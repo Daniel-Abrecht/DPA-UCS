@@ -6,8 +6,6 @@
 #include <protocol/ethtypes.h>
 #include <protocol/arp.h>
 
-static const uint8_t mac_broadcast[6] = { 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF };
-
 void DPAUCS_arp_handler(DPAUCS_packet_info* info){
 
   DPAUCS_arp_t* arp = info->payload;

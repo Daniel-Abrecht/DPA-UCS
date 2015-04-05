@@ -3,8 +3,9 @@
 
 #include <stdint.h>
 #include <packet.h>
+#include <packed.h>
 
-typedef struct __attribute__ ((__packed__)) {
+typedef PACKED1 struct PACKED2 {
   unsigned version : 4;
   unsigned ihl : 4; // IP Header Length
   uint8_t tos; // Type of Service

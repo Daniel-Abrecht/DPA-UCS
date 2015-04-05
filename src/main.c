@@ -16,6 +16,6 @@ int main(void){
     DPAUCS_do_next_task();
   }
 
-  DPAUCS_shutdown();
+//  DPAUCS_shutdown();
 
 }

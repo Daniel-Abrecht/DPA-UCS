@@ -68,5 +68,7 @@ extern const file_t $varname[];
 "
 }
 
+echo "Generating file: $destbasepath/$out.g1.h"
 createFileIncludeHeader "$src" > "$destbasepath/$out.g1.h"
 createFileIncludeCode "$src" "$destbasepath/$destname" "$varname" "$urlbase" "$out.g1.h" "$destname" > "$destbasepath/$out.g1.c"
+echo "Done!"

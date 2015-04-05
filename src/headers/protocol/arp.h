@@ -2,11 +2,12 @@
 #define ARP_H
 
 #include <packet.h>
+#include <packed.h>
 
 #define ARP_REQUEST 1
 #define ARP_RESPONSE 2
 
-typedef struct __attribute__ ((__packed__)) {
+typedef PACKED1 struct PACKED2 {
   uint16_t htype; // Hardware type
   uint16_t ptype; // Protocol type
   uint8_t hlen; // Hardware address length

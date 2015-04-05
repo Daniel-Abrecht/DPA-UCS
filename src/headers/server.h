@@ -21,7 +21,7 @@ extern const uint8_t mac[6];
 extern uint32_t ips[MAX_IPS];
 
 
-void DPAUCS_init();
+void DPAUCS_init( void );
 void DPAUCS_shutdown( void );
 void DPAUCS_add_ip( uint32_t ip );
 void DPAUCS_remove_ip( uint32_t ip );

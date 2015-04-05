@@ -22,7 +22,7 @@ static struct {
   DPAUCS_service_t service;
 } services[MAX_SERVICES];
 
-void DPAUCS_init(){
+void DPAUCS_init( void ){
 
   memset(services,0,sizeof(services));
 

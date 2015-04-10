@@ -17,7 +17,7 @@
 #endif
 
 
-extern const uint8_t mac[6];
+extern uint8_t mac[6];
 extern uint32_t ips[MAX_IPS];
 
 

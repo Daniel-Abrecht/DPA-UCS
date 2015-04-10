@@ -14,13 +14,13 @@ Section Cross References
     server.o(i.DPAUCS_do_next_task) refers to arp.o(i.DPAUCS_arp_handler) for DPAUCS_arp_handler
     server.o(i.DPAUCS_do_next_task) refers to ip.o(i.DPAUCS_ipv4_handler) for DPAUCS_ipv4_handler
     server.o(i.DPAUCS_do_next_task) refers to server.o(.bss) for .bss
-    server.o(i.DPAUCS_do_next_task) refers to main.o(.constdata) for mac
+    server.o(i.DPAUCS_do_next_task) refers to main.o(.data) for mac
     server.o(i.DPAUCS_init) refers to rt_memclr_w.o(.text) for __aeabi_memclr4
     server.o(i.DPAUCS_init) refers to server.o(.bss) for .bss
-    server.o(i.DPAUCS_init) refers to main.o(.constdata) for mac
+    server.o(i.DPAUCS_init) refers to main.o(.data) for mac
     server.o(i.DPAUCS_preparePacket) refers to binaryutils.o(i.btoh16) for btoh16
     server.o(i.DPAUCS_preparePacket) refers to server.o(.bss) for .bss
-    server.o(i.DPAUCS_preparePacket) refers to main.o(.constdata) for mac
+    server.o(i.DPAUCS_preparePacket) refers to main.o(.data) for mac
     server.o(i.DPAUCS_remove_ip) refers to server.o(.bss) for .bss
     server.o(i.DPAUCS_remove_service) refers to server.o(.bss) for .bss
     server.o(i.DPAUCS_sendEth) refers to server.o(.bss) for .bss
@@ -38,7 +38,7 @@ Section Cross References
     arp.o(i.DPAUCS_arp_handler) refers to server.o(i.DPAUCS_preparePacket) for DPAUCS_preparePacket
     arp.o(i.DPAUCS_arp_handler) refers to server.o(i.DPAUCS_sendEth) for DPAUCS_sendEth
     arp.o(i.DPAUCS_arp_handler) refers to server.o(.bss) for ips
-    arp.o(i.DPAUCS_arp_handler) refers to main.o(.constdata) for mac
+    arp.o(i.DPAUCS_arp_handler) refers to main.o(.data) for mac
     ip.o(i.DPAUCS_ipv4_handler) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     ip.o(i.DPAUCS_ipv4_handler) refers to _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) for _printf_x
     ip.o(i.DPAUCS_ipv4_handler) refers to _printf_hex_int.o(.text) for _printf_longlong_hex

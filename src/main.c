@@ -1,9 +1,9 @@
 #include <base_def.h>
 #include <server.h>
 
-#define MAC(X) X( 60,36,DD,26,4A,BC )
+#define MAC(X) X( 5c,f9,dd,55,96,c2 )
 
-const uint8_t mac[] = MAC(MACCONST);
+uint8_t __attribute__((weak)) mac[] = MAC(MACCONST);
 
 int main(void){
 

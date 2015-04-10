@@ -142,7 +142,7 @@ void DPAUCS_do_next_task( void ){
 
     switch(info.type){
       case ETH_TYPE_ARP: DPAUCS_arp_handler(&info); break;
-      case ETH_TYPE_IP_V4: DPAUCS_ipv4_handler(&info); break;
+      case ETH_TYPE_IP_V4: DPAUCS_ip_handler(&info); break;
     }
 
   } while(0);

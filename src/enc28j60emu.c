@@ -7,8 +7,58 @@
 #include <fcntl.h>
 #include <linux/if.h>
 #include <linux/if_packet.h>
+#include <ifaddrs.h>
+#include <server.h>
 
 static int sock;
+uint8_t mac[] = {0,0,0,0,0,0};
+char ifname[IFNAMSIZ];
+
+int setIfaceNameMac(){
+  char buf[8192] = {0};
+  int sck = sock;
+
+  struct ifconf ifc = {0};
+  ifc.ifc_len = sizeof(buf);
+  ifc.ifc_buf = buf;
+
+  if(ioctl(sck, SIOCGIFCONF, &ifc) < 0){
+    perror("ioctl(SIOCGIFCONF)");
+    return -1;
+  }
+
+  /* Iterate through the list of interfaces. */
+  struct ifreq* ifr = ifc.ifc_req;
+  int nInterfaces = ifc.ifc_len / sizeof(struct ifreq);
+
+  for(int i = 0; i < nInterfaces; i++){
+    struct ifreq* item = &ifr[i];
+
+    /* Get the MAC address */
+    if(ioctl(sck, SIOCGIFHWADDR, item) < 0) {
+      perror("ioctl(SIOCGIFHWADDR)");
+      continue;
+    }
+
+    if(
+        !item->ifr_hwaddr.sa_data[0]
+     && !item->ifr_hwaddr.sa_data[1]
+     && !item->ifr_hwaddr.sa_data[2]
+     && !item->ifr_hwaddr.sa_data[3]
+     && !item->ifr_hwaddr.sa_data[4]
+     && !item->ifr_hwaddr.sa_data[5]
+    ) continue;
+
+    strcpy(ifname,item->ifr_name);
+    memcpy(mac,item->ifr_hwaddr.sa_data,6);
+
+    if( ioctl( sck, SIOCGIFINDEX, item ) < 0 ){
+      printf( "init: ioctl SIOCGIFINDEX failed" );
+    }
+    return item->ifr_ifindex;
+  }
+  return -1;
+}
 
 void enc28j60Init( unsigned char* macaddr ){
   printf("socket: ");
@@ -21,32 +71,26 @@ void enc28j60Init( unsigned char* macaddr ){
 //  char dev[] = "wlan1";
 //  setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, dev, sizeof(dev)-1);
 
-  char* ifname = "wlan1";
-  
-  struct ifreq req;
-  memset( &req, 0, sizeof( req ) );
-  strcpy( (char*)req.ifr_name, (char*)ifname );
-
-  if( ioctl( sock, SIOCGIFINDEX, &req ) < 0 ){
-    printf( "init: ioctl SIOCGIFINDEX failed" );
-    return;
-  }
+  int ifi = setIfaceNameMac();
+  if(ifi<0)return;
 
   struct sockaddr_ll addr;
   memset( &addr, 0, sizeof( addr ) );
   addr.sll_family   = PF_PACKET;
   addr.sll_protocol = 0;
-  addr.sll_ifindex  = req.ifr_ifindex;
+  addr.sll_ifindex  = ifi;
 
   if( bind( sock, (const struct sockaddr*)&addr, sizeof( addr ) ) < 0 ){
     printf( "init: bind failed" );
     return;
   }
 
-  if( ioctl( sock, SIOCGIFHWADDR, &req ) < 0 ){
-    printf( "init: ioctl SIOCGIFHWADDR failed " );
-    return;
-  }
+    /* display result */
+
+  printf("%s %02x:%02x:%02x:%02x:%02x:%02x\n", 
+    ifname,
+    mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
+  );
 
   int on = 1;
   setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on));

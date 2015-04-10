@@ -5,6 +5,8 @@
 #include <packet.h>
 #include <packed.h>
 
+#define MAX_IP_PROTO_HANDLERS 3
+
 enum DPAUCS_ipv4_flags {
   IPv4_FLAG_DONT_FRAGMENT  = 0x02,
   IPv4_FLAG_MORE_FRAGMENTS = 0x04
@@ -47,6 +49,12 @@ typedef PACKED1 union PACKED2 {
 } DPAUCS_ip_t;
 
 void DPAUCS_ip_handler( DPAUCS_packet_info* info );
+
+
+typedef void(*DPAUCS_ipProtocolHandler_func)();
+
+void DPAUCS_addIpProtocolHandler(uint8_t protocol, DPAUCS_ipProtocolHandler_func handler);
+void DPAUCS_removeIpProtocolHandler(uint8_t protocol);
 
 #endif
 

@@ -3,7 +3,7 @@ HEADERS 	= $(find . -iname "*.h")
 BIN=bin
 SRC=src
 
-OPTIONS         = -std=c11
+OPTIONS         = -std=c11 -g
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 
@@ -21,6 +21,7 @@ LINUX_FILES  = $(TEMP_LINUX)/main.o
 LINUX_FILES += $(TEMP_LINUX)/server/server.o
 LINUX_FILES += $(TEMP_LINUX)/server/binaryUtils.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/arp.o
+LINUX_FILES += $(TEMP_LINUX)/server/protocol/icmp.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/ip.o
 LINUX_FILES += $(TEMP_LINUX)/enc28j60emu.o
 LINUX_FILES += $(TEMP_LINUX)/files.g1.o

@@ -17,7 +17,7 @@ int main(void){
   DPAUCS_addIpProtocolHandler(IP_PROTOCOL_ICMP,&DPAUCS_icmp_handler);
 
   while(1){
-    DPAUCS_do_next_task();
+    DPAUCS_doNextTask();
   }
 
 //  DPAUCS_shutdown();

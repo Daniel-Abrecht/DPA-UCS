@@ -66,7 +66,7 @@ void DPAUCS_arp_handler(DPAUCS_packet_info* info){
           *(uint32_t*)rtpa = htob32(src_ip); // target ip is previous source ip
 
           // send ethernet frame
-          DPAUCS_sendEth(
+          DPAUCS_sendPacket(
             &infReply,
             sizeof(DPAUCS_arp_t) + 8 + 12 // 8: 2*IPv4 | 12: 2*MAC
           );

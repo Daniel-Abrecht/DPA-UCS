@@ -14,7 +14,7 @@ static int sock;
 uint8_t mac[] = {0,0,0,0,0,0};
 char ifname[IFNAMSIZ];
 
-int setIfaceNameMac(){
+static int setIfaceNameMac(){
   char buf[8192] = {0};
   int sck = sock;
 
@@ -60,31 +60,38 @@ int setIfaceNameMac(){
   return -1;
 }
 
-void enc28j60Init( unsigned char* macaddr ){
+void DPAUCS_ethInit( uint8_t* macaddr ){
+
+  (void) macaddr; // unused
+
+  int ifi;
+
   printf("socket: ");
   fflush(stdout);
   sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   printf(sock>=0?"ok\n":"nope\n");
-  int flags = fcntl(sock,F_GETFL,0);
-  fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+  if(sock<0) return;
 
-//  char dev[] = "wlan1";
-//  setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, dev, sizeof(dev)-1);
-
-  int ifi = setIfaceNameMac();
-  if(ifi<0)return;
-
-  struct sockaddr_ll addr;
-  memset( &addr, 0, sizeof( addr ) );
-  addr.sll_family   = PF_PACKET;
-  addr.sll_protocol = 0;
-  addr.sll_ifindex  = ifi;
-
-  if( bind( sock, (const struct sockaddr*)&addr, sizeof( addr ) ) < 0 ){
-    printf( "init: bind failed" );
-    return;
+  {
+    int flags = fcntl(sock,F_GETFL,0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
   }
 
+  {
+    ifi = setIfaceNameMac();
+    if(ifi<0)return;
+
+    struct sockaddr_ll addr;
+    memset( &addr, 0, sizeof( addr ) );
+    addr.sll_family   = PF_PACKET;
+    addr.sll_protocol = 0;
+    addr.sll_ifindex  = ifi;
+
+    if( bind( sock, (const struct sockaddr*)&addr, sizeof( addr ) ) < 0 ){
+      printf( "init: bind failed" );
+      return;
+    }
+  }
     /* display result */
 
   printf("%s %02x:%02x:%02x:%02x:%02x:%02x\n", 
@@ -92,19 +99,28 @@ void enc28j60Init( unsigned char* macaddr ){
     mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
   );
 
-  int on = 1;
-  setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on));
-  (void) macaddr;
+  {
+    int on = 1;
+    setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on));
+  }
+  {
+    struct packet_mreq mr;
+    memset (&mr, 0, sizeof (mr));
+    mr.mr_ifindex = ifi;
+    mr.mr_type = PACKET_MR_PROMISC;
+    setsockopt (sock, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr));
+  }
+
 }
 
-void enc28j60PacketSend(unsigned int len, unsigned char *packet){
+void DPAUCS_ethSend( uint8_t* packet, uint16_t len ){
   printf("send: %lu ",(unsigned long)len);
   fflush(stdout);
   long ret = send(sock, packet, len, 0);
   printf("%ld %s\n",(long)ret,ret==len?"ok":"nope");
 }
 
-unsigned int enc28j60PacketReceive(unsigned int maxlen, unsigned char *packet){
+uint16_t DPAUCS_ethReceive( uint8_t* packet, uint16_t maxlen ){
   long i = recv(sock, packet, maxlen, 0);
   return i<0?0:i;
 }

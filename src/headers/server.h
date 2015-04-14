@@ -27,12 +27,12 @@ void DPAUCS_add_ip( uint32_t ip );
 void DPAUCS_remove_ip( uint32_t ip );
 void DPAUCS_add_service( uint32_t ip, uint16_t port, DPAUCS_service_t* service );
 void DPAUCS_remove_service( uint32_t ip, uint16_t port );
-void DPAUCS_do_next_task( void );
+void DPAUCS_doNextTask( void );
 
 
 // Internally used stuff //
 void DPAUCS_preparePacket( DPAUCS_packet_info* info );
-void DPAUCS_sendEth( DPAUCS_packet_info* info, uint16_t size );
+void DPAUCS_sendPacket( DPAUCS_packet_info* info, uint16_t size );
 ///////////////////////////
 
 #endif

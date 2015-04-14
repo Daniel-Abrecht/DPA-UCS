@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <string.h>
-#include <enc28j60.h>
+#include <eth.h>
 #include <server.h>
 #include <service.h>
 #include <packet.h>
@@ -26,11 +26,7 @@ void DPAUCS_init( void ){
 
   memset(services,0,sizeof(services));
 
-  // initialize enc28j60
-  enc28j60Init((unsigned char*)mac);
-  enc28j60PhyWrite(PHLCON, 0x476);
-  // change clkout from 6.25MHz to 12.5MHz
-  enc28j60clkout(2);
+  DPAUCS_ethInit(mac);
 
 }
 
@@ -117,11 +113,11 @@ void getPacketInfo( DPAUCS_packet_info* info, DPAUCS_packet_t* packet ){
 }
 
 
-void DPAUCS_do_next_task( void ){
+void DPAUCS_doNextTask( void ){
   do { // Recive & handle packet
 
     DPAUCS_packet_t*const packet = &packetInputBuffer;
-    packet->size = enc28j60PacketReceive(PACKET_SIZE,packet->data.raw);
+    packet->size = DPAUCS_ethReceive(packet->data.raw,PACKET_SIZE);
 
     if(!packet->size)
       break;
@@ -171,16 +167,9 @@ void DPAUCS_preparePacket( DPAUCS_packet_info* info ){
 
 }
 
-void hexdump(const unsigned char* x,unsigned s,unsigned y){
-  unsigned i;
-  for(i=0;i<s;i++,x++)
-    printf("%.2x%c",(int)*x,((i+1)%y)?' ':'\n');
-  if((i%y)) printf("\n");
-}
-
-void DPAUCS_sendEth( DPAUCS_packet_info* info, uint16_t size ){
+void DPAUCS_sendPacket( DPAUCS_packet_info* info, uint16_t size ){
   size += (uint8_t*)info->payload - nextPacketToSend.data.raw; // add ethernetheadersize
   nextPacketToSend.size = size;
-  enc28j60PacketSend( size, nextPacketToSend.data.raw );
+  DPAUCS_ethSend( nextPacketToSend.data.raw, size );
 }
 

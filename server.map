@@ -6,15 +6,17 @@ Section Cross References
 
     main.o(i.main) refers to server.o(i.DPAUCS_init) for DPAUCS_init
     main.o(i.main) refers to server.o(i.DPAUCS_add_ip) for DPAUCS_add_ip
-    main.o(i.main) refers to server.o(i.DPAUCS_do_next_task) for DPAUCS_do_next_task
+    main.o(i.main) refers to ip.o(i.DPAUCS_addIpProtocolHandler) for DPAUCS_addIpProtocolHandler
+    main.o(i.main) refers to server.o(i.DPAUCS_doNextTask) for DPAUCS_doNextTask
+    main.o(i.main) refers to icmp.o(i.DPAUCS_icmp_handler) for DPAUCS_icmp_handler
     server.o(i.DPAUCS_add_ip) refers to server.o(.bss) for .bss
     server.o(i.DPAUCS_add_service) refers to server.o(.bss) for .bss
-    server.o(i.DPAUCS_do_next_task) refers to memcmp.o(.text) for memcmp
-    server.o(i.DPAUCS_do_next_task) refers to server.o(i.getPacketInfo) for getPacketInfo
-    server.o(i.DPAUCS_do_next_task) refers to arp.o(i.DPAUCS_arp_handler) for DPAUCS_arp_handler
-    server.o(i.DPAUCS_do_next_task) refers to ip.o(i.DPAUCS_ipv4_handler) for DPAUCS_ipv4_handler
-    server.o(i.DPAUCS_do_next_task) refers to server.o(.bss) for .bss
-    server.o(i.DPAUCS_do_next_task) refers to main.o(.data) for mac
+    server.o(i.DPAUCS_doNextTask) refers to memcmp.o(.text) for memcmp
+    server.o(i.DPAUCS_doNextTask) refers to server.o(i.getPacketInfo) for getPacketInfo
+    server.o(i.DPAUCS_doNextTask) refers to arp.o(i.DPAUCS_arp_handler) for DPAUCS_arp_handler
+    server.o(i.DPAUCS_doNextTask) refers to ip.o(i.DPAUCS_ip_handler) for DPAUCS_ip_handler
+    server.o(i.DPAUCS_doNextTask) refers to server.o(.bss) for .bss
+    server.o(i.DPAUCS_doNextTask) refers to main.o(.data) for mac
     server.o(i.DPAUCS_init) refers to rt_memclr_w.o(.text) for __aeabi_memclr4
     server.o(i.DPAUCS_init) refers to server.o(.bss) for .bss
     server.o(i.DPAUCS_init) refers to main.o(.data) for mac
@@ -23,27 +25,34 @@ Section Cross References
     server.o(i.DPAUCS_preparePacket) refers to main.o(.data) for mac
     server.o(i.DPAUCS_remove_ip) refers to server.o(.bss) for .bss
     server.o(i.DPAUCS_remove_service) refers to server.o(.bss) for .bss
-    server.o(i.DPAUCS_sendEth) refers to server.o(.bss) for .bss
+    server.o(i.DPAUCS_sendPacket) refers to server.o(.bss) for .bss
     server.o(i.getPacketInfo) refers to rt_memclr_w.o(.text) for __aeabi_memclr4
     server.o(i.getPacketInfo) refers to binaryutils.o(i.btoh16) for btoh16
-    server.o(i.hexdump) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
-    server.o(i.hexdump) refers to _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) for _printf_x
-    server.o(i.hexdump) refers to _printf_c.o(.ARM.Collect$$_printf_percent$$00000013) for _printf_c
-    server.o(i.hexdump) refers to _printf_hex_int.o(.text) for _printf_longlong_hex
-    server.o(i.hexdump) refers to _printf_str.o(.text) for _printf_str
-    server.o(i.hexdump) refers to noretval__2printf.o(.text) for __2printf
     arp.o(i.DPAUCS_arp_handler) refers to binaryutils.o(i.btoh16) for btoh16
     arp.o(i.DPAUCS_arp_handler) refers to binaryutils.o(i.btoh32) for btoh32
     arp.o(i.DPAUCS_arp_handler) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
     arp.o(i.DPAUCS_arp_handler) refers to server.o(i.DPAUCS_preparePacket) for DPAUCS_preparePacket
-    arp.o(i.DPAUCS_arp_handler) refers to server.o(i.DPAUCS_sendEth) for DPAUCS_sendEth
+    arp.o(i.DPAUCS_arp_handler) refers to server.o(i.DPAUCS_sendPacket) for DPAUCS_sendPacket
     arp.o(i.DPAUCS_arp_handler) refers to server.o(.bss) for ips
     arp.o(i.DPAUCS_arp_handler) refers to main.o(.data) for mac
-    ip.o(i.DPAUCS_ipv4_handler) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
-    ip.o(i.DPAUCS_ipv4_handler) refers to _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) for _printf_x
-    ip.o(i.DPAUCS_ipv4_handler) refers to _printf_hex_int.o(.text) for _printf_longlong_hex
-    ip.o(i.DPAUCS_ipv4_handler) refers to noretval__2printf.o(.text) for __2printf
-    ip.o(i.DPAUCS_ipv4_handler) refers to ip.o(.conststring) for .conststring
+    ip.o(i.DPAUCS_addIpProtocolHandler) refers to ip.o(.bss) for .bss
+    ip.o(i.DPAUCS_ip_handler) refers to ip.o(i.IPv4_handler) for IPv4_handler
+    ip.o(i.DPAUCS_removeIpProtocolHandler) refers to ip.o(.bss) for .bss
+    ip.o(i.IPv4_handler) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
+    ip.o(i.IPv4_handler) refers to _printf_u.o(.ARM.Collect$$_printf_percent$$0000000A) for _printf_u
+    ip.o(i.IPv4_handler) refers to _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) for _printf_x
+    ip.o(i.IPv4_handler) refers to _printf_dec.o(.text) for _printf_int_dec
+    ip.o(i.IPv4_handler) refers to _printf_hex_int.o(.text) for _printf_longlong_hex
+    ip.o(i.IPv4_handler) refers to binaryutils.o(i.btoh32) for btoh32
+    ip.o(i.IPv4_handler) refers to noretval__2printf.o(.text) for __2printf
+    ip.o(i.IPv4_handler) refers to server.o(.bss) for ips
+    ip.o(i.IPv4_handler) refers to ip.o(.bss) for .bss
+    ip.o(i.IPv4_handler) refers to ip.o(.conststring) for .conststring
+    mempool.o(i.DPAUCS_mempool_alloc) refers to mempool.o(i.DPAUCS_mempool_defragment) for DPAUCS_mempool_defragment
+    mempool.o(i.DPAUCS_mempool_alloc) refers to mempool.o(i.getEntryEnd) for getEntryEnd
+    mempool.o(i.DPAUCS_mempool_defragment) refers to mempool.o(i.getEntryEnd) for getEntryEnd
+    mempool.o(i.DPAUCS_mempool_defragment) refers to rt_memmove_v6.o(.text) for __aeabi_memmove
+    mempool.o(i.DPAUCS_mempool_free) refers to mempool.o(i.getEntryEnd) for getEntryEnd
     files.g1.o(.constdata) refers to files.g1.o(.conststring) for .conststring
     files.g1.o(.constdata) refers to files.g1.o(.conststrlit) for .conststrlit
     __2printf.o(.text) refers to _printf_char_file.o(.text) for _printf_char_file
@@ -51,7 +60,7 @@ Section Cross References
     noretval__2printf.o(.text) refers to _printf_char_file.o(.text) for _printf_char_file
     noretval__2printf.o(.text) refers to stdio_streams.o(.bss) for __stdout
     __printf.o(.text) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
-    _printf_str.o(.text) refers (Special) to _printf_char.o(.text) for _printf_cs_common
+    _printf_dec.o(.text) refers to _printf_intcommon.o(.text) for _printf_int_common
     _printf_hex_ll.o(.text) refers to _printf_intcommon.o(.text) for _printf_int_common
     _printf_hex_ll.o(.text) refers to _printf_hex_ll.o(.constdata) for .constdata
     _printf_hex_int.o(.text) refers to _printf_intcommon.o(.text) for _printf_int_common
@@ -81,9 +90,11 @@ Section Cross References
     __printf_flags_ss_wp.o(.text) refers to __printf_wp.o(i._is_digit) for _is_digit
     __printf_flags_ss_wp.o(.text) refers to _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) for _printf_percent
     __printf_flags_ss_wp.o(.text) refers to __printf_flags_ss_wp.o(.constdata) for .constdata
-    _printf_c.o(.ARM.Collect$$_printf_percent$$00000013) refers (Weak) to _printf_char.o(.text) for _printf_char
     _printf_x.o(.ARM.Collect$$_printf_percent$$0000000C) refers (Weak) to _printf_hex_int.o(.text) for _printf_int_hex
+    _printf_u.o(.ARM.Collect$$_printf_percent$$0000000A) refers (Weak) to _printf_dec.o(.text) for _printf_int_dec
     _printf_percent.o(.ARM.Collect$$_printf_percent$$00000000) refers (Special) to _printf_percent_end.o(.ARM.Collect$$_printf_percent$$00000017) for _printf_percent_end
+    rt_memmove_v6.o(.text) refers to rt_memcpy_v6.o(.text) for __aeabi_memcpy
+    rt_memmove_v6.o(.text) refers to rt_memmove_w.o(.text) for __memmove_aligned
     __main.o(!!!main) refers to __rtentry.o(.ARM.Collect$$rtentry$$00000000) for __rt_entry
     __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$0000000A) for __rt_entry_li
     __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$0000000D) for __rt_entry_main
@@ -91,7 +102,6 @@ Section Cross References
     __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$00000009) for __rt_entry_postsh_1
     __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry2.o(.ARM.Collect$$rtentry$$00000002) for __rt_entry_presh_1
     __rtentry.o(.ARM.Collect$$rtentry$$00000000) refers (Special) to __rtentry4.o(.ARM.Collect$$rtentry$$00000004) for __rt_entry_sh
-    _printf_char.o(.text) refers (Weak) to _printf_str.o(.text) for _printf_str
     _printf_char_file.o(.text) refers to _printf_char_common.o(.text) for _printf_char_common
     _printf_char_file.o(.text) refers to ferror.o(.text) for ferror
     _printf_char_file.o(.text) refers to fputc.o(i.fputc) for fputc
@@ -101,6 +111,8 @@ Section Cross References
     stdio_streams.o(.data) refers (Special) to initio.o(.text) for _initio
     stdio_streams.o(.data) refers (Special) to initio.o(.text) for _initio
     stdio_streams.o(.data) refers (Special) to initio.o(.text) for _initio
+    rt_memcpy_v6.o(.text) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
+    rt_memmove_w.o(.text) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
     __rtentry2.o(.ARM.Collect$$rtentry$$00000008) refers to boardinit2.o(.text) for _platform_post_stackheap_init
     __rtentry2.o(.ARM.Collect$$rtentry$$0000000A) refers to libinit.o(.ARM.Collect$$libinit$$00000000) for __rt_lib_init
     __rtentry2.o(.ARM.Collect$$rtentry$$0000000B) refers to boardinit3.o(.text) for _platform_post_lib_init
@@ -351,7 +363,6 @@ Section Cross References
     defsig_rtmem_outer.o(.text) refers to defsig_rtmem_inner.o(.text) for __rt_SIGRTMEM_inner
     defsig_rtmem_outer.o(.text) refers to defsig_exit.o(.text) for __sig_exit
     defsig_rtmem_formal.o(.text) refers to rt_raise.o(.text) for __rt_raise
-    rt_memcpy_v6.o(.text) refers to rt_memcpy_w.o(.text) for __aeabi_memcpy4
     heapauxa.o(.text) refers to heapauxa.o(.data) for .data
     _get_argv.o(.text) refers (Special) to hrguard.o(.text) for __heap_region$guard
     _get_argv.o(.text) refers to h1_alloc.o(.text) for malloc

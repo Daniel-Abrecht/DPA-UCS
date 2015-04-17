@@ -38,9 +38,9 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   }
 
   DPAUCS_ipProtocolHandler_func handler = 0;
-  for(int i=0; i<MAX_IP_PROTO_HANDLERS;i++)
+  for(int i=0; i<MAX_IP_PROTO_HANDLERS; i++)
     if( 
-      ipProtocolHandlers[i].handler
+        ipProtocolHandlers[i].handler
      && ipProtocolHandlers[i].protocol == ip->protocol
     ){
       handler = ipProtocolHandlers[i].handler;

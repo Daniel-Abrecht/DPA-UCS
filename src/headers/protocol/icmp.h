@@ -3,6 +3,6 @@
 
 #define IP_PROTOCOL_ICMP 1
 
-void DPAUCS_icmp_handler();
+void DPAUCS_icmp_handler( void );
 
 #endif

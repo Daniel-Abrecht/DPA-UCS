@@ -363,7 +363,7 @@
             <useXO>0</useXO>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define></Define>
+              <Define>KEIL</Define>
               <Undefine></Undefine>
               <IncludePath>src/headers/</IncludePath>
             </VariousControls>
@@ -432,6 +432,16 @@
               <FileName>ip.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\src\server\protocol\ip.c</FilePath>
+            </File>
+            <File>
+              <FileName>mempool.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\server\mempool.c</FilePath>
+            </File>
+            <File>
+              <FileName>icmp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\server\protocol\icmp.c</FilePath>
             </File>
           </Files>
         </Group>

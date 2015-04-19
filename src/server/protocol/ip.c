@@ -2,6 +2,7 @@
 #include <server.h>
 #include <protocol/ip.h>
 #include <binaryUtils.h>
+#include <protocol/tcp_ip_stack_memory.h>
 
 static struct {
   uint8_t protocol;

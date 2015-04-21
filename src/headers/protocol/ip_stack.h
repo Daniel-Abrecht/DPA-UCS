@@ -21,6 +21,4 @@ typedef struct {
   uint8_t offset;
 } ip_packet_info;
 
-extern unsigned short packetNumberCounter;
-
 #endif

@@ -66,5 +66,6 @@ typedef struct DPAUCS_mempool {
 bool DPAUCS_mempool_alloc( DPAUCS_mempool_t* mempool, void** ptr, size_t size );
 void DPAUCS_mempool_defragment( DPAUCS_mempool_t* mempool );
 bool DPAUCS_mempool_free( DPAUCS_mempool_t* mempool, void** memory );
+void DPAUCS_mempool_each( DPAUCS_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg );
 
 #endif

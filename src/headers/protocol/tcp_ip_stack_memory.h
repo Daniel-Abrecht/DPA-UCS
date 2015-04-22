@@ -33,8 +33,8 @@ void DPAUCS_eachFragment( enum DPAUCS_fragmentType filter, bool(*handler)(DPAUCS
 #ifndef TCP_IP_STACK_MEMORY_C
 #define DPAUCS_getFragmentPayload(F) ((void*)(F+1))
 #define DPAUCS_allocFragment(T,F) \
-  DPAUCS_enqueueFragment(FRAGMENT_TYPE_ ## T,sizeof(*F)+F->fragment_info.size)
-#define DPAUCS_removeFragment(F) DPAUCS_removeFragment(&F->fragment_info)
+  (F**)DPAUCS_enqueueFragment(FRAGMENT_TYPE_ ## T,sizeof(*F)+F->fragment.size)
+#define DPAUCS_removeFragment(F) DPAUCS_removeFragment(&F->fragment)
 #endif
 
 #endif

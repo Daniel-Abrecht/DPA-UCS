@@ -137,9 +137,9 @@ bool DPAUCS_mempool_free( DPAUCS_mempool_t*const mempool, void**const memory ){
 }
 
 void DPAUCS_mempool_each( DPAUCS_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg ){
-  for(
-    DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry;
-    iterator;
-    iterator = iterator->nextEntry
-  ) (*handler)(iterator->reference,arg);
+  DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry;
+  while(iterator){
+    iterator = iterator->nextEntry;
+    (*handler)(iterator->reference,arg);
+  }
 }

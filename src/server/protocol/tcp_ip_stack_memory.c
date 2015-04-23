@@ -2,6 +2,14 @@
 #include <protocol/tcp_ip_stack_memory.h>
 #include <stdint.h>
 
+
+extern DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
+
+DPAUCS_fragment_info_t* fragmentTypeInfos[] = {
+  &DPAUCS_ip_fragment_info
+};
+
+
 static char buffer[STACK_BUFFER_SIZE] = {0};
 static DPAUCS_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
 
@@ -66,6 +74,9 @@ void DPAUCS_removeOldestFragment( void ){
 }
 
 void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment ){
+  void(*destructor)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->destructor;
+  if(destructor)
+    (*destructor)(fragment);
   DPAUCS_mempool_free(&mempool,(void**)fragment);
   fragmentsUsed--;
 }

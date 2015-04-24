@@ -8,6 +8,8 @@
 
 #define ANY_FRAGMENT ~0u
 
+#define DPAUCS_eachFragmentByType(T,x,y) DPAUCS_eachFragment(FRAGMENT_TYPE_ ## T,x,y)
+#define DPAUCS_allocFragmentType(T,x) (T**)DPAUCS_createFragment(FRAGMENT_TYPE_ ## T,sizeof(T)+x)
 
 // Don't add more than 16 fragment types
 // sizeof(enum) is equal to sizeof(int)
@@ -30,16 +32,9 @@ typedef struct {
   void(*destructor)(struct DPAUCS_fragment**);
 } DPAUCS_fragment_info_t;
 
-DPAUCS_fragment_t** DPAUCS_allocFragment( enum DPAUCS_fragmentType type, size_t size );
+DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t size );
 void DPAUCS_removeOldestFragment( void );
 void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment );
 void DPAUCS_eachFragment( enum DPAUCS_fragmentType filter, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg );
-
-#ifndef TCP_IP_STACK_MEMORY_C
-#define DPAUCS_getFragmentPayload(F) ((void*)(F+1))
-#define DPAUCS_allocFragment(T,F) \
-  (F**)DPAUCS_allocFragment(FRAGMENT_TYPE_ ## T,sizeof(*F)+F->fragment.size)
-#define DPAUCS_eachFragmentByType(T,x,y) DPAUCS_eachFragment(FRAGMENT_TYPE_ ## T,x,y)
-#endif
 
 #endif

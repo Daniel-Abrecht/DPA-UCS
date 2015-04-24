@@ -6,7 +6,7 @@
 #include <protocol/tcp_ip_stack_memory.h>
 
 #define DEFAULT_TTL 64
-#define DPAUCS_MAX_INCOMPLETE_IP_PACKETS 20
+#define DPAUCS_MAX_INCOMPLETE_IP_PACKETS 32
 
 typedef struct {
   uint32_t srcIp; // largest fields first to reduce padding
@@ -17,7 +17,7 @@ typedef struct {
   uint16_t id;
   uint8_t tos; // Type of Service
   uint16_t offset;
-  bool invalid;
+  bool valid;
 } DPAUCS_ipPacketInfo_t;
 
 typedef struct { 
@@ -27,6 +27,7 @@ typedef struct {
   uint16_t length;
 } DPAUCS_ip_fragment_t;
 
+DPAUCS_ip_fragment_t** DPAUCS_allocIpFragment( DPAUCS_ipPacketInfo_t*, uint16_t );
 void DPAUCS_updateIpPackatOffset( DPAUCS_ip_fragment_t* );
 void DPAUCS_removeIpPacket( DPAUCS_ipPacketInfo_t* );
 bool DPAUCS_isNextIpFragment( DPAUCS_ip_fragment_t* );

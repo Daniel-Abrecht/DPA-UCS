@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <server.h>
-#include <protocol/ip.h>
 #include <binaryUtils.h>
-#include <protocol/tcp_ip_stack_memory.h>
+#include <protocol/ip.h>
+#include <protocol/ip_stack.h>
 
 static struct {
   uint8_t protocol;

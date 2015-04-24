@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 
-extern DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
+extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
 
-DPAUCS_fragment_info_t* fragmentTypeInfos[] = {
+static const DPAUCS_fragment_info_t*const fragmentTypeInfos[] = {
   &DPAUCS_ip_fragment_info
 };
 

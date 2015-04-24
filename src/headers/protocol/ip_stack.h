@@ -33,5 +33,7 @@ void DPAUCS_removeIpPacket( DPAUCS_ipPacketInfo_t* );
 bool DPAUCS_isNextIpFragment( DPAUCS_ip_fragment_t* );
 bool DPAUCS_areFragmentsFromSameIpPacket( DPAUCS_ipPacketInfo_t*, DPAUCS_ipPacketInfo_t* );
 DPAUCS_ip_fragment_t** DPAUCS_searchFollowingIpFragment( DPAUCS_ip_fragment_t* );
+DPAUCS_ipPacketInfo_t* DPAUCS_normalize_ip_packet_info_ptr(DPAUCS_ipPacketInfo_t*);
+DPAUCS_ipPacketInfo_t* DPAUCS_save_ip_packet_info(DPAUCS_ipPacketInfo_t* packet);
 
 #endif

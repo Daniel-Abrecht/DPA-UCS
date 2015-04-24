@@ -1,20 +1,16 @@
 #include <binaryUtils.h>
 
-uint16_t btoh16(uint16_t x){
-  uint8_t y[] = {
-    ( x >> 8 ) & 0xFF,
-    x & 0xFF
-  };
-  return *(uint16_t*)y;
+uint16_t btoh16(uint16_t y){
+  uint8_t* x = (uint8_t*)&y;
+  return ( (uint16_t)x[0] << 8u )
+       | ( (uint16_t)x[1] );
 }
 
-uint32_t btoh32(uint32_t x){
-  uint8_t y[] = {
-    ( x >> 24 ) & 0xFF,
-    ( x >> 16 ) & 0xFF,
-    ( x >>  8 ) & 0xFF,
-      x & 0xFF
-  };
-  return *(uint32_t*)y;
+uint32_t btoh32(uint32_t y){
+  uint8_t* x = (uint8_t*)&y;
+  return ( (uint32_t)x[0] << 24u ) |
+         ( (uint32_t)x[1] << 16u ) |
+         ( (uint32_t)x[2] <<  8u ) |
+         ( (uint32_t)x[3] );
 }
 

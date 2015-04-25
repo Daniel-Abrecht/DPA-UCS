@@ -7,6 +7,7 @@
 
 #define DEFAULT_TTL 64
 #define DPAUCS_MAX_INCOMPLETE_IP_PACKETS 32
+#define DPAUCS_IP_FRAGMENT_DATA_OFFSET ( offsetof(DPAUCS_ip_fragment_t,info) + sizeof(DPAUCS_ipPacketInfo_t*) )
 
 typedef struct {
   uint32_t srcIp; // largest fields first to reduce padding
@@ -21,10 +22,13 @@ typedef struct {
 } DPAUCS_ipPacketInfo_t;
 
 typedef struct { 
+  // Header //
   DPAUCS_fragment_t fragment_info; // must be the first member
-  DPAUCS_ipPacketInfo_t* info;
+  DPAUCS_ipPacketInfo_t* info; // must be the second member
+  // Datas //
   uint16_t offset;
   uint16_t length;
+  uint8_t flags;
 } DPAUCS_ip_fragment_t;
 
 DPAUCS_ip_fragment_t** DPAUCS_allocIpFragment( DPAUCS_ipPacketInfo_t*, uint16_t );
@@ -35,5 +39,6 @@ bool DPAUCS_areFragmentsFromSameIpPacket( DPAUCS_ipPacketInfo_t*, DPAUCS_ipPacke
 DPAUCS_ip_fragment_t** DPAUCS_searchFollowingIpFragment( DPAUCS_ip_fragment_t* );
 DPAUCS_ipPacketInfo_t* DPAUCS_normalize_ip_packet_info_ptr(DPAUCS_ipPacketInfo_t*);
 DPAUCS_ipPacketInfo_t* DPAUCS_save_ip_packet_info(DPAUCS_ipPacketInfo_t* packet);
+void DPAUCS_removeIpFragment( DPAUCS_ip_fragment_t** f );
 
 #endif

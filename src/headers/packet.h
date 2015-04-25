@@ -22,7 +22,6 @@ typedef PACKED1 struct PACKED2 {
       PACKED1 union PACKED2 {
         PACKED1 struct PACKED2 {
           PACKED1 union PACKED2 {
-            unsigned oui : 3;
             uint8_t oui_bytes[3];
           };
           uint16_t type; // Should contain ethernet type filed value
@@ -43,9 +42,10 @@ typedef struct { // Ethernet frame
       PACKED1 union PACKED2 {
         PACKED1 struct PACKED2 { // IEEE_802_1Q
           uint16_t tpid; // Tag protocol identifier: 0x8100
-          unsigned pcp:3; // Priority code point 
-          unsigned dei:1; // Drop eligible indicator 
-          unsigned vid:12; // VLAN identifier
+          // Priority code point 
+          // Drop eligible indicator 
+          // VLAN identifier
+          uint16_t pcp_dei_vid; // 3 1 12
           PACKED1 union PACKED2 {
             uint16_t type; // greater or equal to 1536
             uint16_t length; // smaller or equal to 1500

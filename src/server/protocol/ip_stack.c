@@ -46,7 +46,7 @@ DPAUCS_ipPacketInfo_t* DPAUCS_save_ip_packet_info(DPAUCS_ipPacketInfo_t* packet)
 
 DPAUCS_ipPacketInfo_t* DPAUCS_normalize_ip_packet_info_ptr(DPAUCS_ipPacketInfo_t* ipf){
   for(unsigned i=0;i<DPAUCS_MAX_INCOMPLETE_IP_PACKETS;i++)
-    if( DPAUCS_areFragmentsFromSameIpPacket( incompleteIpPackageInfos+i, ipf ) )
+    if( incompleteIpPackageInfos[i].valid && DPAUCS_areFragmentsFromSameIpPacket( incompleteIpPackageInfos+i, ipf ) )
       return incompleteIpPackageInfos + i;
   return 0;
 }

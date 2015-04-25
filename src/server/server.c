@@ -85,7 +85,7 @@ void getPacketInfo( DPAUCS_packet_info* info, DPAUCS_packet_t* packet ){
   info->is_vlan = packet->data.vlan.tpid == IEEE_802_1Q_TPID_CONST;
 
   if( info->is_vlan ){ // maybe an IEEE 802.1Q tag
-    info->vid     = packet->data.vlan.vid;
+    info->vid     = btoh16(packet->data.vlan.pcp_dei_vid) & 0x0FFF;
     info->type    = btoh16(packet->data.vlan.type);
     info->payload = packet->data.vlan.payload;
     info->llc     = &packet->data.vlan.llc;
@@ -156,11 +156,11 @@ void DPAUCS_preparePacket( DPAUCS_packet_info* info ){
 
   if( info->is_vlan ){
     packet->data.vlan.tpid = IEEE_802_1Q_TPID_CONST;
-    packet->data.vlan.vid  = info->vid;
+    packet->data.vlan.pcp_dei_vid = htob16(info->vid);
     packet->data.vlan.type = htob16(info->type);
     info->payload = packet->data.vlan.payload;
   }else{
-    packet->data.vlan.vid  = 0;
+    packet->data.vlan.pcp_dei_vid  = 0;
     packet->data.type      = htob16(info->type);
     info->payload          = packet->data.payload;
   }

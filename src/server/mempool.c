@@ -137,9 +137,14 @@ bool DPAUCS_mempool_free( DPAUCS_mempool_t*const mempool, void**const memory ){
 }
 
 void DPAUCS_mempool_each( DPAUCS_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg ){
-  DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry;
+  DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry->nextEntry;
+  if(!iterator)
+    return;
   while(iterator){
-    iterator = iterator->nextEntry;
+    void** reference = iterator->nextEntry ? iterator->nextEntry->reference : 0;
     (*handler)(iterator->reference,arg);
-  }
+    if(!reference)
+      break;
+    iterator = (DPAUCS_mempoolEntry_t*)((uint8_t*)(*reference) - DPAUCS_MEMPOOL_ENTRY_SIZE);
+  };
 }

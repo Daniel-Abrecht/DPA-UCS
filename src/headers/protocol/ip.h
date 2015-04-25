@@ -13,14 +13,12 @@ enum DPAUCS_ipv4_flags {
 };
 
 typedef PACKED1 struct PACKED2 {
-  unsigned version : 4;
-  unsigned ihl : 4; // IP Header Length
+  uint8_t version_ihl; // 4bit version | 4bit IP Header Length
   uint8_t tos; // Type of Service
   uint16_t length; // Total Length
   uint16_t id; // Identification
-  unsigned flags : 3;
-  unsigned offset_1 : 5; // Frame offset, splittet to avoid endiannes isuses
-  uint8_t offset_2;
+  uint8_t flags_offset1; // 3bit flags | 5bit Frame offset
+  uint8_t offset2; // 8bit fragment offset
   uint8_t ttl; // Time to live
   // Protocol: http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
   uint8_t protocol;
@@ -30,10 +28,8 @@ typedef PACKED1 struct PACKED2 {
 } DPAUCS_ipv4_t;
 
 typedef PACKED1 struct PACKED2 {
-  unsigned version : 4;
-  unsigned tafficClass1 : 4;
-  unsigned tafficClass2 : 4;
-  unsigned flowLabel1 : 4;
+  uint8_t version_tafficClass1;
+  uint8_t tafficClass2_flowLabel1;
   uint16_t flowLabel2;
   uint16_t payloadLength;
   uint8_t nextHeader;
@@ -50,8 +46,8 @@ typedef PACKED1 union PACKED2 {
 
 void DPAUCS_ip_handler( DPAUCS_packet_info* info );
 
-
-typedef void(*DPAUCS_ipProtocolHandler_func)();
+typedef void(*DPAUCS_sendHandler)(void*,void*,uint16_t);
+typedef bool(*DPAUCS_ipProtocolHandler_func)(void*,DPAUCS_sendHandler,uint16_t,uint16_t,void*,bool);
 
 void DPAUCS_addIpProtocolHandler(uint8_t protocol, DPAUCS_ipProtocolHandler_func handler);
 void DPAUCS_removeIpProtocolHandler(uint8_t protocol);

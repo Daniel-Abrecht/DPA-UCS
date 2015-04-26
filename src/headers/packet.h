@@ -77,6 +77,7 @@ typedef struct {
   bool is_vlan;
   uint16_t vid;
   uint16_t type;
+  uint16_t size;
   void* payload;
   DPAUCS_LLC* llc;
   bool invalid;

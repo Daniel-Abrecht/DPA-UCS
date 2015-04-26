@@ -89,11 +89,13 @@ void getPacketInfo( DPAUCS_packet_info* info, DPAUCS_packet_t* packet ){
     info->type    = btoh16(packet->data.vlan.type);
     info->payload = packet->data.vlan.payload;
     info->llc     = &packet->data.vlan.llc;
+    info->size    = btoh16(packet->data.length);
   }else{
     info->vid     = 0;
     info->type    = btoh16(packet->data.type);
     info->payload = packet->data.payload;
     info->llc     = &packet->data.llc;
+    info->size    = btoh16(packet->data.vlan.length);
   }
 
   if( info->type < 1536 && info->type > 1500 ){ // undefined case

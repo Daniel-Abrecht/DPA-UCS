@@ -5,8 +5,6 @@
 #include <protocol/ip.h>
 #include <protocol/ip_stack.h>
 
-static uint16_t MTU = 1500;
-
 static struct {
   uint8_t protocol;
   DPAUCS_ipProtocolHandler_func handler;
@@ -88,6 +86,9 @@ static void IPv4_sendBackHandler(void* x, void* payload, uint16_t length){
 }
 
 static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
+  if( btoh16(ip->length) > info->size )
+    return;
+
   uint32_t source = htob32(ip->destination);
   uint32_t destination = htob32(ip->destination);
 
@@ -128,9 +129,6 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   fragment.flags = ( ip->flags_offset1 >> 5 ) & 0x07;
   
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
-  
-  if(fragment.length>=MTU)
-    return;
   
   DPAUCS_ipPacketInfo_t* ipi = DPAUCS_normalize_ip_packet_info_ptr(&ipInfo);
   bool isNext;

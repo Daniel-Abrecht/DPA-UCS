@@ -10,11 +10,13 @@
 #define DPAUCS_IP_FRAGMENT_DATA_OFFSET ( offsetof(DPAUCS_ip_fragment_t,info) + sizeof(DPAUCS_ipPacketInfo_t*) )
 
 typedef struct {
-  uint32_t srcIp; // largest fields first to reduce padding
-  uint32_t destIp;
-  uint8_t srcMac[6];
-  // destMac: always the same as global variable mac, only provided to simplify future changes
-  uint8_t destMac[6];
+  uint32_t ip;
+  uint8_t mac[6];
+} eth_ip_address_t;
+
+typedef struct {
+  eth_ip_address_t src;
+  eth_ip_address_t dest;
   uint16_t id;
   uint8_t tos; // Type of Service
   uint16_t offset;

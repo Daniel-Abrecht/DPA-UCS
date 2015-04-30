@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 #include <server.h>
 #include <binaryUtils.h>
@@ -27,62 +26,54 @@ void DPAUCS_removeIpProtocolHandler(uint8_t protocol){
     }
 }
 
-void hexdump(const unsigned char* x,unsigned s,unsigned y){
-  unsigned i;
-  for(i=0;i<s;i++,x++)
-    printf("%.2x%c",(int)*x,((i+1)%y)?' ':'\n');
-  if((i%y)) printf("\n");
+//static buffer_buffer_t outputStreamBufferBuffer;
+DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,6);
+DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,6);
+
+static stream_t outputStream = {
+  &outputStreamBuffer,
+  &outputStreamBufferBuffer,
+  0,
+  0
+};
+
+static struct {
+  void* from;
+  void** to;
+  uint8_t type;
+} currentTransmission;
+
+static stream_t* IPv4_transmissionBegin( void* from, void** to, uint8_t type ){
+  currentTransmission.from = from;
+  currentTransmission.to = to;
+  currentTransmission.type = type;
+  outputStream.outputStreamBufferWriteStartOffset = outputStreamBuffer.write_offset;
+  outputStream.outputStreamBufferBufferWriteStartOffset = outputStreamBufferBuffer.write_offset;
+  return &outputStream;
 }
 
-static void IPv4_sendFromTo(
-  uint32_t sip,
-  uint32_t dip,
-  uint8_t* smac,
-  uint8_t* dmac,
-  void* payload, 
-  uint16_t length
-){
-  printf(
-    "IPv4 send src: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x"
-    " | dest: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x"
-    "ip src: %u.%u.%u.%u | "
-    "ip dest: %u.%u.%u.%u\n"
-    "length: %u | data:\n",
+static void IPv4_transmissionEnd(){
 
-    smac[0], smac[1],
-    smac[2], smac[3],
-    smac[4], smac[5],
+  uchar_buffer_t cb = outputStreamBuffer;
+  buffer_buffer_t bb = outputStreamBufferBuffer;
 
-    dmac[0], dmac[1],
-    dmac[2], dmac[3],
-    dmac[4], dmac[5],
+  for(void** to = currentTransmission.to;to;to++){
+    // reset read offsets
+    cb.read_offset = outputStreamBuffer.read_offset;
+    bb.read_offset = outputStreamBufferBuffer.read_offset;
+    while(!BUFFER_EOF(&bb)){
+      
+    }
+  }
 
-    ( sip >> 24 ) & 0xFF,
-    ( sip >> 16 ) & 0xFF,
-    ( sip >>  8 ) & 0xFF,
-    ( sip >>  0 ) & 0xFF,
+  outputStreamBufferBuffer.read_offset = bb.read_offset;
+  outputStreamBuffer.read_offset = cb.read_offset;
 
-    ( dip >> 24 ) & 0xFF,
-    ( dip >> 16 ) & 0xFF,
-    ( dip >>  8 ) & 0xFF,
-    ( dip >>  0 ) & 0xFF,
-
-    (unsigned)length
-
-  );
-  hexdump(payload,length,16);
-}
-
-static void IPv4_sendBackHandler(void* x, void* payload, uint16_t length){
-  DPAUCS_ipPacketInfo_t* info = x;
-  IPv4_sendFromTo(
-    info->destIp,
-    info->srcIp,
-    info->destMac,
-    info->srcMac,
-    payload,
-    length
-  );
+/*
+  DPAUCS_packet_info nextPacket;
+  memset(&nextPacket,0,sizeof(DPAUCS_packet_info));
+  DPAUCS_preparePacket(&nextPacket);
+  */
 }
 
 static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
@@ -113,10 +104,10 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
 
   DPAUCS_ip_fragment_t fragment;
   DPAUCS_ipPacketInfo_t ipInfo;
-  ipInfo.srcIp = source;
-  ipInfo.destIp = destination;
-  memcpy(ipInfo.srcMac,info->source_mac,6);
-  memcpy(ipInfo.destMac,info->destination_mac,6);
+  ipInfo.src.ip = source;
+  ipInfo.dest.ip = destination;
+  memcpy(ipInfo.src.mac,info->source_mac,6);
+  memcpy(ipInfo.dest.mac,info->destination_mac,6);
   ipInfo.id = ip->id;
   ipInfo.tos = ip->tos;
   ipInfo.offset = 0;
@@ -149,7 +140,16 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
       DPAUCS_ip_fragment_t** f_ptr = &f;
       while(true){
         if(
-            !(*handler)(f->info,&IPv4_sendBackHandler,f->offset,f->length,payload,!(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS))
+            !(*handler)(
+              &f->info->src,
+              &f->info->dest,
+              &IPv4_transmissionBegin,
+              &IPv4_transmissionEnd,
+              f->offset,
+              f->length,
+              payload,
+              !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
+            )
          || !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
         ){
           DPAUCS_removeIpPacket(f->info);
@@ -164,10 +164,8 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
       }
     }else{
       DPAUCS_ip_fragment_t** f_ptr = DPAUCS_allocIpFragment(ipi,fragment.length);
-      if(!f_ptr){
-	printf("DPAUCS_allocIpFragment failed!\n");
+      if(!f_ptr)
         return;
-      }
       memcpy(
         ((uint8_t*)*f_ptr) + DPAUCS_IP_FRAGMENT_DATA_OFFSET,
         ((uint8_t*)&fragment) + DPAUCS_IP_FRAGMENT_DATA_OFFSET,
@@ -177,7 +175,17 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
       return;
     }
   }else{
-    (*handler)(ipi?ipi:&ipInfo,&IPv4_sendBackHandler,fragment.offset,fragment.length,payload,!(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS));
+    DPAUCS_ipPacketInfo_t* ipp = ipi ? ipi : &ipInfo;
+    (*handler)(
+      &ipp->src,
+      &ipp->dest,
+      &IPv4_transmissionBegin,
+      &IPv4_transmissionEnd,
+      fragment.offset,
+      fragment.length,
+      payload,
+      !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
+    );
     if(ipi)
       DPAUCS_removeIpPacket(ipi);
     ipi = 0;

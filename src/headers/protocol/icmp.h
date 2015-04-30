@@ -7,7 +7,7 @@
 #include <packed.h>
 #include <protocol/ip.h>
 
-bool DPAUCS_icmp_handler( void*, DPAUCS_sendHandler, uint16_t, uint16_t, void*, bool );
+bool DPAUCS_icmp_handler( void* from, void* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
 
 typedef PACKED1 struct PACKED2 {
   uint8_t type;

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <packet.h>
 #include <packed.h>
+#include <stream.h>
 
 #define MAX_IP_PROTO_HANDLERS 3
 
@@ -46,8 +47,9 @@ typedef PACKED1 union PACKED2 {
 
 void DPAUCS_ip_handler( DPAUCS_packet_info* info );
 
-typedef void(*DPAUCS_sendHandler)(void*,void*,uint16_t);
-typedef bool(*DPAUCS_ipProtocolHandler_func)(void*,DPAUCS_sendHandler,uint16_t,uint16_t,void*,bool);
+typedef stream_t*(*DPAUCS_beginTransmission)( void* from, void** to, uint8_t type );
+typedef void(*DPAUCS_endTransmission)();
+typedef bool(*DPAUCS_ipProtocolHandler_func)( void* from, void* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
 
 void DPAUCS_addIpProtocolHandler(uint8_t protocol, DPAUCS_ipProtocolHandler_func handler);
 void DPAUCS_removeIpProtocolHandler(uint8_t protocol);

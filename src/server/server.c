@@ -167,6 +167,8 @@ void DPAUCS_preparePacket( DPAUCS_packet_info* info ){
     info->payload          = packet->data.payload;
   }
 
+  packet->size = (uintptr_t)packet->data.payload - (uintptr_t)packet;
+
 }
 
 void DPAUCS_sendPacket( DPAUCS_packet_info* info, uint16_t size ){

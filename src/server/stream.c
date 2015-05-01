@@ -1,4 +1,5 @@
 #include <stream.h>
+#include <string.h>
 
 void DPAUCS_stream_reset(stream_t*const stream){
   stream->buffer->write_offset = stream->outputStreamBufferWriteStartOffset;
@@ -32,22 +33,38 @@ bool DPAUCS_stream_referenceWrite( stream_t*const stream, void* p, size_t size )
   return true;
 }
 
-static size_t stream_read_from_array( bufferInfo_t* info, void* p, size_t max_size ){
-  (void)info;
-  (void)p;
-  (void)max_size;
-  return 0;
+static inline size_t stream_read_from_buffer( bufferInfo_t* info, void* p, size_t max_size ){
+  unsigned char* uch = p;
+  uchar_buffer_t* buffer = info->ptr;
+  size_t i, n;
+  for(
+    i=0, n= info->size < max_size ? info->size : max_size;
+    i < n && !BUFFER_EOF(buffer);
+    i++
+  ) *(uch++) = BUFFER_GET(buffer);
+  return i;
+}
+
+static inline size_t stream_read_from_array( bufferInfo_t* info, void* p, size_t max_size ){
+  size_t n = info->size < max_size ? info->size : max_size;
+  memcpy(p,info->ptr,n);
+  return n;
 }
 
 size_t DPAUCS_stream_read( stream_t*const stream, void* p, size_t max_size ){
-  while( max_size && !BUFFER_EOF(stream->buffer_buffer) ){
-    bufferInfo_t* info = &BUFFER_GET(stream->buffer_buffer);
+  size_t n = max_size;
+  while( n && !BUFFER_EOF(stream->buffer_buffer) ){
+    bufferInfo_t* info = BUFFER_BEGIN(stream->buffer_buffer);
     switch( info->type ){
       case BUFFER_ARRAY:
-        max_size -= stream_read_from_array(info,p,max_size);
+        n -= stream_read_from_array(info,p,n);
       break;
-      default: break;
+      case BUFFER_BUFFER:
+        n -= stream_read_from_array(info,p,n);
+      break;
+      default: return max_size - n;
     }
+    BUFFER_SKIP(stream->buffer_buffer,1);
   }
-  return true;
+  return max_size - n;
 }

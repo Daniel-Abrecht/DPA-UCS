@@ -1,6 +1,9 @@
+#include <stdio.h>
 #include <string.h>
 #include <server.h>
+#include <checksum.h>
 #include <binaryUtils.h>
+#include <protocol/ethtypes.h>
 #include <protocol/ip.h>
 #include <protocol/ip_stack.h>
 
@@ -54,34 +57,80 @@ static stream_t* IPv4_transmissionBegin( void* from, void** to, uint8_t type ){
 
 static void IPv4_transmissionEnd(){
 
+  const uint16_t hl = 5;
+  static uint16_t id = 0;
+
   uchar_buffer_t cb = outputStreamBuffer;
   buffer_buffer_t bb = outputStreamBufferBuffer;
+  stream_t inputStream = { &cb, &bb, 0, 0 };
 
-  for(void** to = currentTransmission.to;to;to++){
+  eth_ip_address_t* src = currentTransmission.from;
+
+  for(void** to = currentTransmission.to;*to;to++,id++){
+
     // reset read offsets
     cb.read_offset = outputStreamBuffer.read_offset;
     bb.read_offset = outputStreamBufferBuffer.read_offset;
-    while(!BUFFER_EOF(&bb)){
-      
+
+    const eth_ip_address_t* dst = *to;
+
+    uint8_t offset = 0;
+
+    while(!DPAUCS_stream_eof(&inputStream)){
+
+      // prepare next packet
+      DPAUCS_packet_info p;
+      memset( &p, 0, sizeof(DPAUCS_packet_info) );
+      p.type = ETH_TYPE_IP_V4;
+      memcpy( p.destination_mac, dst->mac, 6 );
+      memcpy( p.source_mac, ((eth_ip_address_t*)currentTransmission.from)->mac, 6 );
+      DPAUCS_preparePacket( &p );
+
+      // create ip header
+      DPAUCS_ipv4_t* ip = p.payload;
+      ip->version_ihl = (uint16_t)( 4u << 4u ) | ( hl & 0x0F );
+      ip->id = htob16( id );
+      ip->ttl = DEFAULT_TTL;
+      ip->protocol = currentTransmission.type;
+      ip->source = htob32( src->ip );
+      ip->destination = htob32( dst->ip );
+
+      // create content
+      size_t s = DPAUCS_stream_read( &inputStream, ((unsigned char*)p.payload) + hl * 4, (PACKET_MAX_PAYLOAD - sizeof(DPAUCS_ipv4_t)) & ~7u );
+
+      // complete ip header
+      uint8_t flags = 0;
+
+      if(!DPAUCS_stream_eof(&inputStream))
+        flags |= IPv4_FLAG_MORE_FRAGMENTS;
+
+      ip->length = htob16( p.size + hl * 4 + s );
+      ip->flags_offset1 = ( flags << 5 ) | ( ( offset >> 11 ) & 0x1F );
+      ip->offset2 = ( offset >> 3 ) & 0xFF;
+
+      ip->checksum = 0;
+      ip->checksum = checksum( p.payload, hl * 4 );
+
+      // send packet
+      DPAUCS_sendPacket( &p, hl * 4 + s );
+
+      // store ip packet data offset
+      offset += s;
+
     }
   }
 
-  outputStreamBufferBuffer.read_offset = bb.read_offset;
-  outputStreamBuffer.read_offset = cb.read_offset;
+  outputStreamBufferBuffer.read_offset = outputStreamBufferBuffer.write_offset;
+  outputStreamBuffer.read_offset = outputStreamBuffer.write_offset;
 
-/*
-  DPAUCS_packet_info nextPacket;
-  memset(&nextPacket,0,sizeof(DPAUCS_packet_info));
-  DPAUCS_preparePacket(&nextPacket);
-  */
 }
 
 static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   if( btoh16(ip->length) > info->size )
     return;
 
-  uint32_t source = htob32(ip->destination);
-  uint32_t destination = htob32(ip->destination);
+  uint32_t source = btoh32(ip->source);
+  uint32_t destination = btoh32(ip->destination);
 
   if(~destination){ // not broadcast
     int i=0;
@@ -93,7 +142,7 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
 
   DPAUCS_ipProtocolHandler_func handler = 0;
   for(int i=0; i<MAX_IP_PROTO_HANDLERS; i++)
-    if( 
+    if(
         ipProtocolHandlers[i].handler
      && ipProtocolHandlers[i].protocol == ip->protocol
     ){
@@ -112,15 +161,15 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   ipInfo.tos = ip->tos;
   ipInfo.offset = 0;
   ipInfo.valid = true;
-  
+
   uint16_t headerlength = (ip->version_ihl & 0x0F) * 4;
-  
+
   fragment.offset = (uint16_t)( (uint16_t)( ip->flags_offset1 & 0x1F ) | (uint16_t)ip->offset2 << 5u ) * 8u;
   fragment.length = btoh16(ip->length) - headerlength;
   fragment.flags = ( ip->flags_offset1 >> 5 ) & 0x07;
-  
+
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
-  
+
   DPAUCS_ipPacketInfo_t* ipi = DPAUCS_normalize_ip_packet_info_ptr(&ipInfo);
   bool isNext;
   if(ipi){

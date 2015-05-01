@@ -13,6 +13,7 @@ typedef PACKED1 struct PACKED2 {
   uint8_t type;
   uint8_t code;
   uint16_t checksum;
+  uint8_t RoH[4];
 } DPAUCS_icmp_t;
 
 enum icmp_types {

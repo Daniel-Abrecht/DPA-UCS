@@ -3,7 +3,7 @@ HEADERS 	= $(find . -iname "*.h")
 BIN=bin
 SRC=src
 
-OPTIONS         = -std=c11 -Os
+OPTIONS         = -std=c11 -g
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 
@@ -20,8 +20,9 @@ LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${LINUX_GEN_DEST} -iname "*.o")
 LINUX_FILES  = $(TEMP_LINUX)/main.o
 LINUX_FILES += $(TEMP_LINUX)/server/drivers/eth/linux.o
 LINUX_FILES += $(TEMP_LINUX)/server/server.o
-LINUX_FILES += $(TEMP_LINUX)/server/mempool.o
 LINUX_FILES += $(TEMP_LINUX)/server/stream.o
+LINUX_FILES += $(TEMP_LINUX)/server/mempool.o
+LINUX_FILES += $(TEMP_LINUX)/server/checksum.o
 LINUX_FILES += $(TEMP_LINUX)/server/binaryUtils.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/arp.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/icmp.o

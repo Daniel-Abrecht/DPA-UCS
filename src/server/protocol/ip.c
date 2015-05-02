@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string.h>
 #include <server.h>
 #include <checksum.h>
@@ -224,7 +223,7 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   }else{
     DPAUCS_ipPacketInfo_t* ipp = ipi ? ipi : &ipInfo;
     (*handler->onrecive)(
-      ipi,
+      ipp,
       &ipp->src,
       &ipp->dest,
       &IPv4_transmissionBegin,

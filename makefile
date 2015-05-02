@@ -25,6 +25,7 @@ LINUX_FILES += $(TEMP_LINUX)/server/mempool.o
 LINUX_FILES += $(TEMP_LINUX)/server/checksum.o
 LINUX_FILES += $(TEMP_LINUX)/server/binaryUtils.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/arp.o
+LINUX_FILES += $(TEMP_LINUX)/server/protocol/tcp.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/icmp.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/ip.o
 LINUX_FILES += $(TEMP_LINUX)/server/protocol/ip_stack.o

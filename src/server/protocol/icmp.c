@@ -27,10 +27,14 @@ static DPAUCS_ipProtocolHandler_t icmp_handler = {
   .onrecive = &icmp_reciveHandler
 };
 
+static int counter = 0;
+
 void DPAUCS_icmpInit(){
+  if(counter++) return;
   DPAUCS_addIpProtocolHandler(&icmp_handler);
 }
 
 void DPAUCS_icmpShutdown(){
+  if(--counter) return;
   DPAUCS_removeIpProtocolHandler(&icmp_handler);
 }

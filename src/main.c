@@ -1,6 +1,7 @@
 #include <base_def.h>
 #include <server.h>
 #include <protocol/ip.h>
+#include <protocol/tcp.h>
 #include <protocol/icmp.h>
 
 #define MAC(X) X( 5c,f9,dd,55,96,c2 )
@@ -15,6 +16,7 @@ int main(void){
   DPAUCS_add_ip(IPINT(192,168,43,29));
 
   DPAUCS_icmpInit();
+  DPAUCS_tcpInit();
 
   while(1){
     DPAUCS_doNextTask();

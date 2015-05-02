@@ -127,6 +127,8 @@ void DPAUCS_removeIpPacket( DPAUCS_ipPacketInfo_t* ipf ){
     return;
   ipf->valid = false;
   DPAUCS_eachFragmentByType( DPAUCS_ip_fragment_t, &removeIpFragment, ipf );
+  if(ipf->onremove)
+    (ipf->onremove)(ipf);
 }
 
 void DPAUCS_removeIpFragment( DPAUCS_ip_fragment_t** f ){

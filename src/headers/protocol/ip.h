@@ -49,10 +49,16 @@ void DPAUCS_ip_handler( DPAUCS_packet_info* info );
 
 typedef stream_t*(*DPAUCS_beginTransmission)( void* from, void** to, uint8_t type );
 typedef void(*DPAUCS_endTransmission)();
-typedef bool(*DPAUCS_ipProtocolHandler_func)( void* from, void* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
+typedef bool(*DPAUCS_ipProtocolReciveHandler_func)( void* id, void* from, void* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
+typedef void(*DPAUCS_ipProtocolFailtureHandler_func)( void* id );
 
-void DPAUCS_addIpProtocolHandler(uint8_t protocol, DPAUCS_ipProtocolHandler_func handler);
-void DPAUCS_removeIpProtocolHandler(uint8_t protocol);
+typedef struct {
+  uint8_t protocol;
+  DPAUCS_ipProtocolReciveHandler_func onrecive;
+  DPAUCS_ipProtocolFailtureHandler_func onrecivefailture;
+} DPAUCS_ipProtocolHandler_t;
+
+void DPAUCS_addIpProtocolHandler( DPAUCS_ipProtocolHandler_t* handler );
+void DPAUCS_removeIpProtocolHandler( DPAUCS_ipProtocolHandler_t* handler );
 
 #endif
-

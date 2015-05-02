@@ -14,13 +14,14 @@ typedef struct {
   uint8_t mac[6];
 } eth_ip_address_t;
 
-typedef struct {
+typedef struct DPAUCS_ipPacketInfo {
   eth_ip_address_t src;
   eth_ip_address_t dest;
   uint16_t id;
   uint8_t tos; // Type of Service
   uint16_t offset;
   bool valid;
+  void(*onremove)(void*);
 } DPAUCS_ipPacketInfo_t;
 
 typedef struct { 

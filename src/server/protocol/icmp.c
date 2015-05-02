@@ -1,11 +1,12 @@
 #include <checksum.h>
 #include <protocol/icmp.h>
 
-static bool icmp_handler( void* from, void* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool icmp_reciveHandler( void* id, void* from, void* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
   if(!last)
     return false;
   (void)offset;
   (void)length;
+  (void)id;
   DPAUCS_icmp_t* icmp = payload;
   switch( icmp->type ){
     case ICMP_ECHO_REQUEST: {
@@ -21,10 +22,15 @@ static bool icmp_handler( void* from, void* to, DPAUCS_beginTransmission begin, 
   return true;
 }
 
+static DPAUCS_ipProtocolHandler_t icmp_handler = {
+  .protocol = IP_PROTOCOL_ICMP,
+  .onrecive = &icmp_reciveHandler
+};
+
 void DPAUCS_icmpInit(){
-  DPAUCS_addIpProtocolHandler(IP_PROTOCOL_ICMP,&icmp_handler);
+  DPAUCS_addIpProtocolHandler(&icmp_handler);
 }
 
 void DPAUCS_icmpShutdown(){
-  DPAUCS_removeIpProtocolHandler(IP_PROTOCOL_ICMP);
+  DPAUCS_removeIpProtocolHandler(&icmp_handler);
 }

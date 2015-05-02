@@ -7,24 +7,20 @@
 #include <protocol/ip.h>
 #include <protocol/ip_stack.h>
 
-static struct {
-  uint8_t protocol;
-  DPAUCS_ipProtocolHandler_func handler;
-} ipProtocolHandlers[MAX_IP_PROTO_HANDLERS];
+DPAUCS_ipProtocolHandler_t* ipProtocolHandlers[MAX_IP_PROTO_HANDLERS];
 
-void DPAUCS_addIpProtocolHandler(uint8_t protocol, DPAUCS_ipProtocolHandler_func handler){
+void DPAUCS_addIpProtocolHandler(DPAUCS_ipProtocolHandler_t* handler){
   for(int i=0; i<MAX_IP_PROTO_HANDLERS; i++)
-    if( !ipProtocolHandlers[i].handler ){
-      ipProtocolHandlers[i].protocol = protocol;
-      ipProtocolHandlers[i].handler = handler;
+    if( !ipProtocolHandlers[i] ){
+      ipProtocolHandlers[i] = handler;
       break;
     }
 }
 
-void DPAUCS_removeIpProtocolHandler(uint8_t protocol){
+void DPAUCS_removeIpProtocolHandler(DPAUCS_ipProtocolHandler_t* handler){
   for(int i=0; i<MAX_IP_PROTO_HANDLERS; i++)
-    if( ipProtocolHandlers[i].protocol == protocol ){
-      ipProtocolHandlers[i].handler = 0;
+    if( ipProtocolHandlers[i] == handler ){
+      ipProtocolHandlers[i] = 0;
       break;
     }
 }
@@ -140,13 +136,12 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
     if(!destination||i<0) return; // not my ip and not broadcast
   }
 
-  DPAUCS_ipProtocolHandler_func handler = 0;
+  DPAUCS_ipProtocolHandler_t* handler = 0;
   for(int i=0; i<MAX_IP_PROTO_HANDLERS; i++)
-    if(
-        ipProtocolHandlers[i].handler
-     && ipProtocolHandlers[i].protocol == ip->protocol
+    if( ipProtocolHandlers[i]
+     && ipProtocolHandlers[i]->protocol == ip->protocol
     ){
-      handler = ipProtocolHandlers[i].handler;
+      handler = ipProtocolHandlers[i];
       break;
     }
   if(!handler) return; 
@@ -161,6 +156,7 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   ipInfo.tos = ip->tos;
   ipInfo.offset = 0;
   ipInfo.valid = true;
+  ipInfo.onremove = handler->onrecivefailture;
 
   uint16_t headerlength = (ip->version_ihl & 0x0F) * 4;
 
@@ -189,7 +185,8 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
       DPAUCS_ip_fragment_t** f_ptr = &f;
       while(true){
         if(
-            !(*handler)(
+            !(*handler->onrecive)(
+              ipi,
               &f->info->src,
               &f->info->dest,
               &IPv4_transmissionBegin,
@@ -201,6 +198,7 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
             )
          || !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
         ){
+          ipi->onremove = 0;
           DPAUCS_removeIpPacket(f->info);
         }else{
 	  DPAUCS_removeIpFragment(f_ptr);
@@ -225,7 +223,8 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
     }
   }else{
     DPAUCS_ipPacketInfo_t* ipp = ipi ? ipi : &ipInfo;
-    (*handler)(
+    (*handler->onrecive)(
+      ipi,
       &ipp->src,
       &ipp->dest,
       &IPv4_transmissionBegin,
@@ -235,8 +234,10 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
       payload,
       !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
     );
-    if(ipi)
+    if(ipi){
+      ipi->onremove = 0;
       DPAUCS_removeIpPacket(ipi);
+    }
     ipi = 0;
   }
 

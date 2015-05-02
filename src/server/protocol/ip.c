@@ -83,7 +83,7 @@ static void IPv4_transmissionEnd(){
       memset( &p, 0, sizeof(DPAUCS_packet_info) );
       p.type = ETH_TYPE_IP_V4;
       memcpy( p.destination_mac, dst->mac, 6 );
-      memcpy( p.source_mac, ((eth_ip_address_t*)currentTransmission.from)->mac, 6 );
+      memcpy( p.source_mac, src->mac, 6 );
       DPAUCS_preparePacket( &p );
 
       // create ip header

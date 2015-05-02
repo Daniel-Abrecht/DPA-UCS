@@ -13,7 +13,7 @@ bool DPAUCS_icmp_handler( void* from, void* to, DPAUCS_beginTransmission begin, 
       icmp->checksum = 0;
       icmp->checksum = checksum( payload, sizeof(DPAUCS_icmp_t) );
       void* ret[] = { from, 0 };
-      stream_t* stream = (*begin)( to, ret, IP_PROTOCOL_ICMP );(void)stream;
+      stream_t* stream = (*begin)( to, ret, IP_PROTOCOL_ICMP );
       DPAUCS_stream_referenceWrite( stream, payload, length );
       (*end)();
     } break;

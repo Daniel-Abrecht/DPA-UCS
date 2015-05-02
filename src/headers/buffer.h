@@ -9,7 +9,7 @@
   }
 
 #define DEFINE_BUFFER(B,T,name,size) \
-  static B name ## _buffer[size]; \
+  static B name ## _buffer[1<<size]; \
   T name = { name ## _buffer, (1<<size)-1, 0, 0 }
 
 #define BUFFER_SIZE(buf) ( (buf)->write_offset - (buf)->read_offset )

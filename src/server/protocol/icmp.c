@@ -1,7 +1,7 @@
 #include <checksum.h>
 #include <protocol/icmp.h>
 
-bool DPAUCS_icmp_handler( void* from, void* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool icmp_handler( void* from, void* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
   if(!last)
     return false;
   (void)offset;
@@ -21,3 +21,10 @@ bool DPAUCS_icmp_handler( void* from, void* to, DPAUCS_beginTransmission begin, 
   return true;
 }
 
+void DPAUCS_icmpInit(){
+  DPAUCS_addIpProtocolHandler(IP_PROTOCOL_ICMP,&icmp_handler);
+}
+
+void DPAUCS_icmpShutdown(){
+  DPAUCS_removeIpProtocolHandler(IP_PROTOCOL_ICMP);
+}

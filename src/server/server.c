@@ -59,7 +59,8 @@ void DPAUCS_add_service( uint32_t ip, uint16_t port, DPAUCS_service_t* service )
       services[i].port = port;
       services[i].ip = ip;
       services[i].service = *service;
-      (*services[i].service.start)();
+      if(services[i].service.start)
+        (*services[i].service.start)();
       break;
     }
   }
@@ -67,9 +68,10 @@ void DPAUCS_add_service( uint32_t ip, uint16_t port, DPAUCS_service_t* service )
 
 void DPAUCS_remove_service( uint32_t ip, uint16_t port ){
   for(int i=0;i<MAX_SERVICES;i++){
-    if( services[i].ip == ip && services[i].port == port ){
+    if( services[i].active && services[i].ip == ip && services[i].port == port ){
       services[i].active = false;
-      (*services[i].service.stop)();
+      if(services[i].service.stop)
+        (*services[i].service.stop)();
       break;
     }
   }

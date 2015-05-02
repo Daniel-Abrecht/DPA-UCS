@@ -30,7 +30,7 @@ void DPAUCS_removeIpProtocolHandler(uint8_t protocol){
 }
 
 //static buffer_buffer_t outputStreamBufferBuffer;
-DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,6);
+DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,9);
 DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,6);
 
 static stream_t outputStream = {

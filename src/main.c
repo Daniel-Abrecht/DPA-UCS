@@ -14,7 +14,7 @@ int main(void){
   DPAUCS_add_ip(IPINT(192,168,1,29));
   DPAUCS_add_ip(IPINT(192,168,43,29));
 
-  DPAUCS_addIpProtocolHandler(IP_PROTOCOL_ICMP,&DPAUCS_icmp_handler);
+  DPAUCS_icmpInit();
 
   while(1){
     DPAUCS_doNextTask();

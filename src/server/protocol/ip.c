@@ -25,8 +25,8 @@ void DPAUCS_removeIpProtocolHandler(DPAUCS_ipProtocolHandler_t* handler){
 }
 
 //static buffer_buffer_t outputStreamBufferBuffer;
-DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,9);
-DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,6);
+DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,0);
+DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,3);
 
 static stream_t outputStream = {
   &outputStreamBuffer,

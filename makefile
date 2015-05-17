@@ -17,20 +17,30 @@ LINUX_GEN_DEST = FilesAsCArrays
 
 LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${LINUX_GEN_DEST} -iname "*.o")
 
-LINUX_FILES  = $(TEMP_LINUX)/main.o
-LINUX_FILES += $(TEMP_LINUX)/server/drivers/eth/linux.o
-LINUX_FILES += $(TEMP_LINUX)/server/server.o
-LINUX_FILES += $(TEMP_LINUX)/server/stream.o
-LINUX_FILES += $(TEMP_LINUX)/server/mempool.o
-LINUX_FILES += $(TEMP_LINUX)/server/checksum.o
-LINUX_FILES += $(TEMP_LINUX)/server/binaryUtils.o
-LINUX_FILES += $(TEMP_LINUX)/server/protocol/arp.o
-LINUX_FILES += $(TEMP_LINUX)/server/protocol/tcp.o
-LINUX_FILES += $(TEMP_LINUX)/server/protocol/icmp.o
-LINUX_FILES += $(TEMP_LINUX)/server/protocol/ip.o
-LINUX_FILES += $(TEMP_LINUX)/server/protocol/ip_stack.o
-LINUX_FILES += $(TEMP_LINUX)/server/protocol/tcp_ip_stack_memory.o
-LINUX_FILES += $(TEMP_LINUX)/files.g1.o
+FILES  = main.o
+FILES += server/server.o
+FILES += server/stream.o
+FILES += server/mempool.o
+FILES += server/checksum.o
+FILES += server/binaryUtils.o
+FILES += server/protocol/arp.o
+FILES += server/protocol/tcp.o
+FILES += server/protocol/icmp.o
+FILES += server/protocol/ip.o
+FILES += server/protocol/ip_stack.o
+FILES += server/protocol/tcp_ip_stack_memory.o
+FILES += server/services/http.o
+FILES += files.g1.o
+
+LINUX_FILES_TMP  = $(FILES)
+LINUX_FILES_TMP += server/drivers/eth/linux.o
+
+LINUX_FILES = $(shell \
+  for file in ${LINUX_FILES_TMP}; \
+  do \
+    echo "${TEMP_LINUX}/$$file"; \
+  done; \
+)
 
 all: linux
 

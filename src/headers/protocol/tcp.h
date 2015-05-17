@@ -1,11 +1,18 @@
 #ifndef TCP_H
 #define TCP_H
 
-#define IP_PROTOCOL_TCP 6
+#define PROTOCOL_TCP 6
 
 #include <stdbool.h>
 #include <packed.h>
 #include <protocol/ip.h>
+
+#define TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT (1<<3)
+#define STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT 32
+#define TCP_ACK_TIMEOUT 250
+#define TCP_KEEPALIVE_CHECK 6 * 1000
+#define TCP_DROP_AFTER_FAILTURES 10
+
 
 typedef PACKED1 struct PACKED2 {
   uint16_t source;
@@ -13,7 +20,7 @@ typedef PACKED1 struct PACKED2 {
   uint32_t sequence;
   uint32_t acknowledgment;
   union {
-    uint8_t dataOffset; // 5: header length | 3 reserved
+    uint8_t dataOffset; // 4: header length | 3 reserved
     uint16_t flags;
   };
   uint16_t windowSize;
@@ -32,6 +39,25 @@ enum tcp_flags {
   TCP_FLAG_CWR = 1<<7,
   TCP_FLAG_NS  = 1<<8
 };
+
+typedef enum {
+  TCP_SYN_RCVD_STATE,
+  TCP_SYN_SENT_STATE,
+  TCP_ESTAB_STATE,
+  TCP_FIN_WAIT_1_STATE,
+  TCP_CLOSE_WAIT_STATE,
+  TCP_FIN_WAIT_2_STATE,
+  TCP_CLOSING_STATE,
+  TCP_LAST_ACK_STATE,
+  TCP_TIME_WAIT_STATE
+} TCP_state_t;
+
+typedef struct {
+  bool active;
+  uint16_t srcPort, destPort;
+  void *srcAddr, *dstAddr;
+  TCP_state_t state;
+} transmissionControlBlock_t;
 
 void DPAUCS_tcpInit();
 void DPAUCS_tcpShutdown();

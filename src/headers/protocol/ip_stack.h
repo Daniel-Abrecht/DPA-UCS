@@ -4,19 +4,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <protocol/tcp_ip_stack_memory.h>
+#include <protocol/address.h>
 
 #define DEFAULT_TTL 64
 #define DPAUCS_MAX_INCOMPLETE_IP_PACKETS 32
 #define DPAUCS_IP_FRAGMENT_DATA_OFFSET ( offsetof(DPAUCS_ip_fragment_t,info) + sizeof(DPAUCS_ipPacketInfo_t*) )
 
 typedef struct {
+  DPAUCS_address_t addr;
   uint32_t ip;
-  uint8_t mac[6];
-} eth_ip_address_t;
+} ip_address_t;
 
 typedef struct DPAUCS_ipPacketInfo {
-  eth_ip_address_t src;
-  eth_ip_address_t dest;
+  ip_address_t src;
+  ip_address_t dest;
   uint16_t id;
   uint8_t tos; // Type of Service
   uint16_t offset;

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include <server.h>
 #include <checksum.h>
 #include <binaryUtils.h>
@@ -59,7 +60,7 @@ static void IPv4_transmissionEnd(){
   buffer_buffer_t bb = outputStreamBufferBuffer;
   stream_t inputStream = { &cb, &bb, 0, 0 };
 
-  eth_ip_address_t* src = currentTransmission.from;
+  ip_address_t* src = currentTransmission.from;
 
   for(void** to = currentTransmission.to;*to;to++,id++){
 
@@ -67,7 +68,7 @@ static void IPv4_transmissionEnd(){
     cb.read_offset = outputStreamBuffer.read_offset;
     bb.read_offset = outputStreamBufferBuffer.read_offset;
 
-    const eth_ip_address_t* dst = *to;
+    const ip_address_t* dst = *to;
 
     uint8_t offset = 0;
 
@@ -77,8 +78,8 @@ static void IPv4_transmissionEnd(){
       DPAUCS_packet_info p;
       memset( &p, 0, sizeof(DPAUCS_packet_info) );
       p.type = ETH_TYPE_IP_V4;
-      memcpy( p.destination_mac, dst->mac, 6 );
-      memcpy( p.source_mac, src->mac, 6 );
+      memcpy( p.destination_mac, dst->addr.mac, 6 );
+      memcpy( p.source_mac, src->addr.mac, 6 );
       DPAUCS_preparePacket( &p );
 
       // create ip header
@@ -145,19 +146,24 @@ static void IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
     }
   if(!handler) return; 
 
+  uint16_t headerlength = (ip->version_ihl & 0x0F) * 4;
+
+  if( checksum( ip, headerlength ) )
+    return; // invalid checksum
+
   DPAUCS_ip_fragment_t fragment;
   DPAUCS_ipPacketInfo_t ipInfo;
   ipInfo.src.ip = source;
   ipInfo.dest.ip = destination;
-  memcpy(ipInfo.src.mac,info->source_mac,6);
-  memcpy(ipInfo.dest.mac,info->destination_mac,6);
+  ipInfo.src.addr.type = AT_IPv4;
+  ipInfo.dest.addr.type = AT_IPv4;
+  memcpy(ipInfo.src.addr.mac,info->source_mac,6);
+  memcpy(ipInfo.dest.addr.mac,info->destination_mac,6);
   ipInfo.id = ip->id;
   ipInfo.tos = ip->tos;
   ipInfo.offset = 0;
   ipInfo.valid = true;
   ipInfo.onremove = handler->onrecivefailture;
-
-  uint16_t headerlength = (ip->version_ihl & 0x0F) * 4;
 
   fragment.offset = (uint16_t)( (uint16_t)( ip->flags_offset1 & 0x1F ) | (uint16_t)ip->offset2 << 5u ) * 8u;
   fragment.length = btoh16(ip->length) - headerlength;

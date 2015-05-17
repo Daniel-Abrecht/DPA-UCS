@@ -84,8 +84,8 @@ bool DPAUCS_areFragmentsFromSameIpPacket( DPAUCS_ipPacketInfo_t* a, DPAUCS_ipPac
      && a->tos == b->tos
      && a->src.ip == b->src.ip
      && a->src.ip == b->src.ip
-     && !memcmp(a->src.mac,b->src.mac,6)
-     && !memcmp(a->dest.mac,b->dest.mac,6)
+     && !memcmp(a->src.addr.mac,b->src.addr.mac,6)
+     && !memcmp(a->dest.addr.mac,b->dest.addr.mac,6)
     );
   }
   return false;

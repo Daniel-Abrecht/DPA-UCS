@@ -3,6 +3,13 @@
 #include <checksum.h>
 #include <protocol/tcp.h>
 
+// All connections
+transmissionControlBlock_t transmissionControlBlocks[ TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT + STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT ];
+// Connections in FINWAIT-2, LAST-ACK, CLOSEING, SYN-SENT or SYN-RCVD state
+transmissionControlBlock_t* temporaryTransmissionControlBlocks = transmissionControlBlocks;
+// Connections in ESTAB, FIN-WAIT-1 or CLOSE-WAIT state
+transmissionControlBlock_t* staticTransmissionControlBlocks = transmissionControlBlocks + TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT;
+
 void hexdump(const unsigned char* x,unsigned s,unsigned y){
   unsigned i;
   for(i=0;i<s;i++,x++)
@@ -26,7 +33,7 @@ static void printFrame( DPAUCS_tcp_t* tcp ){
     (unsigned)btoh16(tcp->destination),
     (unsigned)btoh32(tcp->sequence),
     (unsigned)btoh32(tcp->acknowledgment),
-    (unsigned)((tcp->dataOffset>>1)&~3u),
+    (unsigned)((tcp->dataOffset>>2)&~3u),
     ( flags & TCP_FLAG_FIN ) ? "FIN" : "",
     ( flags & TCP_FLAG_SYN ) ? "SYN" : "",
     ( flags & TCP_FLAG_RST ) ? "RST" : "",
@@ -43,6 +50,8 @@ static void printFrame( DPAUCS_tcp_t* tcp ){
 }
 
 static bool tcp_reciveHandler( void* id, void* from, void* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+  if( length < 40 )
+    return false;
   (void)id;
   (void)from;
   (void)to;
@@ -50,8 +59,28 @@ static bool tcp_reciveHandler( void* id, void* from, void* to, DPAUCS_beginTrans
   (void)end;
   (void)last;
   DPAUCS_tcp_t* tcp = payload;
+  uint16_t headerLength = ( tcp->dataOffset >> 2 ) & ~3u;
+  if( headerLength > length )
+    return false;
   printf("-- tcp_reciveHandler | id: %p offset: %u size: %u --\n",id,(unsigned)offset,(unsigned)length);
   printFrame(tcp);
+  uint8_t* options = (uint8_t*)payload + 40;
+  while( options < (uint8_t*)payload+headerLength ){
+  printf("option %.2X\n",(int)options[0]);
+  switch(options[0]){
+    case 0: goto afterOptionLoop; // end
+    case 1: options++; continue; // noop
+    default: { // other
+      uint8_t size = options[1];
+      if( size < 2 || options+size > (uint8_t*)payload+headerLength )
+        goto afterOptionLoop;
+      printf("size: %u\n",(unsigned)size);
+      hexdump(options+2,size-2,16);
+      options += size;
+    } break;
+  }
+  }
+  afterOptionLoop:;
   uint16_t flags = btoh16( tcp->flags );
   (void)flags;
   return true;
@@ -62,7 +91,7 @@ static void tcp_reciveFailtureHandler( void* id ){
 }
 
 static DPAUCS_ipProtocolHandler_t tcp_handler = {
-  .protocol = IP_PROTOCOL_TCP,
+  .protocol = PROTOCOL_TCP,
   .onrecive = &tcp_reciveHandler,
   .onrecivefailture = &tcp_reciveFailtureHandler
 };

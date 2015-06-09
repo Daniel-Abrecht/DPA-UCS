@@ -5,8 +5,10 @@
 #include <packet.h>
 #include <packed.h>
 #include <stream.h>
+#include <protocol/address.h>
 
 #define MAX_IP_PROTO_HANDLERS 3
+
 
 enum DPAUCS_ipv4_flags {
   IPv4_FLAG_DONT_FRAGMENT  = 0x02,
@@ -47,9 +49,9 @@ typedef PACKED1 union PACKED2 {
 
 void DPAUCS_ip_handler( DPAUCS_packet_info* info );
 
-typedef stream_t*(*DPAUCS_beginTransmission)( void* from, void** to, uint8_t type );
+typedef stream_t*(*DPAUCS_beginTransmission)( DPAUCS_address_t* from, DPAUCS_address_t** to, uint8_t type );
 typedef void(*DPAUCS_endTransmission)();
-typedef bool(*DPAUCS_ipProtocolReciveHandler_func)( void* id, void* from, void* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
+typedef bool(*DPAUCS_ipProtocolReciveHandler_func)( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
 typedef void(*DPAUCS_ipProtocolFailtureHandler_func)( void* id );
 
 typedef struct {

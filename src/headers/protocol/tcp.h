@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <packed.h>
 #include <protocol/ip.h>
+#include <protocol/address.h>
 
 #define TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT (1<<3)
 #define STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT 32
@@ -55,7 +56,8 @@ typedef enum {
 typedef struct {
   bool active;
   uint16_t srcPort, destPort;
-  void *srcAddr, *dstAddr;
+  DPAUCS_logicAddress_t *srcAddr, *destAddr;
+  DPAUCS_service_t* service;
   TCP_state_t state;
 } transmissionControlBlock_t;
 

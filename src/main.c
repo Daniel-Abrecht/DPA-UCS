@@ -1,5 +1,5 @@
-#include <base_def.h>
 #include <server.h>
+#include <protocol/address.h>
 #include <protocol/ip.h>
 #include <services/http.h>
 #include <protocol/icmp.h>
@@ -12,11 +12,17 @@ int main(void){
 
   DPAUCS_init();
 
-  DPAUCS_add_ip(IPINT(192,168,1,29));
-  DPAUCS_add_ip(IPINT(192,168,43,29));
+  static const DPAUCS_logicAddress_IPv4_t ipv4addrs[] = {
+    LA_IPv4(192,168,1,29),
+    LA_IPv4(192,168,1,39),
+    LA_IPv4(192,168,43,29)
+  };
+
+  for( unsigned i=0; i<sizeof(ipv4addrs); i++ )
+    DPAUCS_add_logicAddress( &ipv4addrs[i].logicAddress );
 
   DPAUCS_icmpInit();
-  DPAUCS_add_service( IP_ANY, 80, &http_service );
+  DPAUCS_add_service( ANY_ADDRESS, 80, &http_service );
 
   while(1){
     DPAUCS_doNextTask();

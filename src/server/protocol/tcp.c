@@ -1,7 +1,9 @@
 #include <stdio.h>
-#include <binaryUtils.h>
+#include <service.h>
 #include <checksum.h>
+#include <binaryUtils.h>
 #include <protocol/tcp.h>
+#include <server.h>
 
 // All connections
 transmissionControlBlock_t transmissionControlBlocks[ TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT + STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT ];
@@ -49,7 +51,7 @@ static void printFrame( DPAUCS_tcp_t* tcp ){
   );
 }
 
-static bool tcp_reciveHandler( void* id, void* from, void* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
   if( length < 40 )
     return false;
   (void)id;
@@ -62,6 +64,21 @@ static bool tcp_reciveHandler( void* id, void* from, void* to, DPAUCS_beginTrans
   uint16_t headerLength = ( tcp->dataOffset >> 2 ) & ~3u;
   if( headerLength > length )
     return false;
+  transmissionControlBlock_t tcb = {
+    .active = true,
+    .srcPort = btoh16(tcp->destination),
+    .destPort = btoh16(tcp->source),
+    .srcAddr = &to->logicAddress,
+    .destAddr = &from->logicAddress,
+    .service = DPAUCS_get_service( &to->logicAddress, btoh16(tcp->destination) )
+  };
+  if(
+      !tcb.service
+   || !tcb.destPort
+   || !tcb.destAddr 
+   || !DPAUCS_isValidHostAddress( tcb.destAddr )
+   || !tcb.service
+  ) return false;
   printf("-- tcp_reciveHandler | id: %p offset: %u size: %u --\n",id,(unsigned)offset,(unsigned)length);
   printFrame(tcp);
   uint8_t* options = (uint8_t*)payload + 40;

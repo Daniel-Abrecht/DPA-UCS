@@ -4,12 +4,10 @@
 #include <stdint.h>
 #include <service.h>
 #include <packet.h>
+#include <protocol/address.h>
 
-#define IP_ANY 0
-#define IP_BROADCAST (~(uint32_t)0)
-
-#ifndef MAX_IPS
-#define MAX_IPS 8
+#ifndef MAX_LOGIC_ADDRESSES
+#define MAX_LOGIC_ADDRESSES 8
 #endif
 
 #ifndef MAX_SERVICES
@@ -18,17 +16,19 @@
 
 
 extern uint8_t mac[6];
-extern uint32_t ips[MAX_IPS];
-
 
 void DPAUCS_init( void );
 void DPAUCS_shutdown( void );
-void DPAUCS_add_ip( uint32_t ip );
-void DPAUCS_remove_ip( uint32_t ip );
-void DPAUCS_add_service( uint32_t ip, uint16_t port, DPAUCS_service_t* service );
-void DPAUCS_remove_service( uint32_t ip, uint16_t port );
-void DPAUCS_doNextTask( void );
 
+void DPAUCS_add_logicAddress( const DPAUCS_logicAddress_t*const logicAddress );
+void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress );
+void DPAUCS_each_logicAddress(DPAUCS_address_types_t, bool(*)(const DPAUCS_logicAddress_t*,void*), void*);
+bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* addr);
+
+void DPAUCS_add_service( const DPAUCS_logicAddress_t* logicAddress, uint16_t port, DPAUCS_service_t* service );
+DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port );
+void DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port );
+void DPAUCS_doNextTask( void );
 
 // Internally used stuff //
 void DPAUCS_preparePacket( DPAUCS_packet_info* info );

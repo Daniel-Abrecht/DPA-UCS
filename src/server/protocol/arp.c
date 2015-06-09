@@ -3,6 +3,7 @@
 #include <server.h>
 #include <binaryUtils.h>
 #include <protocol/ethtypes.h>
+#include <protocol/address.h>
 #include <protocol/arp.h>
 
 void DPAUCS_arp_handler(DPAUCS_packet_info* info){
@@ -28,12 +29,14 @@ void DPAUCS_arp_handler(DPAUCS_packet_info* info){
       uint32_t src_ip  = btoh32( *(uint32_t*)spa );
       uint32_t dest_ip = btoh32( *(uint32_t*)tpa );
 
-      if(dest_ip){ // check if destination isn't broadcast
-        int i;
-        for(i=MAX_IPS;i--;) // and one of my ips
-          if(ips[i]==dest_ip)
-            break;
-        if(i<0) return; // not my ip and not broadcast
+      if( dest_ip ){
+        DPAUCS_logicAddress_IPv4_t addr = {
+          LA_IPv4_INIT,
+          .address = dest_ip
+        };
+        if( !DPAUCS_isValidHostAddress(&addr.logicAddress)
+         || !DPAUCS_has_logicAddress(&addr.logicAddress)
+        ) return;
       }
 
       switch( btoh16( arp->oper ) ){

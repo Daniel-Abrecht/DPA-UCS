@@ -28,6 +28,7 @@ FILES += server/protocol/tcp.o
 FILES += server/protocol/icmp.o
 FILES += server/protocol/ip.o
 FILES += server/protocol/ip_stack.o
+FILES += server/protocol/address.o
 FILES += server/protocol/tcp_ip_stack_memory.o
 FILES += server/services/http.o
 FILES += files.g1.o

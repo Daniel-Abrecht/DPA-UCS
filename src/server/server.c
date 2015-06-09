@@ -6,18 +6,18 @@
 #include <packet.h>
 #include <binaryUtils.h>
 #include <protocol/ethtypes.h>
+#include <protocol/address.h>
 #include <protocol/arp.h>
 #include <protocol/ip.h>
-#include <stdio.h>
 
-uint32_t ips[MAX_IPS] = {0};
+const DPAUCS_logicAddress_t* logicAddresses[MAX_LOGIC_ADDRESSES] = {0};
 
 static DPAUCS_packet_t packetInputBuffer;
 static DPAUCS_packet_t nextPacketToSend;
 
 static struct {
   bool active;
-  uint32_t ip;
+  const DPAUCS_logicAddress_t* logicAddress;
   uint16_t port;
   DPAUCS_service_t service;
 } services[MAX_SERVICES];
@@ -34,30 +34,44 @@ void DPAUCS_shutdown( void ){
 
 }
 
-void DPAUCS_add_ip( uint32_t ip ){
-  for(int i=0;i<MAX_IPS;i++){
-    if(!ips[i]){
-      ips[i] = ip;
+void DPAUCS_add_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){
+  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
+    if(!logicAddresses[i]){
+      logicAddresses[i] = logicAddress;
       break;
     }
   }
 }
 
-void DPAUCS_remove_ip( uint32_t ip ){
-  for(int i=0;i<MAX_IPS;i++){
-    if(ips[i]==ip){
-      ips[i] = 0;
+void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){
+  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
+    if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress)){
+      logicAddresses[i] = 0;
       break;
     }
   }
 }
 
-void DPAUCS_add_service( uint32_t ip, uint16_t port, DPAUCS_service_t* service ){
+void DPAUCS_each_logicAddress(DPAUCS_address_types_t type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
+  for( int i=0; i<MAX_LOGIC_ADDRESSES; i++ )
+    if( logicAddresses[i]->type & type )
+      if( !(*func)(logicAddresses[i],x) )
+        break;
+}
+
+bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
+  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
+    if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress))
+      return true;
+  return false;
+}
+
+void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, DPAUCS_service_t* service ){
   for(int i=0;i<MAX_SERVICES;i++){
     if(!services[i].active){
       services[i].active = true;
       services[i].port = port;
-      services[i].ip = ip;
+      services[i].logicAddress = logicAddress;
       services[i].service = *service;
       if(services[i].service.start)
         (*services[i].service.start)();
@@ -66,15 +80,31 @@ void DPAUCS_add_service( uint32_t ip, uint16_t port, DPAUCS_service_t* service )
   }
 }
 
-void DPAUCS_remove_service( uint32_t ip, uint16_t port ){
+void DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port ){
   for(int i=0;i<MAX_SERVICES;i++){
-    if( services[i].active && services[i].ip == ip && services[i].port == port ){
+    if( services[i].active
+       && (
+          !services[i].logicAddress
+       || DPAUCS_compare_logicAddress( services[i].logicAddress, logicAddress )
+     ) && services[i].port == port
+    ){
       services[i].active = false;
       if(services[i].service.stop)
         (*services[i].service.stop)();
       break;
     }
   }
+}
+
+DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port ){
+  for(int i=0;i<MAX_SERVICES;i++)
+    if( services[i].active
+       && ( 
+           !services[i].logicAddress
+        || DPAUCS_compare_logicAddress( services[i].logicAddress, logicAddress )
+      ) && services[i].port == port
+    ) return &services[i].service;
+    return 0;
 }
 
 void getPacketInfo( DPAUCS_packet_info* info, DPAUCS_packet_t* packet ){

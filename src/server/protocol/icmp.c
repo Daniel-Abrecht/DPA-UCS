@@ -22,7 +22,7 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
   return true;
 }
 
-static DPAUCS_ipProtocolHandler_t icmp_handler = {
+static DPAUCS_layer3_protocolHandler_t icmp_handler = {
   .protocol = IP_PROTOCOL_ICMP,
   .onrecive = &icmp_reciveHandler
 };
@@ -31,10 +31,10 @@ static int counter = 0;
 
 void DPAUCS_icmpInit(){
   if(counter++) return;
-  DPAUCS_addIpProtocolHandler(&icmp_handler);
+  DPAUCS_layer3_addProtocolHandler(&icmp_handler);
 }
 
 void DPAUCS_icmpShutdown(){
   if(--counter) return;
-  DPAUCS_removeIpProtocolHandler(&icmp_handler);
+  DPAUCS_layer3_removeProtocolHandler(&icmp_handler);
 }

@@ -1,3 +1,6 @@
+#ifndef STREAM_H
+#define STREAM_H
+
 #include <stdbool.h>
 #include <buffer.h>
 
@@ -14,3 +17,5 @@ void DPAUCS_stream_reset( stream_t*const );
 size_t DPAUCS_stream_read( stream_t*const, void*, size_t );
 
 #define DPAUCS_stream_eof(s) BUFFER_EOF((s)->buffer_buffer)
+
+#endif

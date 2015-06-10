@@ -27,6 +27,7 @@ FILES += server/protocol/arp.o
 FILES += server/protocol/tcp.o
 FILES += server/protocol/icmp.o
 FILES += server/protocol/ip.o
+FILES += server/protocol/ipv4.o
 FILES += server/protocol/ip_stack.o
 FILES += server/protocol/address.o
 FILES += server/protocol/tcp_ip_stack_memory.o

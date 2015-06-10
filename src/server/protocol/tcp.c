@@ -107,7 +107,7 @@ static void tcp_reciveFailtureHandler( void* id ){
   printf("-- tcp_reciveFailtureHandler | id: %p --\n",id);
 }
 
-static DPAUCS_ipProtocolHandler_t tcp_handler = {
+static DPAUCS_layer3_protocolHandler_t tcp_handler = {
   .protocol = PROTOCOL_TCP,
   .onrecive = &tcp_reciveHandler,
   .onrecivefailture = &tcp_reciveFailtureHandler
@@ -117,10 +117,10 @@ static int counter = 0;
 
 void DPAUCS_tcpInit(){
   if(counter++) return;
-  DPAUCS_addIpProtocolHandler(&tcp_handler);
+  DPAUCS_layer3_addProtocolHandler(&tcp_handler);
 }
 
 void DPAUCS_tcpShutdown(){
   if(--counter) return;
-  DPAUCS_removeIpProtocolHandler(&tcp_handler);
+  DPAUCS_layer3_removeProtocolHandler(&tcp_handler);
 }

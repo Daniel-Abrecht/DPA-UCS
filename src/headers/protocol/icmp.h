@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 #include <packed.h>
-#include <protocol/ip.h>
+#include <protocol/layer3.h>
 
 void DPAUCS_icmpInit();
 void DPAUCS_icmpShutdown();

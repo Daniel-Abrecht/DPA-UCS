@@ -1,6 +1,5 @@
 #include <server.h>
-#include <protocol/ip.h>
-#include <protocol/address.h>
+#include <protocol/layer3.h>
 #include <protocol/ip_stack.h>
 #include <protocol/ethtypes.h>
 
@@ -22,7 +21,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
   }
 
   DPAUCS_layer3_protocolHandler_t* handler = 0;
-  for(int i=0; i<MAX_IP_PROTO_HANDLERS; i++)
+  for(int i=0; i<MAX_LAYER3_PROTO_HANDLERS; i++)
     if( layer3_protocolHandlers[i]
      && layer3_protocolHandlers[i]->protocol == ip->protocol
     ){

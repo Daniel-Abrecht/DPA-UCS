@@ -5,8 +5,7 @@
 
 #include <stdbool.h>
 #include <packed.h>
-#include <protocol/ip.h>
-#include <protocol/address.h>
+#include <protocol/layer3.h>
 
 #define TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT (1<<3)
 #define STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT 32

@@ -59,7 +59,7 @@ void DPAUCS_layer3_transmissionEnd(){
     bb.read_offset = outputStreamBufferBuffer.read_offset;
 
     switch((*to)->type){
-      case AT_IPv4: DPAUCS_IPv4_transmit( &inputStream, (const DPAUCS_ipv4_address_t*)currentTransmission.from, (const DPAUCS_ipv4_address_t*)*to, currentTransmission.type ); break;
+      case AT_IPv4: DPAUCS_IPv4_transmit( &inputStream, (const DPAUCS_IPv4_address_t*)currentTransmission.from, (const DPAUCS_IPv4_address_t*)*to, currentTransmission.type ); break;
     }
 
   }

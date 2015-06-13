@@ -8,7 +8,7 @@
 #include <binaryUtils.h>
 #include <protocol/address.h>
 
-enum DPAUCS_ipv4_flags {
+enum DPAUCS_IPv4_flags {
   IPv4_FLAG_DONT_FRAGMENT  = 0x02,
   IPv4_FLAG_MORE_FRAGMENTS = 0x04
 };
@@ -26,23 +26,23 @@ typedef PACKED1 struct PACKED2 {
   uint16_t checksum;
   uint32_t source; // source IP address
   uint32_t destination; // destination IP address
-} DPAUCS_ipv4_t;
+} DPAUCS_IPv4_t;
 
 typedef struct {
   DPAUCS_address_t addr;
   uint32_t ip;
-} DPAUCS_ipv4_address_t;
+} DPAUCS_IPv4_address_t;
 
 void DPAUCS_IPv4_transmit(
   stream_t* inputStream,
-  const DPAUCS_ipv4_address_t* src,
-  const DPAUCS_ipv4_address_t* dst,
+  const DPAUCS_IPv4_address_t* src,
+  const DPAUCS_IPv4_address_t* dst,
   uint8_t type
 );
 
 void DPAUCS_IPv4_handler(
   DPAUCS_packet_info* info,
-  DPAUCS_ipv4_t* ip
+  DPAUCS_IPv4_t* ip
 );
 
 #endif

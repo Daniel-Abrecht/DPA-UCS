@@ -5,15 +5,15 @@
 #include <stdbool.h>
 #include <protocol/tcp_ip_stack_memory.h>
 #include <protocol/address.h>
-#include <protocol/ipv4.h>
+#include <protocol/IPv4.h>
 
 #define DEFAULT_TTL 64
 #define DPAUCS_MAX_INCOMPLETE_IP_PACKETS 32
 #define DPAUCS_IP_FRAGMENT_DATA_OFFSET ( offsetof(DPAUCS_ip_fragment_t,info) + sizeof(DPAUCS_ipPacketInfo_t*) )
 
 typedef struct DPAUCS_ipPacketInfo {
-  DPAUCS_ipv4_address_t src;
-  DPAUCS_ipv4_address_t dest;
+  DPAUCS_IPv4_address_t src;
+  DPAUCS_IPv4_address_t dest;
   uint16_t id;
   uint8_t tos; // Type of Service
   uint16_t offset;

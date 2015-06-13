@@ -10,6 +10,6 @@ typedef PACKED1 struct PACKED2 {
   uint8_t hopLimit;
   uint8_t sourceAddress[128];
   uint8_t destinationAddress[128];
-} DPAUCS_ipv6_t;
+} DPAUCS_IPv6_t;
 
 #endif

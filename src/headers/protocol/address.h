@@ -59,6 +59,26 @@ typedef struct {
   uint32_t address;
 } DPAUCS_logicAddress_IPv4_t;
 
+typedef struct {
+  const DPAUCS_logicAddress_t* source;
+  const DPAUCS_logicAddress_t* destination;
+} DPAUCS_logicAddress_pair_t;
+
+#define DPAUCS_TYPE_CHECK(T,V) \
+  (void)((struct{T x;}){.x=(V)})
+
+#define DPAUCS_logicAddress_pair_t(T,S,D) \
+  (const DPAUCS_logicAddress_pair_t){ \
+    .source = ( \
+      DPAUCS_TYPE_CHECK(const DPAUCS_logicAddress_ ## T ## _t*,(S)), \
+      &(S)->logicAddress \
+    ), \
+    .destination = ( \
+      DPAUCS_TYPE_CHECK(const DPAUCS_logicAddress_ ## T ## _t*,(D)), \
+      &(D)->logicAddress \
+    ) \
+  }
+
 bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t*);
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t*,const DPAUCS_logicAddress_t*);
 bool DPAUCS_isValidHostAddress(const DPAUCS_logicAddress_t*);

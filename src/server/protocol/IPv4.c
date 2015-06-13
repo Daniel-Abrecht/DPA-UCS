@@ -3,7 +3,7 @@
 #include <protocol/ip_stack.h>
 #include <protocol/ethtypes.h>
 
-void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
+void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
   if( btoh16(ip->length) > info->size )
     return;
 
@@ -132,7 +132,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_ipv4_t* ip ){
 
 }
 
-void DPAUCS_IPv4_transmit( stream_t* inputStream, const DPAUCS_ipv4_address_t* src, const DPAUCS_ipv4_address_t* dst, uint8_t type ){
+void DPAUCS_IPv4_transmit( stream_t* inputStream, const DPAUCS_IPv4_address_t* src, const DPAUCS_IPv4_address_t* dst, uint8_t type ){
   const uint16_t hl = 5;
   static uint16_t id = 0;
 
@@ -149,7 +149,7 @@ void DPAUCS_IPv4_transmit( stream_t* inputStream, const DPAUCS_ipv4_address_t* s
     DPAUCS_preparePacket( &p );
 
     // create ip header
-    DPAUCS_ipv4_t* ip = p.payload;
+    DPAUCS_IPv4_t* ip = p.payload;
     ip->version_ihl = (uint16_t)( 4u << 4u ) | ( hl & 0x0F );
     ip->id = htob16( id );
     ip->ttl = DEFAULT_TTL;
@@ -158,7 +158,7 @@ void DPAUCS_IPv4_transmit( stream_t* inputStream, const DPAUCS_ipv4_address_t* s
     ip->destination = htob32( dst->ip );
 
     // create content
-    size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, (PACKET_MAX_PAYLOAD - sizeof(DPAUCS_ipv4_t)) & ~7u );
+    size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, (PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t)) & ~7u );
 
     // complete ip header
     uint8_t flags = 0;

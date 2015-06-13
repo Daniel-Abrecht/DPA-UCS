@@ -29,9 +29,17 @@ typedef PACKED1 struct PACKED2 {
 } DPAUCS_IPv4_t;
 
 typedef struct {
-  DPAUCS_address_t addr;
+  DPAUCS_address_t address;
   uint32_t ip;
 } DPAUCS_IPv4_address_t;
+
+typedef struct {
+  union {
+    DPAUCS_address_types_t type;
+    DPAUCS_logicAddress_t logicAddress;
+  };
+  uint32_t address;
+} DPAUCS_logicAddress_IPv4_t;
 
 void DPAUCS_IPv4_transmit(
   stream_t* inputStream,

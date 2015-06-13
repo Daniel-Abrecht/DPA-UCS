@@ -13,8 +13,11 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
       icmp->type = ICMP_ECHO_REPLY;
       icmp->checksum = 0;
       icmp->checksum = checksum( payload, sizeof(DPAUCS_icmp_t) );
-      DPAUCS_address_t* ret[] = { from, 0 };
-      stream_t* stream = (*begin)( to, ret, IP_PROTOCOL_ICMP );
+      DPAUCS_address_pair_t fromTo = {
+        .source = to,
+        .destination = from
+      };
+      stream_t* stream = (*begin)( &fromTo, 1, IP_PROTOCOL_ICMP );
       DPAUCS_stream_referenceWrite( stream, payload, length );
       (*end)();
     } break;

@@ -12,7 +12,7 @@ static DPAUCS_ipPacketInfo_t* getNextIncompleteIpPacket(){
   return next;
 }
 
-DPAUCS_ip_fragment_t** DPAUCS_allocIpFragment( DPAUCS_ipPacketInfo_t* packet, uint16_t size ){
+DPAUCS_IPv4_fragment_t** DPAUCS_allocIpFragment( DPAUCS_ipPacketInfo_t* packet, uint16_t size ){
   DPAUCS_ipPacketInfo_t* info = 0;
   if(!packet){
     info = getNextIncompleteIpPacket();
@@ -26,10 +26,10 @@ DPAUCS_ip_fragment_t** DPAUCS_allocIpFragment( DPAUCS_ipPacketInfo_t* packet, ui
   }else{
     info = packet;
   }
-  DPAUCS_ip_fragment_t** f_ptr = DPAUCS_allocFragmentType(DPAUCS_ip_fragment_t,size);
+  DPAUCS_IPv4_fragment_t** f_ptr = DPAUCS_allocFragmentType(DPAUCS_IPv4_fragment_t,size);
   if(!f_ptr)
     return 0;
-  DPAUCS_ip_fragment_t* f = *f_ptr;
+  DPAUCS_IPv4_fragment_t* f = *f_ptr;
   if(!info->valid){ // if packet info and all its fragments were removed to gain enought space for new fragment
     DPAUCS_removeFragment((DPAUCS_fragment_t**)f_ptr);
     return 0;
@@ -51,19 +51,19 @@ DPAUCS_ipPacketInfo_t* DPAUCS_normalize_ip_packet_info_ptr(DPAUCS_ipPacketInfo_t
   return 0;
 }
 
-bool DPAUCS_isNextIpFragment( DPAUCS_ip_fragment_t* ipf ){
+bool DPAUCS_isNextIpFragment( DPAUCS_IPv4_fragment_t* ipf ){
   return !ipf->offset || ipf->info->offset == ipf->offset;
 }
 
 struct searchFollowingIpFragmentArgs {
-  DPAUCS_ip_fragment_t* prev;
-  DPAUCS_ip_fragment_t** result;
+  DPAUCS_IPv4_fragment_t* prev;
+  DPAUCS_IPv4_fragment_t** result;
 };
 
 static bool searchFollowingIpFragment( DPAUCS_fragment_t** f, void* arg ){
   struct searchFollowingIpFragmentArgs* args = arg;
-  DPAUCS_ip_fragment_t** ipf_ptr = (DPAUCS_ip_fragment_t**)f;
-  DPAUCS_ip_fragment_t* ipf = *ipf_ptr;
+  DPAUCS_IPv4_fragment_t** ipf_ptr = (DPAUCS_IPv4_fragment_t**)f;
+  DPAUCS_IPv4_fragment_t* ipf = *ipf_ptr;
   bool isNext = DPAUCS_isNextIpFragment(ipf);
   if( !isNext || ipf->info != args->prev->info )
     return true;
@@ -84,23 +84,23 @@ bool DPAUCS_areFragmentsFromSameIpPacket( DPAUCS_ipPacketInfo_t* a, DPAUCS_ipPac
      && a->tos == b->tos
      && a->src.ip == b->src.ip
      && a->src.ip == b->src.ip
-     && !memcmp(a->src.addr.mac,b->src.addr.mac,6)
-     && !memcmp(a->dest.addr.mac,b->dest.addr.mac,6)
+     && !memcmp(a->src.address.mac,b->src.address.mac,6)
+     && !memcmp(a->dest.address.mac,b->dest.address.mac,6)
     );
   }
   return false;
 }
 
-DPAUCS_ip_fragment_t** DPAUCS_searchFollowingIpFragment( DPAUCS_ip_fragment_t* ipf ){
+DPAUCS_IPv4_fragment_t** DPAUCS_searchFollowingIpFragment( DPAUCS_IPv4_fragment_t* ipf ){
   struct searchFollowingIpFragmentArgs args = {
     ipf,
     0
   };
-  DPAUCS_eachFragmentByType( DPAUCS_ip_fragment_t, &searchFollowingIpFragment, &args );
+  DPAUCS_eachFragmentByType( DPAUCS_IPv4_fragment_t, &searchFollowingIpFragment, &args );
   return args.result;
 }
 
-void DPAUCS_updateIpPackatOffset( DPAUCS_ip_fragment_t* f ){
+void DPAUCS_updateIpPackatOffset( DPAUCS_IPv4_fragment_t* f ){
   if(!DPAUCS_isNextIpFragment(f))
     return;
   f->info->offset += f->length;
@@ -109,7 +109,7 @@ void DPAUCS_updateIpPackatOffset( DPAUCS_ip_fragment_t* f ){
 static bool removePacketToo = true;
 
 static bool removeIpFragment( DPAUCS_fragment_t** f, void* packet_ptr ){
-  if( ((DPAUCS_ip_fragment_t*)*f)->info == packet_ptr ){
+  if( ((DPAUCS_IPv4_fragment_t*)*f)->info == packet_ptr ){
     removePacketToo = false;
     DPAUCS_removeFragment(f);
     removePacketToo = true;
@@ -119,23 +119,23 @@ static bool removeIpFragment( DPAUCS_fragment_t** f, void* packet_ptr ){
 
 static void ipFragmentDestructor(DPAUCS_fragment_t** f){
   if(removePacketToo)
-    DPAUCS_removeIpPacket(((DPAUCS_ip_fragment_t*)*f)->info);
+    DPAUCS_removeIpPacket(((DPAUCS_IPv4_fragment_t*)*f)->info);
 }
 
 void DPAUCS_removeIpPacket( DPAUCS_ipPacketInfo_t* ipf ){
   if(!ipf->valid)
     return;
   ipf->valid = false;
-  DPAUCS_eachFragmentByType( DPAUCS_ip_fragment_t, &removeIpFragment, ipf );
+  DPAUCS_eachFragmentByType( DPAUCS_IPv4_fragment_t, &removeIpFragment, ipf );
   if(ipf->onremove)
     (ipf->onremove)(ipf);
 }
 
-void DPAUCS_removeIpFragment( DPAUCS_ip_fragment_t** f ){
+void DPAUCS_removeIpFragment( DPAUCS_IPv4_fragment_t** f ){
   removeIpFragment((DPAUCS_fragment_t**)f,(*f)->info);
 }
 
-extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
-const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info = {
+extern const DPAUCS_fragment_info_t DPAUCS_IPv4_fragment_info;
+const DPAUCS_fragment_info_t DPAUCS_IPv4_fragment_info = {
   &ipFragmentDestructor
 };

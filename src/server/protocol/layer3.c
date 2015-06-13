@@ -14,8 +14,8 @@ static stream_t outputStream = {
 };
 
 static struct {
-  DPAUCS_address_t* from;
-  DPAUCS_address_t** to;
+  DPAUCS_address_pair_t* fromTo;
+  unsigned fromTo_count;
   uint8_t type;
 } currentTransmission;
 
@@ -37,9 +37,9 @@ void DPAUCS_layer3_removeProtocolHandler(DPAUCS_layer3_protocolHandler_t* handle
     }
 }
 
-stream_t* DPAUCS_layer3_transmissionBegin( DPAUCS_address_t* from, DPAUCS_address_t** to, uint8_t type ){
-  currentTransmission.from = from;
-  currentTransmission.to = to;
+stream_t* DPAUCS_layer3_transmissionBegin( DPAUCS_address_pair_t* fromTo, unsigned fromTo_count, uint8_t type ){
+  currentTransmission.fromTo = fromTo;
+  currentTransmission.fromTo_count = fromTo_count;
   currentTransmission.type = type;
   outputStream.outputStreamBufferWriteStartOffset = outputStreamBuffer.write_offset;
   outputStream.outputStreamBufferBufferWriteStartOffset = outputStreamBufferBuffer.write_offset;
@@ -52,14 +52,23 @@ void DPAUCS_layer3_transmissionEnd(){
   buffer_buffer_t bb = outputStreamBufferBuffer;
   stream_t inputStream = { &cb, &bb, 0, 0 };
 
-  for( DPAUCS_address_t** to=currentTransmission.to; *to; to++ ){
+  for( unsigned i=0; i<currentTransmission.fromTo_count; i++ ){
+
+    DPAUCS_address_pair_t* fromTo = currentTransmission.fromTo + i;
 
     // reset read offsets
     cb.read_offset = outputStreamBuffer.read_offset;
     bb.read_offset = outputStreamBufferBuffer.read_offset;
 
-    switch((*to)->type){
-      case AT_IPv4: DPAUCS_IPv4_transmit( &inputStream, (const DPAUCS_IPv4_address_t*)currentTransmission.from, (const DPAUCS_IPv4_address_t*)*to, currentTransmission.type ); break;
+    switch( fromTo->source->type ){
+
+      case AT_IPv4: DPAUCS_IPv4_transmit( 
+        &inputStream,
+        (const DPAUCS_IPv4_address_t*)fromTo->source,
+        (const DPAUCS_IPv4_address_t*)fromTo->destination,
+        currentTransmission.type
+      ); break;
+
     }
 
   }

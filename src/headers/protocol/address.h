@@ -33,6 +33,7 @@
   )
 
 #define ANY_ADDRESS 0
+#define AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
 
 typedef enum {
   AT_IPv4 = 1<<0
@@ -52,17 +53,14 @@ typedef struct {
 } DPAUCS_address_t;
 
 typedef struct {
-  union {
-    DPAUCS_address_types_t type;
-    DPAUCS_logicAddress_t logicAddress;
-  };
-  uint32_t address;
-} DPAUCS_logicAddress_IPv4_t;
-
-typedef struct {
   const DPAUCS_logicAddress_t* source;
   const DPAUCS_logicAddress_t* destination;
 } DPAUCS_logicAddress_pair_t;
+
+typedef struct {
+  const DPAUCS_address_t* source;
+  const DPAUCS_address_t* destination;
+} DPAUCS_address_pair_t;
 
 #define DPAUCS_TYPE_CHECK(T,V) \
   (void)((struct{T x;}){.x=(V)})
@@ -75,6 +73,18 @@ typedef struct {
     ), \
     .destination = ( \
       DPAUCS_TYPE_CHECK(const DPAUCS_logicAddress_ ## T ## _t*,(D)), \
+      &(D)->logicAddress \
+    ) \
+  }
+
+#define DPAUCS_address_pair_t(T,S,D) \
+  (const DPAUCS_address_pair_t){ \
+    .source = ( \
+      DPAUCS_TYPE_CHECK(const DPAUCS_ ## T ## _address_t*,(S)), \
+      &(S)->logicAddress \
+    ), \
+    .destination = ( \
+      DPAUCS_TYPE_CHECK(const DPAUCS_ ## T ## _address_t*,(D)), \
       &(D)->logicAddress \
     ) \
   }

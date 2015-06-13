@@ -35,14 +35,14 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
   if( checksum( ip, headerlength ) )
     return; // invalid checksum
 
-  DPAUCS_ip_fragment_t fragment;
+  DPAUCS_IPv4_fragment_t fragment;
   DPAUCS_ipPacketInfo_t ipInfo;
   ipInfo.src.ip = source;
   ipInfo.dest.ip = destination;
-  ipInfo.src.addr.type = AT_IPv4;
-  ipInfo.dest.addr.type = AT_IPv4;
-  memcpy(ipInfo.src.addr.mac,info->source_mac,6);
-  memcpy(ipInfo.dest.addr.mac,info->destination_mac,6);
+  ipInfo.src.address.type = AT_IPv4;
+  ipInfo.dest.address.type = AT_IPv4;
+  memcpy(ipInfo.src.address.mac,info->source_mac,6);
+  memcpy(ipInfo.dest.address.mac,info->destination_mac,6);
   ipInfo.id = ip->id;
   ipInfo.tos = ip->tos;
   ipInfo.offset = 0;
@@ -70,14 +70,14 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     fragment.info = ipi;
     if(isNext){
       DPAUCS_updateIpPackatOffset(&fragment);
-      DPAUCS_ip_fragment_t* f = &fragment;
-      DPAUCS_ip_fragment_t** f_ptr = &f;
+      DPAUCS_IPv4_fragment_t* f = &fragment;
+      DPAUCS_IPv4_fragment_t** f_ptr = &f;
       while(true){
         if(
             !(*handler->onrecive)(
               ipi,
-              &f->info->src.addr,
-              &f->info->dest.addr,
+              &f->info->src.address,
+              &f->info->dest.address,
               &DPAUCS_layer3_transmissionBegin,
               &DPAUCS_layer3_transmissionEnd,
               f->offset,
@@ -99,13 +99,13 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
 	payload = (uint8_t*)(f+1);
       }
     }else{
-      DPAUCS_ip_fragment_t** f_ptr = DPAUCS_allocIpFragment(ipi,fragment.length);
+      DPAUCS_IPv4_fragment_t** f_ptr = DPAUCS_allocIpFragment(ipi,fragment.length);
       if(!f_ptr)
         return;
       memcpy(
         ((uint8_t*)*f_ptr) + DPAUCS_IP_FRAGMENT_DATA_OFFSET,
         ((uint8_t*)&fragment) + DPAUCS_IP_FRAGMENT_DATA_OFFSET,
-        sizeof(DPAUCS_ip_fragment_t) - DPAUCS_IP_FRAGMENT_DATA_OFFSET
+        sizeof(DPAUCS_IPv4_fragment_t) - DPAUCS_IP_FRAGMENT_DATA_OFFSET
       );
       memcpy((*f_ptr)+1,payload,fragment.length);
       return;
@@ -114,8 +114,8 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     DPAUCS_ipPacketInfo_t* ipp = ipi ? ipi : &ipInfo;
     (*handler->onrecive)(
       ipp,
-      &ipp->src.addr,
-      &ipp->dest.addr,
+      &ipp->src.address,
+      &ipp->dest.address,
       &DPAUCS_layer3_transmissionBegin,
       &DPAUCS_layer3_transmissionEnd,
       fragment.offset,
@@ -144,8 +144,8 @@ void DPAUCS_IPv4_transmit( stream_t* inputStream, const DPAUCS_IPv4_address_t* s
     DPAUCS_packet_info p;
     memset( &p, 0, sizeof(DPAUCS_packet_info) );
     p.type = ETH_TYPE_IP_V4;
-    memcpy( p.destination_mac, dst->addr.mac, 6 );
-    memcpy( p.source_mac, src->addr.mac, 6 );
+    memcpy( p.destination_mac, dst->address.mac, 6 );
+    memcpy( p.source_mac, src->address.mac, 6 );
     DPAUCS_preparePacket( &p );
 
     // create ip header

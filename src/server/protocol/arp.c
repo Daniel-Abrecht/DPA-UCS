@@ -4,6 +4,7 @@
 #include <binaryUtils.h>
 #include <protocol/ethtypes.h>
 #include <protocol/address.h>
+#include <protocol/IPv4.h>
 #include <protocol/arp.h>
 
 void DPAUCS_arp_handler(DPAUCS_packet_info* info){

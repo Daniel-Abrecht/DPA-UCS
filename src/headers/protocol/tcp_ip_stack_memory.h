@@ -15,7 +15,7 @@
 // sizeof(enum) is equal to sizeof(int)
 // int is 16 bit large on some platforms
 enum DPAUCS_fragmentType {
-  FRAGMENT_TYPE_DPAUCS_ip_fragment_t = 1 << 0
+  FRAGMENT_TYPE_DPAUCS_IPv4_fragment_t = 1 << 0
 };
 
 typedef struct DPAUCS_fragment {

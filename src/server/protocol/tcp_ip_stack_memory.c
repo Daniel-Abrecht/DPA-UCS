@@ -3,10 +3,10 @@
 #include <stdint.h>
 
 
-extern const DPAUCS_fragment_info_t DPAUCS_IPv4_fragment_info;
+extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
 
 static const DPAUCS_fragment_info_t*const fragmentTypeInfos[] = {
-  &DPAUCS_IPv4_fragment_info
+  &DPAUCS_ip_fragment_info
 };
 
 

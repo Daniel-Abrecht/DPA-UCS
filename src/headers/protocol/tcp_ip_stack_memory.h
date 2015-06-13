@@ -8,14 +8,11 @@
 
 #define ANY_FRAGMENT ~0u
 
-#define DPAUCS_eachFragmentByType(T,x,y) DPAUCS_eachFragment(FRAGMENT_TYPE_ ## T,x,y)
-#define DPAUCS_allocFragmentType(T,x) (T**)DPAUCS_createFragment(FRAGMENT_TYPE_ ## T,sizeof(T)+x)
-
 // Don't add more than 16 fragment types
 // sizeof(enum) is equal to sizeof(int)
 // int is 16 bit large on some platforms
 enum DPAUCS_fragmentType {
-  FRAGMENT_TYPE_DPAUCS_IPv4_fragment_t = 1 << 0
+  DPAUCS_FRAGMENT_TYPE_IPv4 = 1 << 0
 };
 
 typedef struct DPAUCS_fragment {

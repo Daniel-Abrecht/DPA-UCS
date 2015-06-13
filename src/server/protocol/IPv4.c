@@ -35,97 +35,110 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
   if( checksum( ip, headerlength ) )
     return; // invalid checksum
 
-  DPAUCS_IPv4_fragment_t fragment;
-  DPAUCS_ipPacketInfo_t ipInfo;
-  ipInfo.src.ip = source;
-  ipInfo.dest.ip = destination;
-  ipInfo.src.address.type = AT_IPv4;
-  ipInfo.dest.address.type = AT_IPv4;
+  DPAUCS_IPv4_packetInfo_t ipInfo = {
+    .ipPacketInfo = {
+      .type = DPAUCS_FRAGMENT_TYPE_IPv4,
+      .valid = true,
+      .onremove = handler->onrecivefailture,
+      .offset = 0
+    },
+    .src = {
+      .address = {
+        .type = AT_IPv4
+      },
+      .ip = source
+    },
+    .dest = {
+      .address = {
+        .type = AT_IPv4
+      },
+      .ip = destination
+    },
+    .id = ip->id,
+    .tos = ip->tos,
+  };
   memcpy(ipInfo.src.address.mac,info->source_mac,6);
   memcpy(ipInfo.dest.address.mac,info->destination_mac,6);
-  ipInfo.id = ip->id;
-  ipInfo.tos = ip->tos;
-  ipInfo.offset = 0;
-  ipInfo.valid = true;
-  ipInfo.onremove = handler->onrecivefailture;
 
-  fragment.offset = (uint16_t)( (uint16_t)( ip->flags_offset1 & 0x1F ) | (uint16_t)ip->offset2 << 5u ) * 8u;
-  fragment.length = btoh16(ip->length) - headerlength;
-  fragment.flags = ( ip->flags_offset1 >> 5 ) & 0x07;
+  DPAUCS_IPv4_fragment_t fragment = {
+    .ipFragment = {
+      .offset = (uint16_t)( (uint16_t)( ip->flags_offset1 & 0x1F ) | (uint16_t)ip->offset2 << 5u ) * 8u,
+      .length = btoh16(ip->length) - headerlength
+    },
+    .flags = ( ip->flags_offset1 >> 5 ) & 0x07
+  };
 
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
-  DPAUCS_ipPacketInfo_t* ipi = DPAUCS_normalize_ip_packet_info_ptr(&ipInfo);
+  DPAUCS_IPv4_packetInfo_t* ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_normalize_ip_packet_info_ptr(&ipInfo.ipPacketInfo);
   bool isNext;
   if(ipi){
-    fragment.info = ipi;
-    isNext = DPAUCS_isNextIpFragment(&fragment);
+    fragment.ipFragment.info = (DPAUCS_ip_packetInfo_t*)ipi;
+    isNext = DPAUCS_isNextIpFragment(&fragment.ipFragment);
   }else{
-    isNext = !fragment.offset; 
+    isNext = !fragment.ipFragment.offset; 
   }
 
   if( fragment.flags & IPv4_FLAG_MORE_FRAGMENTS || !isNext ){
     if(!ipi)
-      ipi = DPAUCS_save_ip_packet_info(&ipInfo);
-    fragment.info = ipi;
+      ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_save_ip_packet_info(&ipInfo.ipPacketInfo);
+    fragment.ipFragment.info = (DPAUCS_ip_packetInfo_t*)ipi;
     if(isNext){
-      DPAUCS_updateIpPackatOffset(&fragment);
+      DPAUCS_updateIpPackatOffset(&fragment.ipFragment);
       DPAUCS_IPv4_fragment_t* f = &fragment;
       DPAUCS_IPv4_fragment_t** f_ptr = &f;
       while(true){
         if(
             !(*handler->onrecive)(
               ipi,
-              &f->info->src.address,
-              &f->info->dest.address,
+              &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->src.address,
+              &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->dest.address,
               &DPAUCS_layer3_transmissionBegin,
               &DPAUCS_layer3_transmissionEnd,
-              f->offset,
-              f->length,
+              f->ipFragment.offset,
+              f->ipFragment.length,
               payload,
               !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
             )
          || !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
         ){
-          ipi->onremove = 0;
-          DPAUCS_removeIpPacket(f->info);
+          ipi->ipPacketInfo.onremove = 0;
+          DPAUCS_removeIpPacket(f->ipFragment.info);
         }else{
-	  DPAUCS_removeIpFragment(f_ptr);
+	  DPAUCS_removeIpFragment((DPAUCS_ip_fragment_t**)f_ptr);
 	}
-        f_ptr = DPAUCS_searchFollowingIpFragment(*f_ptr);
+        f_ptr = (DPAUCS_IPv4_fragment_t**)DPAUCS_searchFollowingIpFragment(&(*f_ptr)->ipFragment);
         if(!f_ptr)
           break;
         f = *f_ptr;
 	payload = (uint8_t*)(f+1);
       }
     }else{
-      DPAUCS_IPv4_fragment_t** f_ptr = DPAUCS_allocIpFragment(ipi,fragment.length);
+      DPAUCS_IPv4_fragment_t** f_ptr = (DPAUCS_IPv4_fragment_t**)DPAUCS_layer3_allocFragment(&ipi->ipPacketInfo,fragment.ipFragment.length);
       if(!f_ptr)
         return;
-      memcpy(
-        ((uint8_t*)*f_ptr) + DPAUCS_IP_FRAGMENT_DATA_OFFSET,
-        ((uint8_t*)&fragment) + DPAUCS_IP_FRAGMENT_DATA_OFFSET,
-        sizeof(DPAUCS_IPv4_fragment_t) - DPAUCS_IP_FRAGMENT_DATA_OFFSET
-      );
-      memcpy((*f_ptr)+1,payload,fragment.length);
+      (*f_ptr)->ipFragment.offset = fragment.ipFragment.offset;
+      (*f_ptr)->ipFragment.length = fragment.ipFragment.length;
+      (*f_ptr)->flags = fragment.flags;
+      memcpy((*f_ptr)+1,payload,fragment.ipFragment.length);
       return;
     }
   }else{
-    DPAUCS_ipPacketInfo_t* ipp = ipi ? ipi : &ipInfo;
+    DPAUCS_IPv4_packetInfo_t* ipp = ipi ? ipi : &ipInfo;
     (*handler->onrecive)(
       ipp,
       &ipp->src.address,
       &ipp->dest.address,
       &DPAUCS_layer3_transmissionBegin,
       &DPAUCS_layer3_transmissionEnd,
-      fragment.offset,
-      fragment.length,
+      fragment.ipFragment.offset,
+      fragment.ipFragment.length,
       payload,
       !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
     );
     if(ipi){
-      ipi->onremove = 0;
-      DPAUCS_removeIpPacket(ipi);
+      ipi->ipPacketInfo.onremove = 0;
+      DPAUCS_removeIpPacket(&ipi->ipPacketInfo);
     }
     ipi = 0;
   }

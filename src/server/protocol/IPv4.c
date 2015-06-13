@@ -70,21 +70,21 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
 
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
-  DPAUCS_IPv4_packetInfo_t* ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_normalize_ip_packet_info_ptr(&ipInfo.ipPacketInfo);
+  DPAUCS_IPv4_packetInfo_t* ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_layer3_normalize_packet_info_ptr(&ipInfo.ipPacketInfo);
   bool isNext;
   if(ipi){
     fragment.ipFragment.info = (DPAUCS_ip_packetInfo_t*)ipi;
-    isNext = DPAUCS_isNextIpFragment(&fragment.ipFragment);
+    isNext = DPAUCS_layer3_isNextFragment(&fragment.ipFragment);
   }else{
     isNext = !fragment.ipFragment.offset; 
   }
 
   if( fragment.flags & IPv4_FLAG_MORE_FRAGMENTS || !isNext ){
     if(!ipi)
-      ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_save_ip_packet_info(&ipInfo.ipPacketInfo);
+      ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_layer3_save_packet_info(&ipInfo.ipPacketInfo);
     fragment.ipFragment.info = (DPAUCS_ip_packetInfo_t*)ipi;
     if(isNext){
-      DPAUCS_updateIpPackatOffset(&fragment.ipFragment);
+      DPAUCS_layer3_updatePackatOffset(&fragment.ipFragment);
       DPAUCS_IPv4_fragment_t* f = &fragment;
       DPAUCS_IPv4_fragment_t** f_ptr = &f;
       while(true){
@@ -103,11 +103,11 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
          || !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
         ){
           ipi->ipPacketInfo.onremove = 0;
-          DPAUCS_removeIpPacket(f->ipFragment.info);
+          DPAUCS_layer3_removePacket(f->ipFragment.info);
         }else{
-	  DPAUCS_removeIpFragment((DPAUCS_ip_fragment_t**)f_ptr);
+	  DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f_ptr);
 	}
-        f_ptr = (DPAUCS_IPv4_fragment_t**)DPAUCS_searchFollowingIpFragment(&(*f_ptr)->ipFragment);
+        f_ptr = (DPAUCS_IPv4_fragment_t**)DPAUCS_layer3_searchFollowingFragment(&(*f_ptr)->ipFragment);
         if(!f_ptr)
           break;
         f = *f_ptr;
@@ -138,7 +138,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     );
     if(ipi){
       ipi->ipPacketInfo.onremove = 0;
-      DPAUCS_removeIpPacket(&ipi->ipPacketInfo);
+      DPAUCS_layer3_removePacket(&ipi->ipPacketInfo);
     }
     ipi = 0;
   }

@@ -42,14 +42,16 @@ typedef union {
   DPAUCS_IPv4_packetInfo_t IPv4_packetInfo;
 } DPAUCS_layer3_packetInfo_t;
 
+bool DPAUCS_areFragmentsFromSameIPv4Packet( DPAUCS_IPv4_packetInfo_t*, DPAUCS_IPv4_packetInfo_t* );
+
 DPAUCS_ip_fragment_t** DPAUCS_layer3_allocFragment( DPAUCS_ip_packetInfo_t*, uint16_t );
-void DPAUCS_updateIpPackatOffset( DPAUCS_ip_fragment_t* );
-void DPAUCS_removeIpPacket( DPAUCS_ip_packetInfo_t* );
-bool DPAUCS_isNextIpFragment( DPAUCS_ip_fragment_t* );
-bool DPAUCS_areFragmentsFromSameIpPacket( DPAUCS_ip_packetInfo_t*, DPAUCS_ip_packetInfo_t* );
-DPAUCS_ip_fragment_t** DPAUCS_searchFollowingIpFragment( DPAUCS_ip_fragment_t* );
-DPAUCS_ip_packetInfo_t* DPAUCS_normalize_ip_packet_info_ptr(DPAUCS_ip_packetInfo_t*);
-DPAUCS_ip_packetInfo_t* DPAUCS_save_ip_packet_info(DPAUCS_ip_packetInfo_t* packet);
-void DPAUCS_removeIpFragment( DPAUCS_ip_fragment_t** f );
+void DPAUCS_layer3_updatePackatOffset( DPAUCS_ip_fragment_t* );
+void DPAUCS_layer3_removePacket( DPAUCS_ip_packetInfo_t* );
+bool DPAUCS_layer3_isNextFragment( DPAUCS_ip_fragment_t* );
+bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t*, DPAUCS_ip_packetInfo_t* );
+DPAUCS_ip_fragment_t** DPAUCS_layer3_searchFollowingFragment( DPAUCS_ip_fragment_t* );
+DPAUCS_ip_packetInfo_t* DPAUCS_layer3_normalize_packet_info_ptr(DPAUCS_ip_packetInfo_t*);
+DPAUCS_ip_packetInfo_t* DPAUCS_layer3_save_packet_info(DPAUCS_ip_packetInfo_t* packet);
+void DPAUCS_layer3_removeFragment( DPAUCS_ip_fragment_t** f );
 
 #endif

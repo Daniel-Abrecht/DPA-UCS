@@ -3,6 +3,7 @@
 #include <checksum.h>
 #include <binaryUtils.h>
 #include <protocol/tcp.h>
+#include <protocol/arp.h>
 #include <server.h>
 
 // All connections
@@ -12,7 +13,37 @@ transmissionControlBlock_t* temporaryTransmissionControlBlocks = transmissionCon
 // Connections in ESTAB, FIN-WAIT-1 or CLOSE-WAIT state
 transmissionControlBlock_t* staticTransmissionControlBlocks = transmissionControlBlocks + TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT;
 
-void hexdump(const unsigned char* x,unsigned s,unsigned y){
+static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAUCS_beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
+static void tcp_reciveFailtureHandler( void* );
+static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
+static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
+
+static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
+  transmissionControlBlock_t* start = transmissionControlBlocks;
+  transmissionControlBlock_t* end = transmissionControlBlocks+sizeof(transmissionControlBlocks)/sizeof(*transmissionControlBlocks);
+  for(transmissionControlBlock_t* it=start;it<end;it++)
+    if(
+      it->active &&
+      it->srcPort == tcb->srcPort &&
+      it->destPort == tcb->destPort &&
+      it->service == tcb->service &&
+      DPAUCS_compare_logicAddress( &it->srcAddr->logicAddress , &tcb->srcAddr->logicAddress ) &&
+      DPAUCS_compare_logicAddress( &it->destAddr->logicAddress, &tcb->destAddr->logicAddress )
+    ) return it;
+  return 0;
+}
+
+static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
+  static unsigned i = 0;
+  tcb->destAddr = DPAUCS_arpCache_register( tcb->destAddr );
+  transmissionControlBlock_t* stcb = temporaryTransmissionControlBlocks + ( i++ % TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT );
+  if(stcb->active)
+    DPAUCS_arpCache_deregister( stcb->destAddr );
+  *stcb = *tcb;
+  return stcb;
+}
+
+void hexdump( const unsigned char* x, unsigned s, unsigned y ){
   unsigned i;
   for(i=0;i<s;i++,x++)
     printf("%.2x%c",(int)*x,((i+1)%y)?' ':'\n');
@@ -68,19 +99,32 @@ static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_
     .active = true,
     .srcPort = btoh16(tcp->destination),
     .destPort = btoh16(tcp->source),
-    .srcAddr = &to->logicAddress,
-    .destAddr = &from->logicAddress,
+    .srcAddr = to,
+    .destAddr = from,
     .service = DPAUCS_get_service( &to->logicAddress, btoh16(tcp->destination) )
   };
   if(
       !tcb.service
    || !tcb.destPort
-   || !tcb.destAddr 
-   || !DPAUCS_isValidHostAddress( tcb.destAddr )
+   || !DPAUCS_isValidHostAddress( &tcb.destAddr->logicAddress )
    || !tcb.service
   ) return false;
+
   printf("-- tcp_reciveHandler | id: %p offset: %u size: %u --\n",id,(unsigned)offset,(unsigned)length);
+
+  transmissionControlBlock_t* stcb = searchTCB( &tcb );
+  uint16_t flags = btoh16( tcp->flags );
+  if( flags & TCP_FLAG_SYN ){
+    if( stcb ){
+      printf( "Dublicate SYN or already opened connection detected.\n" );
+      return false;
+    }
+    tcb.state = TCP_SYN_RCVD_STATE;
+    stcb = addTemporaryTCB( &tcb );
+  }
+
   printFrame(tcp);
+
   uint8_t* options = (uint8_t*)payload + 40;
   while( options < (uint8_t*)payload+headerLength ){
   printf("option %.2X\n",(int)options[0]);
@@ -98,8 +142,6 @@ static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_
   }
   }
   afterOptionLoop:;
-  uint16_t flags = btoh16( tcp->flags );
-  (void)flags;
   return true;
 }
 

@@ -7,8 +7,14 @@
 #include <packed.h>
 #include <protocol/layer3.h>
 
+#ifndef TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT
 #define TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT (1<<3)
+#endif 
+
+#ifndef STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT
 #define STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT 32
+#endif
+
 #define TCP_ACK_TIMEOUT 250
 #define TCP_KEEPALIVE_CHECK 6 * 1000
 #define TCP_DROP_AFTER_FAILTURES 10
@@ -53,11 +59,19 @@ typedef enum {
 } TCP_state_t;
 
 typedef struct {
+
+  // internal stuff //
   bool active;
   uint16_t srcPort, destPort;
-  DPAUCS_logicAddress_t *srcAddr, *destAddr;
+  DPAUCS_address_t *srcAddr, *destAddr;
   DPAUCS_service_t* service;
+
+  // TCP stuff //
+  
   TCP_state_t state;
+
+  ///////////////
+  
 } transmissionControlBlock_t;
 
 void DPAUCS_tcpInit();

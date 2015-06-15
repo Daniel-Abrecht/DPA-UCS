@@ -92,5 +92,6 @@ typedef struct {
 bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t*);
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t*,const DPAUCS_logicAddress_t*);
 bool DPAUCS_isValidHostAddress(const DPAUCS_logicAddress_t*);
+bool DPAUCS_copy_logicAddress( DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
 
 #endif

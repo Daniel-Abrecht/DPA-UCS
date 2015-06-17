@@ -1,7 +1,7 @@
 #ifndef ICMP_H
 #define ICMP_H
 
-#define IP_PROTOCOL_ICMP 1
+#define PROTOCOL_ICMP 1
 
 #include <stdbool.h>
 #include <packed.h>

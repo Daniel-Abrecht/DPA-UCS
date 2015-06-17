@@ -1,3 +1,4 @@
+#include <stream.h>
 #include <checksum.h>
 #include <binaryUtils.h>
 
@@ -12,6 +13,17 @@ uint16_t checksum( void* p, size_t l ){
   if( unaligned ){
     uint8_t* x = p;
     checksum += htob16(((uint16_t)x[0]<<8)|x[l-1]);
+    checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
+  }
+  return ~checksum;
+}
+
+uint16_t checksumOfStream( DPAUCS_stream_t* stream ){
+  uint32_t checksum = 0;
+  while(!DPAUCS_stream_eof(stream)){
+    uint16_t num = 0;
+    DPAUCS_stream_read( stream, &num, sizeof(num) );
+    checksum += num;
     checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
   }
   return ~checksum;

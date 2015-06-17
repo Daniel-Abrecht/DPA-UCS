@@ -3,7 +3,7 @@ HEADERS 	= $(find . -iname "*.h")
 BIN=bin
 SRC=src
 
-OPTIONS         = -std=c11
+OPTIONS         = -std=c11 -g
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 

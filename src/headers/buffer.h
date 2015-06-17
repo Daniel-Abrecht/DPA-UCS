@@ -23,7 +23,7 @@
   ] )
 #define BUFFER_SKIP(buf,x) do { (buf)->read_offset += x; } while(0)
 #define BUFFER_GET(buf) (buf)->buffer[ (buf)->read_offset++ & (buf)->size_mask ]
-
+#define BUFFER_AT(buf,offset) (buf)->buffer[ ( (buf)->read_offset + (offset) ) & (buf)->size_mask ]
 #define BUFFER_FULL(buf) ( BUFFER_SIZE(buf) > (buf)->size_mask )
 #define BUFFER_PUT(buf,x) \
   do { \
@@ -48,6 +48,7 @@ typedef enum {
 typedef struct {
   buffer_type type;
   size_t size;
+  size_t offset;
   void* ptr;
 } bufferInfo_t;
 

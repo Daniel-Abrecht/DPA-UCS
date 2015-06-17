@@ -69,6 +69,7 @@ typedef struct {
   // TCP stuff //
   
   TCP_state_t state;
+  uint32_t SEQ;
 
   ///////////////
   

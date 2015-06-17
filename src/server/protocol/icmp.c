@@ -17,7 +17,7 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
         .source = to,
         .destination = from
       };
-      stream_t* stream = (*begin)( &fromTo, 1, IP_PROTOCOL_ICMP );
+      DPAUCS_stream_t* stream = (*begin)( &fromTo, 1, PROTOCOL_ICMP );
       DPAUCS_stream_referenceWrite( stream, payload, length );
       (*end)();
     } break;
@@ -26,7 +26,7 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
 }
 
 static DPAUCS_layer3_protocolHandler_t icmp_handler = {
-  .protocol = IP_PROTOCOL_ICMP,
+  .protocol = PROTOCOL_ICMP,
   .onrecive = &icmp_reciveHandler
 };
 

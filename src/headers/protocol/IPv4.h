@@ -42,7 +42,7 @@ typedef struct {
 } DPAUCS_logicAddress_IPv4_t;
 
 void DPAUCS_IPv4_transmit(
-  stream_t* inputStream,
+  DPAUCS_stream_t* inputStream,
   const DPAUCS_IPv4_address_t* src,
   const DPAUCS_IPv4_address_t* dst,
   uint8_t type

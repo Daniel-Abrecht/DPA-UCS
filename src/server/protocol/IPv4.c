@@ -145,7 +145,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
 
 }
 
-void DPAUCS_IPv4_transmit( stream_t* inputStream, const DPAUCS_IPv4_address_t* src, const DPAUCS_IPv4_address_t* dst, uint8_t type ){
+void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_address_t* src, const DPAUCS_IPv4_address_t* dst, uint8_t type ){
   const uint16_t hl = 5;
   static uint16_t id = 0;
 

@@ -20,9 +20,11 @@ static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAU
 static void tcp_reciveFailtureHandler( void* );
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
+static void removeTCB( transmissionControlBlock_t* tcb );
 static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb );
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream );
 static void tcp_sendRST( transmissionControlBlock_t* tcb, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end );
+static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
 
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
   transmissionControlBlock_t* start = transmissionControlBlocks;
@@ -39,12 +41,28 @@ static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
   return 0;
 }
 
+static transmissionControlBlock_t* getTcbByCurrentId( const void*const id ){
+  transmissionControlBlock_t* start = transmissionControlBlocks;
+  transmissionControlBlock_t* end = transmissionControlBlocks + sizeof(transmissionControlBlocks)/sizeof(*transmissionControlBlocks);
+  for( transmissionControlBlock_t* it=start; it<end; it++ )
+    if( it->active && it->currentId == id )
+      return it;
+  return 0;
+}
+
+static void removeTCB( transmissionControlBlock_t* tcb ){
+  if( !tcb->active )
+    return;
+  DPAUCS_arpCache_deregister( tcb->destAddr );
+  tcb->active = false;
+  tcb->currentId = 0;
+}
+
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
   static unsigned i = 0;
   tcb->destAddr = DPAUCS_arpCache_register( tcb->destAddr );
   transmissionControlBlock_t* stcb = temporaryTransmissionControlBlocks + ( i++ % TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT );
-  if(stcb->active)
-    DPAUCS_arpCache_deregister( stcb->destAddr );
+  removeTCB( stcb );
   *stcb = *tcb;
   return stcb;
 }
@@ -151,15 +169,38 @@ static void tcp_sendRST( transmissionControlBlock_t* tcb, DPAUCS_beginTransmissi
 
 }
 
-static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool tcp_processDatas(
+  transmissionControlBlock_t* tcb,
+  DPAUCS_beginTransmission begin,
+  DPAUCS_endTransmission end,
+  uint16_t offset,
+  uint16_t length,
+  void* payload,
+  bool last
+){
+  (void)tcb;
+  (void)begin;
+  (void)end;
+  (void)offset;
+  (void)length;
+  (void)payload;
+  (void)last;
+  return true;
+}
+
+static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
+  return ( stcb->state & TCP_SYN_RCVD_STATE   )
+      || ( stcb->state & TCP_SYN_SENT_STATE   )
+      || ( stcb->state & TCP_FIN_WAIT_2_STATE )
+      || ( stcb->state & TCP_CLOSING_STATE    )
+      || ( stcb->state & TCP_LAST_ACK_STATE   );
+}
+
+static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
   if( length < 40 )
     return false;
 
   (void)id;
-  (void)from;
-  (void)to;
-  (void)begin;
-  (void)end;
   (void)last;
 
   DPAUCS_tcp_t* tcp = payload;
@@ -175,7 +216,8 @@ static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_
     .srcAddr = to,
     .destAddr = from,
     .SEQ = btoh32(tcp->sequence),
-    .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) )
+    .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
+    .currentId = id
   };
 
   if(
@@ -221,7 +263,29 @@ static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_
   }
   afterOptionLoop:;
 
+  if( tcp_connectionUnstable(stcb) )
+    return !last;
+
   return true;
+}
+
+static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+
+  bool ret;
+
+  transmissionControlBlock_t* tcb = getTcbByCurrentId(id);
+  if(tcb)
+    ret = tcp_processDatas( tcb, begin, end, offset, length, payload, last );
+  else
+    ret = tcp_processHeader( id, from, to, begin, end, offset, length, payload, last );
+
+  if(last){
+    tcb = getTcbByCurrentId(id);
+    if(tcb)
+      tcb->currentId = 0;
+  }
+
+  return ret;
 }
 
 static void tcp_reciveFailtureHandler( void* id ){

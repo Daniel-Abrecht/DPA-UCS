@@ -65,6 +65,7 @@ typedef struct {
   uint16_t srcPort, destPort;
   DPAUCS_address_t *srcAddr, *destAddr;
   DPAUCS_service_t* service;
+  void* currentId;
 
   // TCP stuff //
   

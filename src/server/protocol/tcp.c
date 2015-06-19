@@ -21,7 +21,7 @@ static void tcp_reciveFailtureHandler( void* );
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
 static void removeTCB( transmissionControlBlock_t* tcb );
-static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb );
+static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, uint16_t flags );
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream );
 static void tcp_sendRST( transmissionControlBlock_t* tcb, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end );
 static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
@@ -106,12 +106,12 @@ static void printFrame( DPAUCS_tcp_t* tcp ){
   );
 }
 
-static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb ){
+static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, uint16_t flags ){
   memset( tcp, 0, sizeof(*tcp) );
   tcp->destination = btoh16( tcb->destPort );
   tcp->source = btoh16( tcb->srcPort );
   tcp->acknowledgment = btoh32( tcb->SEQ + 1 );
-  tcp->flags = btoh16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | TCP_FLAG_ACK | TCP_FLAG_RST );
+  tcp->flags = btoh16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | flags );
 }
 
 static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
@@ -160,7 +160,7 @@ static void tcp_sendRST( transmissionControlBlock_t* tcb, DPAUCS_beginTransmissi
   };
 
   DPAUCS_tcp_t tcp;
-  tcp_from_tcb( &tcp, tcb );
+  tcp_from_tcb( &tcp, tcb, TCP_FLAG_ACK | TCP_FLAG_RST );
 
   DPAUCS_stream_t* stream = (*begin)( &fromTo, 1, PROTOCOL_TCP );
   DPAUCS_stream_referenceWrite( stream, &tcp, sizeof(tcp) );
@@ -197,7 +197,7 @@ static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
 }
 
 static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
-  if( length < 40 )
+  if( length < sizeof(DPAUCS_tcp_t) )
     return false;
 
   (void)id;
@@ -235,12 +235,21 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   transmissionControlBlock_t* stcb = searchTCB( &tcb );
   uint16_t flags = btoh16( tcp->flags );
   if( flags & TCP_FLAG_SYN ){
+    if( headerLength < length ){
+      // Datas in SYNs are rarely seen, won't support them.
+      printf( "SYN with datas rejected.\n" );
+      tcp_sendRST( &tcb, begin, end );
+      return false;
+    }
     if( stcb ){
       printf( "Dublicate SYN or already opened connection detected.\n" );
       return false;
     }
     tcb.state = TCP_SYN_RCVD_STATE;
     stcb = addTemporaryTCB( &tcb );
+  }else if( !stcb ){
+    tcp_sendRST( &tcb, begin, end );
+    return false;
   }
 
   printFrame( tcp );
@@ -265,6 +274,8 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
 
   if( tcp_connectionUnstable(stcb) )
     return !last;
+  else if( headerLength < length )
+    tcp_processDatas( stcb, begin, end, offset+headerLength, length-headerLength, (char*)payload+headerLength, last );
 
   return true;
 }

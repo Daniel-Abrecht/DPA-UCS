@@ -70,7 +70,21 @@ typedef struct {
   // TCP stuff //
 
   TCP_state_t state;
-  uint32_t SEQ;
+  
+  struct {
+    uint32_t
+      UNA,
+      NXT,
+      WND
+    ;
+  } SND;
+
+  struct {
+    uint32_t
+      NXT,
+      WND
+    ;
+  } RCV;
 
   ///////////////
   

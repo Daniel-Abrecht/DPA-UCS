@@ -17,7 +17,7 @@ transmissionControlBlock_t* temporaryTransmissionControlBlocks = transmissionCon
 transmissionControlBlock_t* staticTransmissionControlBlocks = transmissionControlBlocks + TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT;
 
 
-static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAUCS_beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
+static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream, uint16_t, uint16_t, void*, bool );
 static void tcp_reciveFailtureHandler( void* );
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
@@ -25,9 +25,10 @@ static void removeTCB( transmissionControlBlock_t* tcb );
 static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, uint16_t flags );
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream );
 static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
+static void tcp_sendNoData( transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream );
 
-static void tcp_sendRST( transmissionControlBlock_t* tcb, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end );
-static void tcp_sendSYNACK( transmissionControlBlock_t* tcb, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end );
+
+static uint32_t ISS = 0;
 
 
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
@@ -39,8 +40,8 @@ static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
       it->srcPort == tcb->srcPort &&
       it->destPort == tcb->destPort &&
       it->service == tcb->service &&
-      DPAUCS_compare_logicAddress( &it->srcAddr->logicAddress , &tcb->srcAddr->logicAddress ) &&
-      DPAUCS_compare_logicAddress( &it->destAddr->logicAddress, &tcb->destAddr->logicAddress )
+      DPAUCS_compare_logicAddress( &it->fromTo.source->logicAddress , &tcb->fromTo.destination->logicAddress ) &&
+      DPAUCS_compare_logicAddress( &it->fromTo.destination->logicAddress, &tcb->fromTo.destination->logicAddress )
     ) return it;
   return 0;
 }
@@ -57,14 +58,14 @@ static transmissionControlBlock_t* getTcbByCurrentId( const void*const id ){
 static void removeTCB( transmissionControlBlock_t* tcb ){
   if( !tcb->active )
     return;
-  DPAUCS_arpCache_deregister( tcb->destAddr );
+  DPAUCS_arpCache_deregister( tcb->fromTo.destination );
   tcb->active = false;
   tcb->currentId = 0;
 }
 
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
   static unsigned i = 0;
-  tcb->destAddr = DPAUCS_arpCache_register( tcb->destAddr );
+  tcb->fromTo.destination = DPAUCS_arpCache_register( tcb->fromTo.destination );
   transmissionControlBlock_t* stcb = temporaryTransmissionControlBlocks + ( i++ % TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT );
   removeTCB( stcb );
   *stcb = *tcb;
@@ -114,7 +115,7 @@ static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, ui
   memset( tcp, 0, sizeof(*tcp) );
   tcp->destination = btoh16( tcb->destPort );
   tcp->source = btoh16( tcb->srcPort );
-  tcp->acknowledgment = btoh32( tcb->RCV.NXT );
+  tcp->acknowledgment = btoh32( tcb->RCV.NXT + 1 );
   tcp->sequence = btoh32( tcb->SND.NXT );
   tcb->SND.UNA = tcb->SND.NXT;
   tcp->flags = btoh16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | flags );
@@ -127,8 +128,8 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
     uint16_t length;
   };
   struct pseudoHeader pseudoHeader = {
-    .src = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->srcAddr->logicAddress))->address ),
-    .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->destAddr->logicAddress))->address ),
+    .src = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->fromTo.source->logicAddress))->address ),
+    .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->fromTo.destination->logicAddress))->address ),
     .padding = 0,
     .protocol = PROTOCOL_TCP,
     .length = htob16( sizeof(struct pseudoHeader) + sizeof(tcp) + DPAUCS_stream_getLength( stream ) )
@@ -137,7 +138,7 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
 }
 
 static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
-  switch( tcb->srcAddr->type ){
+  switch( tcb->fromTo.source->type ){
     case AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,stream);
   }
   return 0;
@@ -158,52 +159,51 @@ static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   DPAUCS_stream_restoreReadOffset( stream, &sros );
 }
 
-static void tcp_sendRST( transmissionControlBlock_t* tcb, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end ){
+static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp, DPAUCS_createTransmissionStream createStream ){
 
-  DPAUCS_address_pair_t fromTo = {
-    .source = tcb->srcAddr,
-    .destination = tcb->destAddr
+  DPAUCS_stream_t* stream = (*createStream)();
+  DPAUCS_stream_referenceWrite( stream, tcp, sizeof(*tcp) );
+
+  return (DPAUCS_tcp_transmission_t){
+    .tcp = tcp,
+    .stream = stream,
   };
-
-  DPAUCS_tcp_t tcp;
-  tcp_from_tcb( &tcp, tcb, TCP_FLAG_ACK | TCP_FLAG_RST );
-
-  DPAUCS_stream_t* stream = (*begin)( &fromTo, 1, PROTOCOL_TCP );
-  DPAUCS_stream_referenceWrite( stream, &tcp, sizeof(tcp) );
-  tcp_calculateChecksum( tcb, &tcp, stream );
-  (*end)();
 
 }
 
-static void tcp_sendSYNACK( transmissionControlBlock_t* tcb, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end ){
+static void tcp_end( DPAUCS_tcp_transmission_t* transmission, transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
 
-  DPAUCS_address_pair_t fromTo = {
-    .source = tcb->srcAddr,
-    .destination = tcb->destAddr
-  };
+  for(;*tcb;tcb++){
+    tcp_from_tcb( transmission->tcp, *tcb, flags );
+    tcp_calculateChecksum( *tcb, transmission->tcp, transmission->stream );
+    (*transmit)(transmission->stream,&(*tcb)->fromTo, PROTOCOL_TCP);
+  }
+  (*destroyStream)(transmission->stream);
+
+}
+
+static void tcp_sendNoData( transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
 
   DPAUCS_tcp_t tcp;
-  tcp_from_tcb( &tcp, tcb, TCP_FLAG_SYN | TCP_FLAG_ACK );
-
-  DPAUCS_stream_t* stream = (*begin)( &fromTo, 1, PROTOCOL_TCP );
-  DPAUCS_stream_referenceWrite( stream, &tcp, sizeof(tcp) );
-  tcp_calculateChecksum( tcb, &tcp, stream );
-  (*end)();
+  DPAUCS_tcp_transmission_t t = tcp_begin( &tcp, createStream );
+  tcp_end( &t, tcb, flags, transmit, destroyStream );
 
 }
 
 static bool tcp_processDatas(
   transmissionControlBlock_t* tcb,
-  DPAUCS_beginTransmission begin,
-  DPAUCS_endTransmission end,
+  DPAUCS_createTransmissionStream createStream,
+  DPAUCS_transmit transmit,
+  DPAUCS_destroyTransmissionStream destroyStream, 
   uint16_t offset,
   uint16_t length,
   void* payload,
   bool last
 ){
   (void)tcb;
-  (void)begin;
-  (void)end;
+  (void)createStream;
+  (void)transmit;
+  (void)destroyStream;
   (void)offset;
   (void)length;
   (void)payload;
@@ -219,7 +219,7 @@ static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
       || ( stcb->state & TCP_LAST_ACK_STATE   );
 }
 
-static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
   if( length < sizeof(DPAUCS_tcp_t) )
     return false;
 
@@ -236,8 +236,17 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     .active = true,
     .srcPort = btoh16(tcp->destination),
     .destPort = btoh16(tcp->source),
-    .srcAddr = to,
-    .destAddr = from,
+    .fromTo = {
+      .source = to,
+      .destination = from
+    },
+    .SND = {
+      .NXT = ISS += length
+    },
+    .RCV = {
+      .NXT = btoh32(tcp->sequence) + length - headerLength,
+      .WND = tcb.RCV.NXT
+    },
     .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
     .currentId = id
   };
@@ -245,10 +254,10 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   if(
       !tcb.service
    || !tcb.destPort
-   || !DPAUCS_isValidHostAddress( &tcb.destAddr->logicAddress )
+   || !DPAUCS_isValidHostAddress( &tcb.fromTo.destination->logicAddress )
    || !tcb.service
   ){
-    tcp_sendRST( &tcb, begin, end );
+    tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
     return false;
   }
 
@@ -260,7 +269,7 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     if( headerLength < length ){
       // Datas in SYNs are rarely seen, won't support them.
       printf( "SYN with datas rejected.\n" );
-      tcp_sendRST( &tcb, begin, end );
+      tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
       return false;
     }
     if( stcb ){
@@ -268,14 +277,10 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
       return false;
     }
     tcb.state = TCP_SYN_RCVD_STATE;
-    static uint32_t ISS = 0;
-    tcb.SND.NXT = ISS += length;
-    tcb.RCV.NXT = btoh32(tcp->sequence)  + length - headerLength + 1;
-    tcb.RCV.WND = tcb.RCV.NXT;
     stcb = addTemporaryTCB( &tcb );
-    tcp_sendSYNACK( &tcb, begin, end );
+    tcp_sendNoData( (transmissionControlBlock_t*[]){stcb,0}, TCP_FLAG_ACK | TCP_FLAG_SYN, createStream, transmit, destroyStream );
   }else if( !stcb ){
-    tcp_sendRST( &tcb, begin, end );
+    tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
     return false;
   }
 
@@ -302,20 +307,20 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   if( tcp_connectionUnstable(stcb) )
     return !last;
   else if( headerLength < length )
-    tcp_processDatas( stcb, begin, end, offset+headerLength, length-headerLength, (char*)payload+headerLength, last );
+    tcp_processDatas( stcb, createStream, transmit, destroyStream, offset+headerLength, length-headerLength, (char*)payload+headerLength, last );
 
   return true;
 }
 
-static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
 
   bool ret;
 
   transmissionControlBlock_t* tcb = getTcbByCurrentId(id);
   if(tcb)
-    ret = tcp_processDatas( tcb, begin, end, offset, length, payload, last );
+    ret = tcp_processDatas( tcb, createStream, transmit, destroyStream, offset, length, payload, last );
   else
-    ret = tcp_processHeader( id, from, to, begin, end, offset, length, payload, last );
+    ret = tcp_processHeader( id, from, to, createStream, transmit, destroyStream, offset, length, payload, last );
 
   if(last){
     tcb = getTcbByCurrentId(id);

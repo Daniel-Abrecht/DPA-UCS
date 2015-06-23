@@ -1,7 +1,7 @@
 #include <checksum.h>
 #include <protocol/icmp.h>
 
-static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission begin, DPAUCS_endTransmission end, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
   if(!last)
     return false;
   (void)offset;
@@ -17,9 +17,10 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
         .source = to,
         .destination = from
       };
-      DPAUCS_stream_t* stream = (*begin)( &fromTo, 1, PROTOCOL_ICMP );
+      DPAUCS_stream_t* stream = (*createStream)();
       DPAUCS_stream_referenceWrite( stream, payload, length );
-      (*end)();
+      (*transmit)( stream, &fromTo, PROTOCOL_ICMP );
+      (*destroyStream)( stream );
     } break;
   }
   return true;

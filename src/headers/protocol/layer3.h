@@ -6,9 +6,10 @@
 
 #define MAX_LAYER3_PROTO_HANDLERS 3
 
-typedef DPAUCS_stream_t*(*DPAUCS_beginTransmission)( DPAUCS_address_pair_t* fromTo, unsigned fromTo_count, uint8_t type );
-typedef void(*DPAUCS_endTransmission)();
-typedef bool(*DPAUCS_layer3_ProtocolReciveHandler_func)( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_beginTransmission beginTransmission, DPAUCS_endTransmission, uint16_t, uint16_t, void*, bool );
+typedef DPAUCS_stream_t*(*DPAUCS_createTransmissionStream)();
+typedef void(*DPAUCS_transmit)( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type );
+typedef void(*DPAUCS_destroyTransmissionStream)( DPAUCS_stream_t* );
+typedef bool(*DPAUCS_layer3_ProtocolReciveHandler_func)( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream, uint16_t, uint16_t, void*, bool );
 typedef void(*DPAUCS_layer3_ProtocolFailtureHandler_func)( void* id );
 
 typedef struct {
@@ -22,7 +23,8 @@ extern DPAUCS_layer3_protocolHandler_t* layer3_protocolHandlers[MAX_LAYER3_PROTO
 void DPAUCS_layer3_addProtocolHandler( DPAUCS_layer3_protocolHandler_t* handler );
 void DPAUCS_layer3_removeProtocolHandler( DPAUCS_layer3_protocolHandler_t* handler );
 
-DPAUCS_stream_t* DPAUCS_layer3_transmissionBegin( DPAUCS_address_pair_t* fromTo, unsigned fromTo_count, uint8_t type );
-void DPAUCS_layer3_transmissionEnd();
+DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream();
+void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type );
+void DPAUCS_layer3_destroyTransmissionStream( DPAUCS_stream_t* x );
 
 #endif

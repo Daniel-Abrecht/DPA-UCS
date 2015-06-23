@@ -63,7 +63,7 @@ typedef struct {
   // internal stuff //
   bool active;
   uint16_t srcPort, destPort;
-  DPAUCS_address_t *srcAddr, *destAddr;
+  DPAUCS_address_pair_t fromTo;
   DPAUCS_service_t* service;
   void* currentId;
 
@@ -89,6 +89,11 @@ typedef struct {
   ///////////////
   
 } transmissionControlBlock_t;
+
+typedef struct {
+  DPAUCS_tcp_t* tcp;
+  DPAUCS_stream_t* stream;
+} DPAUCS_tcp_transmission_t;
 
 void DPAUCS_tcpInit();
 void DPAUCS_tcpShutdown();

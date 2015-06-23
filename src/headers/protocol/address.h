@@ -58,8 +58,8 @@ typedef struct {
 } DPAUCS_logicAddress_pair_t;
 
 typedef struct {
-  const DPAUCS_address_t* source;
-  const DPAUCS_address_t* destination;
+  DPAUCS_address_t* source;
+  DPAUCS_address_t* destination;
 } DPAUCS_address_pair_t;
 
 #define DPAUCS_TYPE_CHECK(T,V) \

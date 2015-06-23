@@ -11,12 +11,6 @@ static DPAUCS_stream_t outputStream = {
   &outputStreamBufferBuffer
 };
 
-static struct {
-  DPAUCS_address_pair_t* fromTo;
-  unsigned fromTo_count;
-  uint8_t type;
-} currentTransmission;
-
 DPAUCS_layer3_protocolHandler_t* layer3_protocolHandlers[MAX_LAYER3_PROTO_HANDLERS];
 
 void DPAUCS_layer3_addProtocolHandler(DPAUCS_layer3_protocolHandler_t* handler){
@@ -35,37 +29,30 @@ void DPAUCS_layer3_removeProtocolHandler(DPAUCS_layer3_protocolHandler_t* handle
     }
 }
 
-DPAUCS_stream_t* DPAUCS_layer3_transmissionBegin( DPAUCS_address_pair_t* fromTo, unsigned fromTo_count, uint8_t type ){
-  currentTransmission.fromTo = fromTo;
-  currentTransmission.fromTo_count = fromTo_count;
-  currentTransmission.type = type;
+DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream(){
   return &outputStream;
 }
 
-void DPAUCS_layer3_transmissionEnd(){
+void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type ){
 
   DPAUCS_stream_offsetStorage_t sros;
-  DPAUCS_stream_saveReadOffset( &sros, &outputStream );
+  DPAUCS_stream_saveReadOffset( &sros, stream );
 
-  for( unsigned i=0; i<currentTransmission.fromTo_count; i++ ){
+  switch( fromTo->source->type ){
 
-    DPAUCS_address_pair_t* fromTo = currentTransmission.fromTo + i;
-
-    DPAUCS_stream_restoreReadOffset( &outputStream, &sros );
-
-    switch( fromTo->source->type ){
-
-      case AT_IPv4: DPAUCS_IPv4_transmit( 
-        &outputStream,
-        (const DPAUCS_IPv4_address_t*)fromTo->source,
-        (const DPAUCS_IPv4_address_t*)fromTo->destination,
-        currentTransmission.type
-      ); break;
-
-    }
+    case AT_IPv4: DPAUCS_IPv4_transmit( 
+      stream,
+      (const DPAUCS_IPv4_address_t*)fromTo->source,
+      (const DPAUCS_IPv4_address_t*)fromTo->destination,
+      type
+    ); break;
 
   }
 
-  DPAUCS_stream_reset( &outputStream );
+  DPAUCS_stream_restoreReadOffset( stream, &sros );
 
+}
+
+void DPAUCS_layer3_destroyTransmissionStream( DPAUCS_stream_t* stream ){
+  DPAUCS_stream_reset( stream );
 }

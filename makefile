@@ -45,9 +45,12 @@ LINUX_FILES = $(shell \
   done; \
 )
 
-all: linux
+all: bin linux
 
-linux: $(LINUX_TARGET)
+linux: bin $(LINUX_TARGET)
+
+bin:
+	@mkdir $(BIN)
 
 $(LINUX_TARGET): $(LINUX_FILES)
 	gcc $(LINUX_OPTIONS) $(LINUX_FILES) $(LINUX_GENERATED) -o $(LINUX_TARGET)

@@ -9,12 +9,8 @@
 #include <protocol/arp.h>
 #include <protocol/IPv4.h>
 
-// All connections
-transmissionControlBlock_t transmissionControlBlocks[ TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT + STATIC_TRANSMISSION_CONTROL_BLOCK_COUNT ];
-// Connections in FINWAIT-2, LAST-ACK, CLOSEING, SYN-SENT or SYN-RCVD state
-transmissionControlBlock_t* temporaryTransmissionControlBlocks = transmissionControlBlocks;
-// Connections in ESTAB, FIN-WAIT-1 or CLOSE-WAIT state
-transmissionControlBlock_t* staticTransmissionControlBlocks = transmissionControlBlocks + TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT;
+
+transmissionControlBlock_t transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
 
 static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream, uint16_t, uint16_t, void*, bool );
@@ -26,6 +22,7 @@ static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, ui
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream );
 static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
 static void tcp_sendNoData( transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream );
+static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
 
 
 static uint32_t ISS = 0;
@@ -33,14 +30,14 @@ static uint32_t ISS = 0;
 
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
   transmissionControlBlock_t* start = transmissionControlBlocks;
-  transmissionControlBlock_t* end = transmissionControlBlocks+sizeof(transmissionControlBlocks)/sizeof(*transmissionControlBlocks);
-  for(transmissionControlBlock_t* it=start;it<end;it++)
+  transmissionControlBlock_t* end = transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
+  for( transmissionControlBlock_t* it=start; it<end ;it++ )
     if(
       it->active &&
       it->srcPort == tcb->srcPort &&
       it->destPort == tcb->destPort &&
       it->service == tcb->service &&
-      DPAUCS_compare_logicAddress( &it->fromTo.source->logicAddress , &tcb->fromTo.destination->logicAddress ) &&
+      DPAUCS_compare_logicAddress( &it->fromTo.source->logicAddress , &tcb->fromTo.source->logicAddress ) &&
       DPAUCS_compare_logicAddress( &it->fromTo.destination->logicAddress, &tcb->fromTo.destination->logicAddress )
     ) return it;
   return 0;
@@ -48,7 +45,7 @@ static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
 
 static transmissionControlBlock_t* getTcbByCurrentId( const void*const id ){
   transmissionControlBlock_t* start = transmissionControlBlocks;
-  transmissionControlBlock_t* end = transmissionControlBlocks + sizeof(transmissionControlBlocks)/sizeof(*transmissionControlBlocks);
+  transmissionControlBlock_t* end = transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
   for( transmissionControlBlock_t* it=start; it<end; it++ )
     if( it->active && it->currentId == id )
       return it;
@@ -65,8 +62,18 @@ static void removeTCB( transmissionControlBlock_t* tcb ){
 
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
   static unsigned i = 0;
-  tcb->fromTo.destination = DPAUCS_arpCache_register( tcb->fromTo.destination );
-  transmissionControlBlock_t* stcb = temporaryTransmissionControlBlocks + ( i++ % TEMPORARY_TRANSMISSION_CONTROL_BLOCK_COUNT );
+  unsigned j = i;
+  DPAUCS_address_t* addr = DPAUCS_arpCache_register( tcb->fromTo.destination );
+  if( !addr )
+    return 0;
+  tcb->fromTo.destination = addr;
+  transmissionControlBlock_t* stcb;
+  do {
+    if( j >= i+TRANSMISSION_CONTROL_BLOCK_COUNT )
+      return 0;
+    stcb = transmissionControlBlocks + ( j++ % TRANSMISSION_CONTROL_BLOCK_COUNT );
+  } while( stcb->active && !tcp_connectionUnstable( stcb ) );
+  i = j;
   removeTCB( stcb );
   *stcb = *tcb;
   return stcb;
@@ -115,9 +122,8 @@ static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, ui
   memset( tcp, 0, sizeof(*tcp) );
   tcp->destination = btoh16( tcb->destPort );
   tcp->source = btoh16( tcb->srcPort );
-  tcp->acknowledgment = btoh32( tcb->RCV.NXT + 1 );
+  tcp->acknowledgment = btoh32( tcb->RCV.NXT );
   tcp->sequence = btoh32( tcb->SND.NXT );
-  tcb->SND.UNA = tcb->SND.NXT;
   tcp->flags = btoh16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | flags );
 }
 
@@ -132,8 +138,9 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
     .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->fromTo.destination->logicAddress))->address ),
     .padding = 0,
     .protocol = PROTOCOL_TCP,
-    .length = htob16( sizeof(struct pseudoHeader) + sizeof(tcp) + DPAUCS_stream_getLength( stream ) )
+    .length = htob16( DPAUCS_stream_getLength( stream ) )
   };
+  (void)tcp;
   return checksum( &pseudoHeader, sizeof(pseudoHeader) );
 }
 
@@ -148,8 +155,8 @@ static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, stream );
 
-  uint16_t data_checksum = ~checksumOfStream( stream );
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, stream );
+  uint16_t data_checksum = ~checksumOfStream( stream );
 
   uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum;
   uint16_t checksum = ~( ( tmp_checksum & 0xFFFF ) + ( tmp_checksum >> 16 ) );
@@ -166,7 +173,7 @@ static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp, DPAUCS_createTran
 
   return (DPAUCS_tcp_transmission_t){
     .tcp = tcp,
-    .stream = stream,
+    .stream = stream
   };
 
 }
@@ -177,6 +184,8 @@ static void tcp_end( DPAUCS_tcp_transmission_t* transmission, transmissionContro
     tcp_from_tcb( transmission->tcp, *tcb, flags );
     tcp_calculateChecksum( *tcb, transmission->tcp, transmission->stream );
     (*transmit)(transmission->stream,&(*tcb)->fromTo, PROTOCOL_TCP);
+    (*tcb)->SND.UNA = (*tcb)->SND.NXT;
+    (*tcb)->SND.NXT += DPAUCS_stream_getLength( transmission->stream ) - sizeof(DPAUCS_tcp_t) + 1;
   }
   (*destroyStream)(transmission->stream);
 
@@ -220,6 +229,7 @@ static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
 }
 
 static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
+  ISS += length;
   if( length < sizeof(DPAUCS_tcp_t) )
     return false;
 
@@ -241,11 +251,11 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
       .destination = from
     },
     .SND = {
-      .NXT = ISS += length
+      .UNA = ISS,
+      .NXT = ISS
     },
     .RCV = {
-      .NXT = btoh32(tcp->sequence) + length - headerLength,
-      .WND = tcb.RCV.NXT
+      .NXT = btoh32(tcp->sequence) + length - headerLength + 1,
     },
     .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
     .currentId = id
@@ -278,10 +288,29 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     }
     tcb.state = TCP_SYN_RCVD_STATE;
     stcb = addTemporaryTCB( &tcb );
+    if(!stcb)
+      return false;
     tcp_sendNoData( (transmissionControlBlock_t*[]){stcb,0}, TCP_FLAG_ACK | TCP_FLAG_SYN, createStream, transmit, destroyStream );
   }else if( !stcb ){
+    printf( "Connection unavaiable.\n" );
     tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
     return false;
+  }
+
+  if( flags & TCP_FLAG_ACK ){
+    uint32_t ackrel = btoh32(tcp->acknowledgment) - stcb->SND.UNA - 1;
+    uint32_t ackwnd = stcb->SND.NXT - stcb->SND.UNA;
+    if( ackrel >= ackwnd )
+      return false;
+    stcb->SND.UNA = btoh32(tcp->acknowledgment);
+    if( stcb->state == TCP_SYN_RCVD_STATE ){
+      stcb->state = TCP_ESTAB_STATE;
+      printf("Connection established.\n");
+    }
+  }
+
+  if( flags & TCP_FLAG_FIN ){
+    
   }
 
   printFrame( tcp );

@@ -3,7 +3,7 @@
 
 #include <mempool.h>
 
-#define STACK_BUFFER_SIZE 1024 * 50 // 50 KB
+#define STACK_BUFFER_SIZE 1024u * 5u // 50 KB
 #define DPAUCS_MAX_FRAGMANTS 256
 
 #define ANY_FRAGMENT ~0u

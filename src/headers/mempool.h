@@ -38,11 +38,11 @@ struct maxAlignHelperStruct {
 
 
 #define DPAUCS_MEMPOOL(BUFFER,SIZE) { \
-  SIZE - DPAUCS_MEMPOOL_ENTRY_SIZE, \
-  SIZE, \
-  SIZE - DPAUCS_MEMPOOL_ENTRY_SIZE, \
-  BUFFER + DPAUCS_MEMPOOL_ENTRY_SIZE, \
- {BUFFER} \
+  .freeMemory = SIZE - DPAUCS_MEMPOOL_ENTRY_SIZE, \
+  .size = SIZE, \
+  .largestContiguousFreeMemorySize = SIZE - DPAUCS_MEMPOOL_ENTRY_SIZE, \
+  .largestContiguousFreeMemoryBegin = BUFFER + DPAUCS_MEMPOOL_ENTRY_SIZE, \
+  .memory = BUFFER \
 }
 
 struct DPAUCS_mempoolEntry;

@@ -6,14 +6,18 @@ static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPAUCS_MAX_INCOMPLETE_L
 
 unsigned DPAUCS_layer3_getPacketTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
+#ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_packetInfo_t);
+#endif
   }
   return 0;
 }
 
 unsigned DPAUCS_layer3_getFragmentTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
+#ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_fragment_t);
+#endif
   }
   return 0;
 }
@@ -29,15 +33,18 @@ bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS
     || (DPAUCS_layer3_packetInfo_t*)b >= incompletePackageInfos + DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS
   ){
     switch( a->type ){
+#ifdef USE_IPv4
       case DPAUCS_FRAGMENT_TYPE_IPv4: return DPAUCS_areFragmentsFromSameIPv4Packet(
         (DPAUCS_IPv4_packetInfo_t*)a,
         (DPAUCS_IPv4_packetInfo_t*)b
       ); break;
+#endif
     }
   }
   return false;
 }
 
+#ifdef USE_IPv4
 bool DPAUCS_areFragmentsFromSameIPv4Packet( DPAUCS_IPv4_packetInfo_t* a, DPAUCS_IPv4_packetInfo_t* b ){
   return (
       a->id == b->id
@@ -48,6 +55,7 @@ bool DPAUCS_areFragmentsFromSameIPv4Packet( DPAUCS_IPv4_packetInfo_t* a, DPAUCS_
    && !memcmp(a->dest.address.mac,b->dest.address.mac,6)
   );
 }
+#endif
 
 unsigned incompleteIpPackageInfoOffset = 0;
 static DPAUCS_ip_packetInfo_t* getNextIncompletePacket(){

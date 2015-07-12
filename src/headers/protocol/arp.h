@@ -2,7 +2,7 @@
 #define ARP_H
 
 #include <packet.h>
-#include <packed.h>
+#include <helper_macros.h>
 #include <protocol/address.h>
 
 #define ARP_REQUEST 1

@@ -17,6 +17,7 @@ typedef struct {
   uint16_t offset;
 } DPAUCS_ip_packetInfo_t;
 
+#ifdef USE_IPv4
 typedef struct {
   DPAUCS_ip_packetInfo_t ipPacketInfo;
   DPAUCS_IPv4_address_t src;
@@ -24,6 +25,7 @@ typedef struct {
   uint16_t id;
   uint8_t tos; // Type of Service
 } DPAUCS_IPv4_packetInfo_t;
+#endif
 
 typedef struct {
   DPAUCS_fragment_t fragmentInfo; // must be the first member
@@ -39,10 +41,14 @@ typedef struct {
 
 typedef union {
   DPAUCS_ip_packetInfo_t ip_packetInfo;
+#ifdef USE_IPv4
   DPAUCS_IPv4_packetInfo_t IPv4_packetInfo;
+#endif
 } DPAUCS_layer3_packetInfo_t;
 
+#ifdef USE_IPv4
 bool DPAUCS_areFragmentsFromSameIPv4Packet( DPAUCS_IPv4_packetInfo_t*, DPAUCS_IPv4_packetInfo_t* );
+#endif
 
 DPAUCS_ip_fragment_t** DPAUCS_layer3_allocFragment( DPAUCS_ip_packetInfo_t*, uint16_t );
 void DPAUCS_layer3_updatePackatOffset( DPAUCS_ip_fragment_t* );

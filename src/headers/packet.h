@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <packed.h>
+#include <helper_macros.h>
 
 #define PACKET_SIZE 1522
 #define PACKET_MAX_PAYLOAD 1500

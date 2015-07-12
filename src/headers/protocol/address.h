@@ -1,7 +1,7 @@
 #ifndef ADDRESS_TYPES_H
 #define ADDRESS_TYPES_H
 
-#include <packed.h>
+#include <helper_macros.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -36,8 +36,12 @@
 #define AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
 
 typedef enum {
-  AT_IPv4 = 1<<0
-//  AT_IPv6 = 1<<1
+#ifdef USE_IPv4
+  AT_IPv4 = 1<<0,
+#endif
+#ifdef USE_IPv6
+  AT_IPv6 = 1<<1,
+#endif
 } DPAUCS_address_types_t;
 
 typedef struct {

@@ -1,6 +1,10 @@
 #include <services/http.h>
 #include <protocol/tcp.h>
 
+DPAUCS_MODUL( http ){
+  DPAUCS_DEPENDENCY( tcp );
+}
+
 static int counter = 0;
 
 static void start(){

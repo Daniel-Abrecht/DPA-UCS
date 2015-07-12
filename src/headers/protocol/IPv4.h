@@ -1,4 +1,4 @@
-#ifndef IPv4_H
+#if !defined( IPv4_H ) && defined( USE_IPv4 )
 #define IPv4_H
 
 #include <packet.h>

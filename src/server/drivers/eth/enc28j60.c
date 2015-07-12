@@ -15,3 +15,5 @@ uint16_t DPAUCS_ethReceive( uint8_t* packet, uint16_t maxlen ){
   return enc28j60PacketReceive( maxlen, packet );
 }
 
+void DPAUCS_ethShutdown(){
+}

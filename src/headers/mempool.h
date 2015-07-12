@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <packed.h>
+#include <helper_macros.h>
 
 #if __STDC_VERSION__ >= 201112L // c11
 #include <stdalign.h>

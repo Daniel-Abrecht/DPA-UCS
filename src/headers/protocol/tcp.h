@@ -4,8 +4,11 @@
 #define PROTOCOL_TCP 6
 
 #include <stdbool.h>
-#include <packed.h>
+#include <helper_macros.h>
 #include <protocol/layer3.h>
+#include <service.h>
+
+DPAUCS_MODUL( tcp );
 
 #ifndef TRANSMISSION_CONTROL_BLOCK_COUNT
 #define TRANSMISSION_CONTROL_BLOCK_COUNT (1<<5)
@@ -91,7 +94,7 @@ typedef struct {
   DPAUCS_stream_t* stream;
 } DPAUCS_tcp_transmission_t;
 
-void DPAUCS_tcpInit();
-void DPAUCS_tcpShutdown();
+void WEAK DPAUCS_tcpInit();
+void WEAK DPAUCS_tcpShutdown();
 
 #endif

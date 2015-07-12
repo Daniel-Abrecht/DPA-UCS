@@ -1,5 +1,9 @@
-#ifndef IPv6_H
+#if !defined( IPv6_H ) && defined( USE_IPv6 )
 #define IPv6_H
+
+#include <stdint.h>
+#include <packet.h>
+#include <helper_macros.h>
 
 typedef PACKED1 struct PACKED2 {
   uint8_t version_tafficClass1;

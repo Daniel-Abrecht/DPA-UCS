@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <packed.h>
 #include <string.h>
 #include <server.h>
 #include <service.h>
@@ -9,6 +8,7 @@
 #include <protocol/arp.h>
 #include <protocol/IPv4.h>
 
+DPAUCS_MODUL( tcp ){}
 
 transmissionControlBlock_t transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
@@ -127,6 +127,7 @@ static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, ui
   tcp->flags = btoh16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | flags );
 }
 
+#ifdef USE_IPv4
 static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
   PACKED1 struct PACKED2 pseudoHeader {
     uint32_t src, dst;
@@ -143,10 +144,13 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
   (void)tcp;
   return checksum( &pseudoHeader, sizeof(pseudoHeader) );
 }
+#endif
 
 static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
   switch( tcb->fromTo.source->type ){
+#ifdef USE_IPv4
     case AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,stream);
+#endif
   }
   return 0;
 }

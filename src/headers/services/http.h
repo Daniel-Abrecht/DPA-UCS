@@ -3,6 +3,8 @@
 
 #include <service.h>
 
-extern DPAUCS_service_t http_service;
+DPAUCS_MODUL( http );
+
+extern DPAUCS_service_t WEAK http_service;
 
 #endif

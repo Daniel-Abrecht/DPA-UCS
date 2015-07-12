@@ -8,6 +8,7 @@
 #include <linux/if.h>
 #include <linux/if_packet.h>
 #include <ifaddrs.h>
+#include <unistd.h>
 #include <server.h>
 
 static int sock;
@@ -125,3 +126,6 @@ uint16_t DPAUCS_ethReceive( uint8_t* packet, uint16_t maxlen ){
   return i<0?0:i;
 }
 
+void DPAUCS_ethShutdown(){
+  close(sock);
+}

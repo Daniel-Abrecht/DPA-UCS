@@ -17,32 +17,43 @@ AVR_CC=avr-gcc
 AVR_MCU=attiny8
 AVR_NET_DRIVER=dummy
 
-OPTIONS         = -std=c11 -Os
+OPTIONS        += -std=c11 -Os
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
-OPTIONS        += -s -ffunction-sections -fdata-sections -Wl,-gc-sections
+OPTIONS        += -s -ffunction-sections -fdata-sections
 
 GEN_DEST = FilesAsCArrays
 URL_FILE_BASE   = static/
 
+USE_IPv4=true
+#USE_IPv6=true
 
-FILES  = main.o
+OPTIONAL_FILES += server/protocol/icmp.o
+OPTIONAL_FILES += server/protocol/tcp.o server/protocol/tcp_retransmission_cache.o
+OPTIONAL_FILES += server/services/http.o
+
+ifdef USE_IPv4
+OPTIONAL_FILES += server/protocol/IPv4.o
+OPTIONS        += -DUSE_IPv4
+endif
+ifdef USE_IPv6
+OPTIONS        += -DUSE_IPv6
+endif
+
+FILES += main.o
 FILES += server/server.o
 FILES += server/stream.o
 FILES += server/mempool.o
 FILES += server/checksum.o
 FILES += server/binaryUtils.o
 FILES += server/protocol/arp.o
-FILES += server/protocol/tcp.o
-FILES += server/protocol/icmp.o
 FILES += server/protocol/ip.o
-FILES += server/protocol/IPv4.o
 FILES += server/protocol/layer3.o
 FILES += server/protocol/ip_stack.o
 FILES += server/protocol/address.o
 FILES += server/protocol/tcp_ip_stack_memory.o
-FILES += server/services/http.o
 FILES += files.g1.o
+FILES += $(OPTIONAL_FILES)
 
 
 ###################
@@ -116,7 +127,12 @@ clean: clean_linux clean_avr
 ###################
 
 $(LINUX_TARGET): $(LINUX_FILES)
-	$(LINUX_CC) $(LINUX_OPTIONS) $(LINUX_FILES) $(LINUX_GENERATED) -o $(LINUX_TARGET)
+	# First pass, won't remove unused symbols because it will supress undefined reference errors
+	# in unused symbols and they are used for dependendy checking
+	$(LINUX_CC) $(LINUX_OPTIONS) $(LINUX_FILES) $(LINUX_GENERATED) -o $(LINUX_TARGET)_tmp
+	rm $(LINUX_TARGET)_tmp
+	# Second pass, there isn't any undefined reference, remove all unused symbols
+	$(LINUX_CC) $(LINUX_OPTIONS) -Wl,-gc-sections $(LINUX_FILES) $(LINUX_GENERATED) -o $(LINUX_TARGET)
 
 $(TEMP_LINUX)/%.o: $(SRC)/%.c $(HEADERS)
 	@mkdir -p "$(shell dirname "$@")"
@@ -137,7 +153,7 @@ clean_linux:
 ###################
 
 $(AVR_TARGET): $(AVR_FILES)
-	$(AVR_CC) $(AVR_OPTIONS) $(AVR_FILES) $(AVR_GENERATED) -o $(AVR_TARGET)
+	$(AVR_CC) $(AVR_OPTIONS) -Wl,-gc-sections $(AVR_FILES) $(AVR_GENERATED) -o $(AVR_TARGET)
 
 $(TEMP_AVR)/%.o: $(SRC)/%.c $(HEADERS)
 	@mkdir -p "$(shell dirname "$@")"

@@ -7,6 +7,7 @@
 #include <binaryUtils.h>
 #include <protocol/ethtypes.h>
 #include <protocol/address.h>
+#include <protocol/icmp.h>
 #include <protocol/arp.h>
 #include <protocol/ip.h>
 
@@ -28,9 +29,17 @@ void DPAUCS_init( void ){
 
   DPAUCS_ethInit(mac);
 
+  if(DPAUCS_icmpInit)
+    DPAUCS_icmpInit();
+
 }
 
 void DPAUCS_shutdown( void ){
+
+  if(DPAUCS_icmpShutdown)
+    DPAUCS_icmpShutdown();
+
+  DPAUCS_ethShutdown();
 
 }
 
@@ -67,6 +76,8 @@ bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
 }
 
 void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, DPAUCS_service_t* service ){
+  if(!service)
+    return;
   for(int i=0;i<MAX_SERVICES;i++){
     if(!services[i].active){
       services[i].active = true;

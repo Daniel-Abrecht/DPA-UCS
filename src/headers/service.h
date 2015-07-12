@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <helper_macros.h>
 
 typedef struct {
   uint8_t tos; // type of service

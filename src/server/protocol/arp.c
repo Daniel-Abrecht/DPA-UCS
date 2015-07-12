@@ -81,11 +81,17 @@ void DPAUCS_arp_handler( DPAUCS_packet_info* info ){
     *tpa = tha + arp->hlen  // Target protocol address
   ;
 
+  (void)sha;
+  (void)spa;
+  (void)tha;
+  (void)tpa;
+
   // handle only 6 byte long hardware adresses
   if( arp->hlen != 6 )
     return;
 
   switch( btoh16( arp->ptype ) ){
+#ifdef USE_IPv4
     case ETH_TYPE_IP_V4: {
       // IPv4 addresses must be 4 bytes long
       if( arp->plen != 4 ) return;
@@ -144,7 +150,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info* info ){
       }
 
     } break;
-    default: return; // Unsupportet protocol type
+#endif
   }
 
 }

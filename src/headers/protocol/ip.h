@@ -8,8 +8,12 @@
 
 typedef PACKED1 union PACKED2 {
   uint8_t version;
+#ifdef USE_IPv4
   DPAUCS_IPv4_t IPv4;
-  DPAUCS_IPv6_t ipv6;
+#endif
+#ifdef USE_IPv6
+  DPAUCS_IPv6_t IPv6;
+#endif
 } DPAUCS_ip_t;
 
 void DPAUCS_ip_handler( DPAUCS_packet_info* info );

@@ -40,12 +40,14 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
 
   switch( fromTo->source->type ){
 
+#ifdef USE_IPv4
     case AT_IPv4: DPAUCS_IPv4_transmit( 
       stream,
       (const DPAUCS_IPv4_address_t*)fromTo->source,
       (const DPAUCS_IPv4_address_t*)fromTo->destination,
       type
     ); break;
+#endif
 
   }
 

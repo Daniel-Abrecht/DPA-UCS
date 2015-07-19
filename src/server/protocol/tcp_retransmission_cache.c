@@ -50,11 +50,28 @@ cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t* t, transmissionControlBloc
   return (cacheEntry_t**)entry;
 }
 
-void accessCache( cacheEntry_t** entry, cacheAccessFunc_t func ){
-  (void)entry;
-  (void)func;
+void removeFromCache( cacheEntry_t** entry ){
+  DPAUCS_mempool_free( &mempool, (void**)entry );
 }
 
-void removeFromCache( cacheEntry_t** entry ){
-  (void)entry;
+void tcbRemovationHandler( transmissionControlBlock_t* tcb ){
+  void** entry = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
+  while( --entry >= cacheEntries ){
+    if(!*entry)
+      continue;
+    transmissionControlBlock_t** it = (transmissionControlBlock_t**)(void*)( ((cacheEntry_t*)*entry) + 1 );
+    size_t n = ((cacheEntry_t*)*entry)->tcbBufferSize;
+    size_t m = 0;
+    for( ; *it; it++ ){
+      n--;
+      if( *it != tcb ){
+        m++;
+        continue;
+      }
+      memcpy( it, it+1, n );
+      it--;
+    }
+    if(!m) // no tcb's left, remove entry
+      *entry = 0;
+  }
 }

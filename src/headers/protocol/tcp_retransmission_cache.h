@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "protocol/tcp.h"
+#include <protocol/tcp.h>
 
 #ifndef TCP_RETRANSMISSION_CACHE_SIZE
 #define TCP_RETRANSMISSION_CACHE_SIZE 1024 * 4 // 2K
@@ -23,7 +23,7 @@ typedef struct {
 } cacheEntry_t;
 
 cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t*, transmissionControlBlock_t**, uint16_t );
-void accessCache( cacheEntry_t**, cacheAccessFunc_t );
 void removeFromCache( cacheEntry_t** );
+void tcbRemovationHandler( transmissionControlBlock_t* );
 
 #endif

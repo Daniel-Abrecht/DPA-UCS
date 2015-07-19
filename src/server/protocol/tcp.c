@@ -7,6 +7,7 @@
 #include <protocol/tcp.h>
 #include <protocol/arp.h>
 #include <protocol/IPv4.h>
+#include <protocol/tcp_retransmission_cache.h>
 
 DPAUCS_MODUL( tcp ){}
 
@@ -55,6 +56,7 @@ static transmissionControlBlock_t* getTcbByCurrentId( const void*const id ){
 static void removeTCB( transmissionControlBlock_t* tcb ){
   if( !tcb->active )
     return;
+  tcbRemovationHandler( tcb );
   DPAUCS_arpCache_deregister( tcb->fromTo.destination );
   tcb->active = false;
   tcb->currentId = 0;

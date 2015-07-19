@@ -2,7 +2,6 @@
 #include <protocol/ip.h>
 #include <protocol/layer3.h>
 
-//static buffer_buffer_t outputStreamBufferBuffer;
 DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,0);
 DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,3);
 

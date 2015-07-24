@@ -19,10 +19,10 @@ static void tcp_reciveFailtureHandler( void* );
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
 static void removeTCB( transmissionControlBlock_t* tcb );
-static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, uint16_t flags );
+static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream );
 static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
-static void tcp_sendNoData( transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream );
+static bool tcp_sendNoData( transmissionControlBlock_t** tcb, tcp_segment_t* SEG, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream );
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
 
 
@@ -120,13 +120,14 @@ static void printFrame( DPAUCS_tcp_t* tcp ){
   );
 }
 
-static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, uint16_t flags ){
+static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
   memset( tcp, 0, sizeof(*tcp) );
-  tcp->destination = btoh16( tcb->destPort );
-  tcp->source = btoh16( tcb->srcPort );
+  tcp->destination = htob16( tcb->destPort );
+  tcp->source = htob16( tcb->srcPort );
   tcp->acknowledgment = btoh32( tcb->RCV.NXT );
-  tcp->sequence = btoh32( tcb->SND.NXT );
-  tcp->flags = btoh16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | flags );
+  tcp->sequence = htob32( SEG->SEQ );
+  tcp->windowSize = htob16( tcb->RCV.WND );
+  tcp->flags = htob16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | SEG->flags );
 }
 
 #ifdef USE_IPv4
@@ -184,24 +185,45 @@ static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp, DPAUCS_createTran
 
 }
 
-static void tcp_end( DPAUCS_tcp_transmission_t* transmission, transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
+inline uint32_t tcp_SEG_LEN( uint32_t datalen, uint32_t flags ){
+  /* RFC 793  Page 26
+   * > ...
+   * > is achived by implicitly including some
+   * > control flags in the sequence space
+   * > ... 
+   * > The segment length (SEG.LEN) includes both 
+   * > data and sequqence space occupying controls
+   */
+  if( flags & ( TCP_FLAG_SYN | TCP_FLAG_FIN ) )
+    return datalen + 1;
+  else
+    return datalen;
+}
+
+static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, transmissionControlBlock_t** tcb, tcp_segment_t* SEG, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
+
+  if( tcp_connectionUnstable( *tcb ) )
+    if(!addToCache( transmission, tcb, SEG->flags ))
+        return false;
 
   for(;*tcb;tcb++){
-    tcp_from_tcb( transmission->tcp, *tcb, flags );
+    tcp_from_tcb( transmission->tcp, *tcb, SEG );
     tcp_calculateChecksum( *tcb, transmission->tcp, transmission->stream );
     (*transmit)(transmission->stream,&(*tcb)->fromTo, PROTOCOL_TCP);
-    (*tcb)->SND.UNA = (*tcb)->SND.NXT;
-    (*tcb)->SND.NXT += DPAUCS_stream_getLength( transmission->stream ) - sizeof(DPAUCS_tcp_t) + 1;
+    uint32_t next = SEG->SEQ + tcp_SEG_LEN( DPAUCS_stream_getLength( transmission->stream ) - sizeof(DPAUCS_tcp_t), SEG->flags );
+    if( (*tcb)->SND.NXT < next )
+      (*tcb)->SND.NXT = next;
   }
   (*destroyStream)(transmission->stream);
 
+  return true;
 }
 
-static void tcp_sendNoData( transmissionControlBlock_t** tcb, uint16_t flags, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
+static bool tcp_sendNoData( transmissionControlBlock_t** tcb, tcp_segment_t* SEG, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
 
   DPAUCS_tcp_t tcp;
   DPAUCS_tcp_transmission_t t = tcp_begin( &tcp, createStream );
-  tcp_end( &t, tcb, flags, transmit, destroyStream );
+  return tcp_end( &t, tcb, SEG, transmit, destroyStream );
 
 }
 
@@ -223,15 +245,18 @@ static bool tcp_processDatas(
   (void)length;
   (void)payload;
   (void)last;
+  printf("\n-- data begin --\n");
+  fwrite( payload, 1, length, stdout );
+  printf("\n-- data end --\n");
   return true;
 }
 
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
-  return ( stcb->state & TCP_SYN_RCVD_STATE   )
-      || ( stcb->state & TCP_SYN_SENT_STATE   )
-      || ( stcb->state & TCP_FIN_WAIT_2_STATE )
-      || ( stcb->state & TCP_CLOSING_STATE    )
-      || ( stcb->state & TCP_LAST_ACK_STATE   );
+  return ( stcb->state == TCP_SYN_RCVD_STATE   )
+      || ( stcb->state == TCP_SYN_SENT_STATE   )
+      || ( stcb->state == TCP_FIN_WAIT_2_STATE )
+      || ( stcb->state == TCP_CLOSING_STATE    )
+      || ( stcb->state == TCP_LAST_ACK_STATE   );
 }
 
 static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
@@ -248,6 +273,12 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   if( headerLength > length )
     return false;
 
+  tcp_segment_t SEG = {
+    .ACK = btoh32(tcp->acknowledgment),
+    .SEQ = btoh32(tcp->sequence),
+    .flags = btoh16( tcp->flags )
+  };
+
   transmissionControlBlock_t tcb = {
     .active = true,
     .srcPort = btoh16(tcp->destination),
@@ -256,12 +287,8 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
       .source = to,
       .destination = from
     },
-    .SND = {
-      .UNA = ISS,
-      .NXT = ISS
-    },
     .RCV = {
-      .NXT = btoh32(tcp->sequence) + length - headerLength + 1,
+      .NXT = SEG.SEQ + tcp_SEG_LEN( length - headerLength, SEG.flags )
     },
     .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
     .currentId = id
@@ -273,78 +300,145 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
    || !DPAUCS_isValidHostAddress( &tcb.fromTo.destination->logicAddress )
    || !tcb.service
   ){
-    tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
+    tcp_segment_t segment = {
+      .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
+      .ACK = tcb.RCV.NXT,
+      .SEQ = ISS
+    };
+    tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, &segment, createStream, transmit, destroyStream );
     return false;
   }
 
   printf("-- tcp_reciveHandler | id: %p offset: %u size: %u --\n",id,(unsigned)offset,(unsigned)length);
 
+  enum {
+    SEG_POS_LAST_OCTET,
+    SEG_POS_NEXT_OCTET,
+    SEG_POS_FUTUR_OCTET
+  } segment_position = SEG_POS_NEXT_OCTET;
+
   transmissionControlBlock_t* stcb = searchTCB( &tcb );
-  uint16_t flags = btoh16( tcp->flags );
-  if( flags & TCP_FLAG_SYN ){
-    if( headerLength < length ){
-      // Datas in SYNs are rarely seen, won't support them.
-      printf( "SYN with datas rejected.\n" );
-      tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
-      return false;
+  if( stcb ){
+    // relSeq == 1 and no data is allowed as specified by
+    // RFC 763  Page 25/26
+    uint32_t relSeq = stcb->RCV.NXT - SEG.SEQ;
+    if( relSeq == 1 )
+      segment_position = SEG_POS_LAST_OCTET;
+    else if( relSeq == 0 )
+      segment_position = SEG_POS_NEXT_OCTET;
+    else
+      segment_position = SEG_POS_FUTUR_OCTET;
+    printf("relSeq: %u\n",(unsigned)relSeq);
+    switch( segment_position ){
+      case SEG_POS_NEXT_OCTET: {
+        printf("RCV.NXT: %u => %u\n",(unsigned)stcb->RCV.NXT,(unsigned)tcb.RCV.NXT);
+        stcb->RCV.NXT = tcb.RCV.NXT;
+      } break;
+      case SEG_POS_LAST_OCTET:
+        if( length==headerLength )
+          break;
+      case SEG_POS_FUTUR_OCTET:
+      default:
+        printf("Out of order: SEG.SEQ = %u\n",(unsigned)SEG.SEQ);
+        return false;
     }
+  }
+  if( SEG.flags & TCP_FLAG_SYN ){
     if( stcb ){
       printf( "Dublicate SYN or already opened connection detected.\n" );
       return false;
     }
     tcb.state = TCP_SYN_RCVD_STATE;
+    /* In case of a SYN with data,
+     * I won't buffer a syn with data, however, 
+     * I can acknowledge the SYN only, 
+     * causeing a retransmission of all datas later or a RST
+     */
+    tcb.RCV.NXT = SEG.SEQ + 1;
     stcb = addTemporaryTCB( &tcb );
     if(!stcb)
       return false;
-    tcp_sendNoData( (transmissionControlBlock_t*[]){stcb,0}, TCP_FLAG_ACK | TCP_FLAG_SYN, createStream, transmit, destroyStream );
+    stcb->SND.UNA = ISS + 1;
+    stcb->SND.NXT = ISS + 1;
+    stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
+    tcp_segment_t segment = {
+      .flags = TCP_FLAG_ACK | TCP_FLAG_SYN,
+      .ACK = stcb->RCV.NXT,
+      .SEQ = ISS
+    };
+    tcp_sendNoData( (transmissionControlBlock_t*[]){stcb,0}, &segment, createStream, transmit, destroyStream );
   }else if( !stcb ){
     printf( "Connection unavaiable.\n" );
-    tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, TCP_FLAG_ACK | TCP_FLAG_RST, createStream, transmit, destroyStream );
+    tcp_segment_t segment = {
+      .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
+      .ACK = tcb.RCV.NXT,
+      .SEQ = ISS
+    };
+    tcp_sendNoData( (transmissionControlBlock_t*[]){&tcb,0}, &segment, createStream, transmit, destroyStream );
     return false;
-  }
-
-  if( flags & TCP_FLAG_ACK ){
-    uint32_t ackrel = btoh32(tcp->acknowledgment) - stcb->SND.UNA - 1;
-    uint32_t ackwnd = stcb->SND.NXT - stcb->SND.UNA;
-    if( ackrel >= ackwnd )
-      return false;
-    stcb->SND.UNA = btoh32(tcp->acknowledgment);
-    if( stcb->state == TCP_SYN_RCVD_STATE ){
-      stcb->state = TCP_ESTAB_STATE;
-      printf("Connection established.\n");
-    }
-  }
-
-  if( flags & TCP_FLAG_FIN ){
-    
   }
 
   printFrame( tcp );
 
+  if( SEG.flags & TCP_FLAG_ACK ){
+    uint32_t ackrel = SEG.ACK - stcb->SND.UNA;
+    uint32_t ackwnd = stcb->SND.NXT - stcb->SND.UNA;
+    printf( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
+    if( ackrel > ackwnd )
+      return false;
+    stcb->SND.UNA = btoh32(tcp->acknowledgment);
+    switch( segment_position ){
+      case SEG_POS_NEXT_OCTET: {
+        if( stcb->state == TCP_SYN_RCVD_STATE ){
+          stcb->state = TCP_ESTAB_STATE;
+          printf("Connection established.\n");
+        }
+      } break;
+      case SEG_POS_LAST_OCTET: {
+        printf("TCP Keep-Alive\n");
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .ACK = stcb->RCV.NXT - 1,
+          .SEQ = stcb->SND.NXT
+        };
+        tcp_sendNoData( (transmissionControlBlock_t*[]){stcb,0}, &segment, createStream, transmit, destroyStream );
+      } break;
+      case SEG_POS_FUTUR_OCTET:
+      default: break;
+    }
+  }
+
+  if( SEG.flags & TCP_FLAG_FIN ){
+    
+  }
+
+  /*
   uint8_t* options = (uint8_t*)payload + 40;
   while( options < (uint8_t*)payload+headerLength ){
-  printf("option %.2X\n",(int)options[0]);
-  switch(options[0]){
-    case 0: goto afterOptionLoop; // end
-    case 1: options++; continue; // noop
-    default: { // other
-      uint8_t size = options[1];
-      if( size < 2 || options+size > (uint8_t*)payload+headerLength )
-        goto afterOptionLoop;
-      printf("size: %u\n",(unsigned)size);
-      hexdump(options+2,size-2,16);
-      options += size;
-    } break;
-  }
+    printf("option %.2X\n",(int)options[0]);
+    switch(options[0]){
+      case 0: goto afterOptionLoop; // end
+      case 1: options++; continue; // noop
+      default: { // other
+        uint8_t size = options[1];
+        if( size < 2 || options+size > (uint8_t*)payload+headerLength )
+          goto afterOptionLoop;
+        printf("size: %u\n",(unsigned)size);
+        hexdump(options+2,size-2,16);
+        options += size;
+      } break;
+    }
   }
   afterOptionLoop:;
-
-  if( tcp_connectionUnstable(stcb) )
+*/
+  if( tcp_connectionUnstable(stcb)
+   || headerLength >= length
+   || segment_position != SEG_POS_NEXT_OCTET
+  ){
     return !last;
-  else if( headerLength < length )
-    tcp_processDatas( stcb, createStream, transmit, destroyStream, offset+headerLength, length-headerLength, (char*)payload+headerLength, last );
-
-  return true;
+  }else{
+    return tcp_processDatas( stcb, createStream, transmit, destroyStream, offset+headerLength, length-headerLength, (char*)payload+headerLength, last );
+  }
 }
 
 static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){

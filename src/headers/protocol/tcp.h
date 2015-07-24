@@ -18,6 +18,7 @@ DPAUCS_MODUL( tcp );
 #define TCP_KEEPALIVE_CHECK 6 * 1000
 #define TCP_DROP_AFTER_FAILTURES 10
 
+#define DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE 1460
 
 typedef PACKED1 struct PACKED2 {
   uint16_t source;
@@ -88,6 +89,14 @@ typedef struct {
   ///////////////
   
 } transmissionControlBlock_t;
+
+typedef struct {
+  uint32_t
+    ACK,
+    SEQ
+  ;
+  uint16_t flags;
+} tcp_segment_t;
 
 typedef struct {
   DPAUCS_tcp_t* tcp;

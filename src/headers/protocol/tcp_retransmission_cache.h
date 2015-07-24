@@ -19,6 +19,7 @@ typedef struct {
   size_t tcbBufferSize;
   size_t charBufferSize;
   size_t streamBufferSize;
+  tcp_segment_t SEG;
   uint16_t flags;
 } cacheEntry_t;
 

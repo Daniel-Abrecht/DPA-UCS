@@ -32,21 +32,31 @@ cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t* t, transmissionControlBloc
   DPAUCS_mempool_alloc( &mempool, entry, fullSize );
   if(!*entry)
     return 0;
-  char* emem = *entry;
-  memcpy( emem, &e , sizeof(e)       ); emem += sizeof(e);
-  memcpy( emem, tcb, e.tcbBufferSize ); emem += e.tcbBufferSize;
+
   {
-    uchar_buffer_t* cb = t->stream->buffer;
-    while(!BUFFER_EOF( cb ))
-      *emem++ = BUFFER_GET( cb );
+    DPAUCS_stream_offsetStorage_t sros;
+    DPAUCS_stream_saveReadOffset( &sros, t->stream );
+
+    char* emem = *entry;
+    memcpy( emem, &e , sizeof(e)       ); emem += sizeof(e);
+    memcpy( emem, tcb, e.tcbBufferSize ); emem += e.tcbBufferSize;
+
+    {
+      uchar_buffer_t* cb = t->stream->buffer;
+      while(!BUFFER_EOF( cb ))
+        *emem++ = BUFFER_GET( cb );
+    }
+    {
+      buffer_buffer_t* bb = t->stream->buffer_buffer;
+      bufferInfo_t* bmem = (bufferInfo_t*)emem;
+      while(!BUFFER_EOF( bb ))
+        *bmem++ = BUFFER_GET( bb );
+      emem += e.streamBufferSize;
+    }
+
+    DPAUCS_stream_restoreReadOffset( t->stream, &sros );
   }
-  {
-    buffer_buffer_t* bb = t->stream->buffer_buffer;
-    bufferInfo_t* bmem = (bufferInfo_t*)emem;
-    while(!BUFFER_EOF( bb ))
-      *bmem++ = BUFFER_GET( bb );
-    emem += e.streamBufferSize;
-  }
+
   return (cacheEntry_t**)entry;
 }
 
@@ -72,6 +82,6 @@ void tcbRemovationHandler( transmissionControlBlock_t* tcb ){
       it--;
     }
     if(!m) // no tcb's left, remove entry
-      *entry = 0;
+      removeFromCache( (cacheEntry_t**)entry );
   }
 }

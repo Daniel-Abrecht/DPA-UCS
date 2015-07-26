@@ -92,7 +92,6 @@ typedef struct {
 
 typedef struct {
   uint32_t
-    ACK,
     SEQ,
     LEN
   ;

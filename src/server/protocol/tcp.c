@@ -20,7 +20,7 @@ static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
 static void removeTCB( transmissionControlBlock_t* tcb );
 static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
-static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream );
+static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
 static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
 static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream );
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
@@ -130,7 +130,7 @@ static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tc
 }
 
 #ifdef USE_IPv4
-static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
+static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
   PACKED1 struct PACKED2 pseudoHeader {
     uint32_t src, dst;
     uint8_t padding, protocol;
@@ -141,27 +141,30 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
     .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->fromTo.destination->logicAddress))->address ),
     .padding = 0,
     .protocol = PROTOCOL_TCP,
-    .length = htob16( DPAUCS_stream_getLength( stream ) )
+    .length = htob16( length )
   };
   (void)tcp;
   return checksum( &pseudoHeader, sizeof(pseudoHeader) );
 }
 #endif
 
-static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
+static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
+
+  (void)stream;
+
   switch( tcb->fromTo.source->type ){
 #ifdef USE_IPv4
-    case AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,stream);
+    case AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,length);
 #endif
   }
   return 0;
 }
 
-static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream ){
+static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, stream );
 
-  uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, stream );
+  uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, stream, length );
   uint16_t data_checksum = ~checksumOfStream( stream );
 
   uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum;
@@ -201,15 +204,25 @@ inline uint32_t tcp_SEG_LEN( uint32_t datalen, uint32_t flags ){
 
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream ){
 
-  cleanupCache(); // TODO: add some checks if it's necessary
-  if(!addToCache( transmission, count, tcb, SEG ))
-    return false;
+  size_t length = DPAUCS_stream_getLength( transmission->stream );
+  uint16_t len_tmp = length - sizeof(DPAUCS_tcp_t);
+
+  for(unsigned i=count;i--;)
+    SEG[i].LEN = tcp_SEG_LEN( len_tmp, SEG[i].flags );
+
+  if( len_tmp ){
+    cleanupCache(); // TODO: add some checks if it's necessary
+    if(!addToCache( transmission, count, tcb, SEG )){
+      printf("TCP Retransmission cache full.\n");
+      return false;
+    }
+  }
 
   for(unsigned i=0;i<count;i++){
     tcp_from_tcb( transmission->tcp, tcb[i], SEG+i );
-    tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream );
+    tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, length );
     (*transmit)(transmission->stream,&tcb[i]->fromTo, PROTOCOL_TCP);
-    uint32_t next = SEG[i].SEQ + tcp_SEG_LEN( DPAUCS_stream_getLength( transmission->stream ) - sizeof(DPAUCS_tcp_t), SEG[i].flags );
+    uint32_t next = SEG[i].SEQ + SEG[i].LEN;
     if( tcb[i]->SND.NXT < next )
       tcb[i]->SND.NXT = next;
   }
@@ -273,7 +286,6 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     return false;
 
   tcp_segment_t SEG = {
-    .ACK = btoh32(tcp->acknowledgment),
     .SEQ = btoh32(tcp->sequence),
     .flags = btoh16( tcp->flags )
   };
@@ -292,6 +304,7 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
     .currentId = id
   };
+  uint32_t ACK = btoh32(tcp->acknowledgment);
 
   if(
       !tcb.service
@@ -301,7 +314,6 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   ){
     tcp_segment_t segment = {
       .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
-      .ACK = tcb.RCV.NXT,
       .SEQ = ISS
     };
     tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, &segment, createStream, transmit, destroyStream );
@@ -355,23 +367,23 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
      */
     tcb.RCV.NXT = SEG.SEQ + 1;
     stcb = addTemporaryTCB( &tcb );
-    if(!stcb)
+    if(!stcb){
+      printf("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
       return false;
+    }
     stcb->SND.UNA = ISS + 1;
     stcb->SND.NXT = ISS + 1;
     stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
     tcp_segment_t segment = {
       .flags = TCP_FLAG_ACK | TCP_FLAG_SYN,
-      .ACK = stcb->RCV.NXT,
       .SEQ = ISS
     };
     tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
   }else if( !stcb ){
     printf( "Connection unavaiable.\n" );
     tcp_segment_t segment = {
-      .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
-      .ACK = tcb.RCV.NXT,
-      .SEQ = ISS
+      .flags = TCP_FLAG_RST,
+      .SEQ = ACK
     };
     tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, &segment, createStream, transmit, destroyStream );
     return false;
@@ -380,7 +392,7 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   printFrame( tcp );
 
   if( SEG.flags & TCP_FLAG_ACK ){
-    uint32_t ackrel = SEG.ACK - stcb->SND.UNA;
+    uint32_t ackrel = ACK - stcb->SND.UNA;
     uint32_t ackwnd = stcb->SND.NXT - stcb->SND.UNA;
     printf( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
     if( ackrel > ackwnd )
@@ -397,7 +409,6 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
         printf("TCP Keep-Alive\n");
         tcp_segment_t segment = {
           .flags = TCP_FLAG_ACK,
-          .ACK = stcb->RCV.NXT,
           .SEQ = stcb->SND.NXT
         };
         tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );

@@ -20,6 +20,7 @@ AVR_NET_DRIVER=dummy
 OPTIONS        += -std=c11 -Os
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
+OPTIONS        += -ffast-math
 OPTIONS        += -s -ffunction-sections -fdata-sections
 
 GEN_DEST = FilesAsCArrays

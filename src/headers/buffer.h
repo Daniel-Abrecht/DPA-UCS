@@ -3,36 +3,35 @@
 #define BUFFER_TEMPLATE(T) \
   typedef struct { \
     T*const buffer; \
-    const size_t size_mask; \
+    const size_t size; \
     size_t read_offset; \
     size_t write_offset; \
   }
 
 #define DEFINE_BUFFER(B,T,name,size) \
-  static B name ## _buffer[1<<size]; \
-  T name = { name ## _buffer, (1<<size)-1, 0, 0 }
+  static B name ## _buffer[size]; \
+  T name = { name ## _buffer, size, 0, 0 }
 
 #define BUFFER_SIZE(buf) ( (buf)->write_offset - (buf)->read_offset )
 #define BUFFER_EOF(buf) ( !BUFFER_SIZE(buf) )
-#define BUFFER_BEGIN(buf) ( &(buf)->buffer[ (buf)->read_offset & (buf)->size_mask ] )
+#define BUFFER_BEGIN(buf) ( &(buf)->buffer[ (buf)->read_offset % (buf)->size ] )
 #define BUFFER_END(buf) \
   ( &(buf)->buffer[ \
-    ( (buf)->read_offset & (buf)->size_mask ) > ( (buf)->write_offset & (buf)->size_mask ) \
-      ? (buf)->write_offset & (buf)->size_mask \
-      : (buf)->size_mask + 1 \
+    ( (buf)->read_offset % (buf)->size ) > ( (buf)->write_offset % (buf)->size ) \
+      ? (buf)->write_offset % (buf)->size \
+      : (buf)->size \
   ] )
 #define BUFFER_SKIP(buf,x) do { (buf)->read_offset += x; } while(0)
-#define BUFFER_GET(buf) (buf)->buffer[ (buf)->read_offset++ & (buf)->size_mask ]
-#define BUFFER_AT(buf,offset) (buf)->buffer[ ( (buf)->read_offset + (offset) ) & (buf)->size_mask ]
-#define BUFFER_FULL(buf) ( BUFFER_SIZE(buf) > (buf)->size_mask )
+#define BUFFER_GET(buf) (buf)->buffer[ (buf)->read_offset++ % (buf)->size ]
+#define BUFFER_AT(buf,offset) (buf)->buffer[ ( (buf)->read_offset + (offset) ) % (buf)->size ]
+#define BUFFER_FULL(buf) ( BUFFER_SIZE(buf) >= (buf)->size )
 #define BUFFER_PUT(buf,x) \
   do { \
-    (buf)->buffer[ (buf)->write_offset & (buf)->size_mask ] = x; \
+    (buf)->buffer[ (buf)->write_offset % (buf)->size ] = x; \
     (buf)->write_offset++; \
   } while(0)
 
-#define BUFF_MKMASK(x) ((1<<(x))-1)
-#define BUFF_MAX BUFF_MKMASK( sizeof(size_t)-1 )
+#define BUFF_MAX ( 1<<(sizeof(size_t)-1) )
 
 #define BUFFER_BUFFER_USERDEFINED(buf) ( BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
 #define BUFFER_BUFFER_TYPE(buf) ( BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )

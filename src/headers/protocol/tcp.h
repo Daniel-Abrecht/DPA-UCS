@@ -93,7 +93,8 @@ typedef struct {
 typedef struct {
   uint32_t
     ACK,
-    SEQ
+    SEQ,
+    LEN
   ;
   uint16_t flags;
 } tcp_segment_t;

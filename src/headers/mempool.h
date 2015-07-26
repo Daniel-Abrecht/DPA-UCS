@@ -45,6 +45,12 @@ struct maxAlignHelperStruct {
   .memory = BUFFER \
 }
 
+#define DPAUCS_GET_MEMPOOL_ENTRY( memory ) \
+  ((DPAUCS_mempoolEntry_t*)((uint8_t*)(*memory) - DPAUCS_MEMPOOL_ENTRY_SIZE))
+
+#define DPAUCS_MEMPOOL_SIZE( memory ) \
+  DPAUCS_GET_MEMPOOL_ENTRY( memory )->size
+
 struct DPAUCS_mempoolEntry;
 typedef struct DPAUCS_mempoolEntry {
   void** reference;

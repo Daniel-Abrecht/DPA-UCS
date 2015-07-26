@@ -23,6 +23,7 @@ void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, DPAUCS_stream_off
 void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, DPAUCS_stream_t* stream );
 void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, DPAUCS_stream_offsetStorage_t* sros );
 size_t DPAUCS_stream_getLength( DPAUCS_stream_t* stream );
+bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t*const stream, bufferInfo_t* bmem, size_t bmsize, unsigned char* cmem, size_t cmsize );
 
 #define DPAUCS_stream_eof(s) BUFFER_EOF((s)->buffer_buffer)
 

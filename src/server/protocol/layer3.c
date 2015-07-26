@@ -2,8 +2,8 @@
 #include <protocol/ip.h>
 #include <protocol/layer3.h>
 
-DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,0);
-DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,3);
+DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,1);
+DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,16);
 
 static DPAUCS_stream_t outputStream = {
   &outputStreamBuffer,

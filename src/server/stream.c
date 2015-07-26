@@ -1,5 +1,6 @@
 #include <stream.h>
 #include <string.h>
+#include <stdint.h>
 
 void DPAUCS_stream_reset( DPAUCS_stream_t*const stream ){
   DPAUCS_stream_offsetStorage_t sros;
@@ -27,6 +28,41 @@ void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, DPAUCS_
 void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, DPAUCS_stream_offsetStorage_t* sros ){
   stream->buffer->write_offset = sros->bufferOffset;
   stream->buffer_buffer->write_offset = sros->bufferBufferOffset;
+}
+
+static inline void buffer_buffer_to_raw( void* src_cbuf, void* dst_cbuf, bufferInfo_t* dst, bufferInfo_t src ){
+  *dst = src;
+  switch( src.type ){
+    case BUFFER_BUFFER: {
+      dst->ptr = (char*)src.ptr - (uintptr_t)src_cbuf + (uintptr_t)dst_cbuf;
+    } break;
+    default: break;
+  }
+}
+
+bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t*const stream, bufferInfo_t* bmem, size_t bmsize, unsigned char* cmem, size_t cmsize ){
+
+  DPAUCS_stream_offsetStorage_t sros;
+  DPAUCS_stream_saveReadOffset( &sros, stream );
+
+  uchar_buffer_t* cb = stream->buffer;
+  buffer_buffer_t* bb = stream->buffer_buffer;
+
+  if( BUFFER_SIZE(cb) > cmsize || BUFFER_SIZE(bb) > bmsize )
+    return false;
+
+  {
+    unsigned char* c = cmem;
+    while(!BUFFER_EOF( cb ))
+      *c++ = BUFFER_GET( cb );
+  }
+
+  while(!BUFFER_EOF( bb ))
+    buffer_buffer_to_raw( cb->buffer, cmem, bmem++, BUFFER_GET( bb ) );
+
+  DPAUCS_stream_restoreReadOffset( stream, &sros );
+
+  return true;
 }
 
 bool DPAUCS_stream_copyWrite( DPAUCS_stream_t*const stream, void* p, size_t size ){

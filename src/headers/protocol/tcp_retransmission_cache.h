@@ -16,15 +16,16 @@
 typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t* t, transmissionControlBlock_t** tcb, uint16_t flags);
 
 typedef struct {
+  unsigned count;
   size_t tcbBufferSize;
+  size_t segmentBufferSize;
   size_t charBufferSize;
   size_t streamBufferSize;
-  tcp_segment_t SEG;
-  uint16_t flags;
 } cacheEntry_t;
 
-cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t*, transmissionControlBlock_t**, uint16_t );
+
+cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t*, unsigned, transmissionControlBlock_t**, tcp_segment_t* );
 void removeFromCache( cacheEntry_t** );
-void tcbRemovationHandler( transmissionControlBlock_t* );
+void cleanupCache();
 
 #endif

@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <adelay.h>
 #include <protocol/tcp.h>
 
 #ifndef TCP_RETRANSMISSION_CACHE_SIZE
@@ -21,11 +22,13 @@ typedef struct {
   size_t segmentBufferSize;
   size_t charBufferSize;
   size_t streamBufferSize;
+  adelay_t adelay;
 } cacheEntry_t;
 
 
 cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t*, unsigned, transmissionControlBlock_t**, tcp_segment_t* );
 void removeFromCache( cacheEntry_t** );
 void cleanupCache();
+void tcp_retransmission_cache_do_retransmissions( void );
 
 #endif

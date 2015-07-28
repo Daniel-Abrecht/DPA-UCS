@@ -105,5 +105,7 @@ typedef struct {
 
 void WEAK DPAUCS_tcpInit();
 void WEAK DPAUCS_tcpShutdown();
+void WEAK tcp_do_next_task( void );
+
 
 #endif

@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <eth.h>
+#include <adelay.h>
 #include <server.h>
 #include <service.h>
 #include <packet.h>
@@ -9,6 +10,7 @@
 #include <protocol/address.h>
 #include <protocol/icmp.h>
 #include <protocol/arp.h>
+#include <protocol/tcp.h>
 #include <protocol/ip.h>
 
 const DPAUCS_logicAddress_t* logicAddresses[MAX_LOGIC_ADDRESSES] = {0};
@@ -31,6 +33,12 @@ void DPAUCS_init( void ){
 
   if(DPAUCS_icmpInit)
     DPAUCS_icmpInit();
+
+#ifdef DPAUCS_INIT // Allows to add init functions using makefile
+#define X(F) void F( void ); F();
+  DPAUCS_INIT
+#undef X
+#endif
 
 }
 
@@ -187,6 +195,12 @@ void DPAUCS_doNextTask( void ){
     }
 
   } while(0);
+
+  if(adelay_update)
+    adelay_update();
+
+  if(tcp_do_next_task)
+    tcp_do_next_task();
 
 }
 

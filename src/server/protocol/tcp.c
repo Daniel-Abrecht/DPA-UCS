@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <server.h>
+#include <adelay.h>
 #include <service.h>
 #include <checksum.h>
 #include <binaryUtils.h>
@@ -9,7 +10,9 @@
 #include <protocol/IPv4.h>
 #include <protocol/tcp_retransmission_cache.h>
 
-DPAUCS_MODUL( tcp ){}
+DPAUCS_MODUL( tcp ){
+  DPAUCS_DEPENDENCY( adelay_driver );
+}
 
 transmissionControlBlock_t transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
@@ -59,6 +62,7 @@ static void removeTCB( transmissionControlBlock_t* tcb ){
   DPAUCS_arpCache_deregister( tcb->fromTo.destination );
   tcb->active = false;
   tcb->currentId = 0;
+  printf("Connection removed.\n");
 }
 
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
@@ -249,17 +253,25 @@ static bool tcp_processDatas(
   void* payload,
   bool last
 ){
-  (void)tcb;
+
   (void)createStream;
   (void)transmit;
   (void)destroyStream;
   (void)offset;
-  (void)length;
-  (void)payload;
-  (void)last;
+
+  tcb->RCV.NXT += length;
+
   printf("\n-- data begin --\n");
   fwrite( payload, 1, length, stdout );
   printf("\n-- data end --\n");
+  if(last){
+    tcp_segment_t segment = {
+      .flags = TCP_FLAG_ACK,
+      .SEQ = tcb->SND.NXT
+    };
+    tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
+  }
+
   return true;
 }
 
@@ -299,7 +311,7 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
       .destination = from
     },
     .RCV = {
-      .NXT = SEG.SEQ + tcp_SEG_LEN( length - headerLength, SEG.flags )
+      .NXT = SEG.SEQ + tcp_SEG_LEN( 0, SEG.flags )
     },
     .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
     .currentId = id
@@ -400,9 +412,21 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     stcb->SND.UNA = btoh32(tcp->acknowledgment);
     switch( segment_position ){
       case SEG_POS_NEXT_OCTET: {
-        if( stcb->state == TCP_SYN_RCVD_STATE ){
-          stcb->state = TCP_ESTAB_STATE;
-          printf("Connection established.\n");
+        switch( stcb->state ){
+          case TCP_SYN_RCVD_STATE: {
+            stcb->state = TCP_ESTAB_STATE;
+            printf("Connection established.\n");
+          } break;
+          case TCP_CLOSING_STATE: {
+            stcb->state = TCP_TIME_WAIT_STATE;
+          } break;
+          case TCP_LAST_ACK_STATE: {
+            removeTCB( stcb );
+          } break;
+          case TCP_FIN_WAIT_1_STATE: {
+            stcb->state = TCP_FIN_WAIT_2_STATE;
+          } break;
+          default: break;
         }
       } break;
       case SEG_POS_LAST_OCTET: {
@@ -419,7 +443,33 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   }
 
   if( SEG.flags & TCP_FLAG_FIN ){
-    
+    switch( stcb->state ){
+      case TCP_ESTAB_STATE: {
+        stcb->state = TCP_CLOSE_WAIT_STATE;
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .SEQ = stcb->SND.NXT
+        };
+        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
+      } break;
+      case TCP_FIN_WAIT_1_STATE: {
+        stcb->state = TCP_CLOSING_STATE;
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .SEQ = stcb->SND.NXT
+        };
+        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
+      } break;
+      case TCP_FIN_WAIT_2_STATE: {
+        stcb->state = TCP_TIME_WAIT_STATE;
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .SEQ = stcb->SND.NXT
+        };
+        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
+      } break;
+      default: break;
+    }
   }
 
   /*
@@ -490,4 +540,8 @@ void DPAUCS_tcpInit(){
 void DPAUCS_tcpShutdown(){
   if(--counter) return;
   DPAUCS_layer3_removeProtocolHandler(&tcp_handler);
+}
+
+void tcp_do_next_task( void ){
+  tcp_retransmission_cache_do_retransmissions();
 }

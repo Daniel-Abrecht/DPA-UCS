@@ -14,8 +14,9 @@ SRC=src
 SYSTEM_CC=gcc
 LINUX_CC=gcc
 AVR_CC=avr-gcc
-AVR_MCU=attiny8
+AVR_MCU=atmega16
 AVR_NET_DRIVER=dummy
+AVR_F_CPU = 3686400UL
 
 OPTIONS        += -std=c11 -Os
 OPTIONS        += -I$(SRC)/headers/
@@ -30,6 +31,7 @@ USE_IPv4=true
 #USE_IPv6=true
 
 OPTIONAL_FILES += server/protocol/icmp.o
+OPTIONAL_FILES += server/adelay.o
 OPTIONAL_FILES += server/protocol/tcp.o server/protocol/tcp_retransmission_cache.o
 OPTIONAL_FILES += server/services/http.o
 
@@ -68,6 +70,7 @@ LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 
 LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
+LINUX_FILES_TMP += server/drivers/adelay_clock.o
 
 
 LINUX_FILES = $(shell \
@@ -79,10 +82,10 @@ LINUX_FILES = $(shell \
 
 
 ###################
-#      LINUX      #
+#       AVR       #
 ###################
 
-AVR_OPTIONS	= $(OPTIONS)
+AVR_OPTIONS	= $(OPTIONS) -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
 TEMP_AVR	= tmp/avr_$(AVR_MCU)
 AVR_TARGET	= $(BIN)/avr_$(AVR_MCU)
 AVR_GENERATED   = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
@@ -90,6 +93,14 @@ AVR_GENERATED   = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 AVR_FILES_TMP  = $(FILES)
 AVR_FILES_TMP += server/drivers/$(AVR_NET_DRIVER).o
 
+ifndef NO_ADELAY_DRIVER
+AVR_FILES_TMP += server/drivers/adelay_timer.o
+DPAUCS_INIT   += X(adelay_timer_init)
+endif
+
+ifdef DPAUCS_INIT
+AVR_OPTIONS   += -DDPAUCS_INIT='$(DPAUCS_INIT)'
+endif
 
 AVR_FILES = $(shell \
   for file in ${AVR_FILES_TMP}; \

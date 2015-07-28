@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <mempool.h>
@@ -14,14 +15,6 @@ typedef struct {
   unsigned char* charBuffer;
   bufferInfo_t* streamBuffer;
 } entryInfo_t;
-
-// workarround for gcc bug 50925 in gcc < 4.9
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=50925#c19
-#if defined( __GNUC__ ) && ( __GNUC__ < 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ < 9 ) ) && defined( __OPTIMIZE_SIZE__ )
-#define GCC_BUGFIX_50925 __attribute__((optimize("O3")))
-#else
-#define GCC_BUGFIX_50925
-#endif
 
 static inline void GCC_BUGFIX_50925 getEntryInfo( entryInfo_t* res, void** entry ){
   res->entry = *entry;
@@ -110,4 +103,26 @@ void cleanupCache(){
 */
     }
   }
+}
+
+static void retransmit( entryInfo_t* ei ){
+  (void)ei;
+  printf("retransmit\n");
+}
+
+// TODO: Make this dynamic, it's required by RFC 793 Page 41
+#define RETRANSMISSION_INTERVAL 500
+
+static bool do_retransmissions( void** entry, void* unused ){
+  (void)unused;
+  entryInfo_t info;
+  getEntryInfo( &info, entry );
+  if(!adelay_done( &info.entry->adelay, RETRANSMISSION_INTERVAL ))
+    return true;
+  retransmit( &info );
+  return true;
+}
+
+void tcp_retransmission_cache_do_retransmissions( void ){
+  DPAUCS_mempool_each( &mempool, do_retransmissions, 0 );
 }

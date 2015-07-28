@@ -3,9 +3,11 @@
 
 #include <stddef.h>
 
-#define URL_ENTRY \
-  const entry_type type; \
-  const char*const path;
+#ifdef __FLASH
+#define DP_FLASH //__flash
+#else
+#define DP_FLASH
+#endif
 
 typedef enum {
   FILE_ENTRY,
@@ -13,22 +15,15 @@ typedef enum {
 } entry_type;
 
 typedef struct {
-  URL_ENTRY
+  const entry_type type;
+  DP_FLASH const char* path;
 } entry_t;
 
 typedef struct {
-  URL_ENTRY
-  const char*const mime;
-  const size_t size;
-  const char*const content;
+  entry_t entry;
+  const DP_FLASH char* mime;
+  size_t size;
+  const DP_FLASH char* content;
 } file_t;
-
-typedef struct buffer_t buffer_t;
-typedef struct http_t http_t;
-
-typedef struct { 
-  URL_ENTRY
-  unsigned(*func)( const http_t*, buffer_t*const );
-} function_t;
 
 #endif

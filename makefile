@@ -18,7 +18,7 @@ AVR_MCU=atmega16
 AVR_NET_DRIVER=dummy
 AVR_F_CPU = 3686400UL
 
-OPTIONS        += -std=c11 -Os
+OPTIONS        += -std=c11 -Os #-flto
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 OPTIONS        += -ffast-math

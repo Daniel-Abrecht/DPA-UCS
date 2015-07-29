@@ -103,7 +103,7 @@ void DPAUCS_mempool_defragment( DPAUCS_mempool_t*const mempool ){
 }
 
 bool DPAUCS_mempool_free( DPAUCS_mempool_t*const mempool, void**const memory ){
-  DPAUCS_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( memory );
+  DPAUCS_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
   DPAUCS_mempoolEntry_t* previous;
 
   for(

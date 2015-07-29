@@ -1,6 +1,6 @@
-#define TCP_IP_STACK_MEMORY_C
-#include <protocol/tcp_ip_stack_memory.h>
 #include <stdint.h>
+#include <protocol/tcp_ip_stack_memory.h>
+#include <protocol/ip_stack.h>
 
 
 extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
@@ -25,7 +25,32 @@ static bool removeFragmentByPacketNumber(DPAUCS_fragment_t** fragment, void* pac
   return false;
 }
 
+unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type){
+  switch(type){
+#ifdef USE_IPv4
+    case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_fragment_t);
+#endif
+  }
+  return 0;
+}
+
+void DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType newType ){
+  size_t oldFragmentTypeSize = DPAUCS_getFragmentTypeSize( (*fragment)->type );
+  size_t newFragmentTypeSize = DPAUCS_getFragmentTypeSize( newType );
+  void(*beforeTakeover)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->beforeTakeover;
+  if(beforeTakeover)
+    (*beforeTakeover)(fragment);
+  (void)oldFragmentTypeSize;
+  (void)newFragmentTypeSize;
+  // TODO
+}
+
+void* DPAUCS_getFragmentData( DPAUCS_fragment_t* fragment ){
+  return (char*)fragment + DPAUCS_MEMPOOL_SIZE( fragment ) - fragment->size;
+}
+
 DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t size ){
+  size_t fragmentTypeSize = DPAUCS_getFragmentTypeSize( type );
   unsigned short packetNumber = packetNumberCounter++;
   DPAUCS_eachFragment(ANY_FRAGMENT,&removeFragmentByPacketNumber,&packetNumber);
   if( fragmentsUsed < DPAUCS_MAX_FRAGMANTS )
@@ -37,7 +62,7 @@ DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t
   if(i>=DPAUCS_MAX_FRAGMANTS)
     return 0;
   DPAUCS_fragment_t** fragment_ptr = fragments + i;
-  while( !DPAUCS_mempool_alloc(&mempool,(void**)fragment_ptr,size) && fragmentsUsed )
+  while( !DPAUCS_mempool_alloc(&mempool,(void**)fragment_ptr,size + fragmentTypeSize) && fragmentsUsed )
     DPAUCS_removeOldestFragment();
   DPAUCS_fragment_t* fragment = *fragment_ptr;
   if(!fragment)

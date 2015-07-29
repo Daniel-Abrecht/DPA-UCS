@@ -13,15 +13,6 @@ unsigned DPAUCS_layer3_getPacketTypeSize(enum DPAUCS_fragmentType type){
   return 0;
 }
 
-unsigned DPAUCS_layer3_getFragmentTypeSize(enum DPAUCS_fragmentType type){
-  switch(type){
-#ifdef USE_IPv4
-    case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_fragment_t);
-#endif
-  }
-  return 0;
-}
-
 bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS_ip_packetInfo_t* b ){
   if( a == b )
     return true;
@@ -79,7 +70,7 @@ DPAUCS_ip_fragment_t** DPAUCS_layer3_allocFragment( DPAUCS_ip_packetInfo_t* pack
   }else{
     info = packet;
   }
-  DPAUCS_ip_fragment_t** f_ptr = (DPAUCS_ip_fragment_t**)DPAUCS_createFragment(packet->type,size+DPAUCS_layer3_getFragmentTypeSize(packet->type));
+  DPAUCS_ip_fragment_t** f_ptr = (DPAUCS_ip_fragment_t**)DPAUCS_createFragment(packet->type,size);
   if(!f_ptr)
     return 0;
   DPAUCS_ip_fragment_t* f = *f_ptr;
@@ -129,7 +120,7 @@ DPAUCS_ip_fragment_t** DPAUCS_layer3_searchFollowingFragment( DPAUCS_ip_fragment
     ipf,
     0
   };
-  DPAUCS_eachFragment( ipf->fragmentInfo.type, &searchFollowingFragment, &args );
+  DPAUCS_eachFragment( ipf->fragment.type, &searchFollowingFragment, &args );
   return args.result;
 }
 
@@ -155,13 +146,20 @@ static void ipFragmentDestructor(DPAUCS_fragment_t** f){
     DPAUCS_layer3_removePacket(((DPAUCS_ip_fragment_t*)*f)->info);
 }
 
+static void ipFragmentBeforeTakeover( DPAUCS_fragment_t** f ){
+  DPAUCS_ip_packetInfo_t* ipf = ((DPAUCS_ip_fragment_t*)*f)->info;
+  if(!ipf->valid)
+    return;
+  ipf->valid = false;
+}
+
 void DPAUCS_layer3_removePacket( DPAUCS_ip_packetInfo_t* ipf ){
   if(!ipf->valid)
     return;
   ipf->valid = false;
   DPAUCS_eachFragment( ipf->type, &removeIpFragment, ipf );
-  if(ipf->onremove)
-    (ipf->onremove)(ipf);
+  if(ipf->onrecivefailture)
+    (ipf->onrecivefailture)(ipf);
 }
 
 void DPAUCS_layer3_removeFragment( DPAUCS_ip_fragment_t** f ){
@@ -170,5 +168,6 @@ void DPAUCS_layer3_removeFragment( DPAUCS_ip_fragment_t** f ){
 
 extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
 const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info = {
-  &ipFragmentDestructor
+  .destructor = &ipFragmentDestructor,
+  .beforeTakeover = &ipFragmentBeforeTakeover
 };

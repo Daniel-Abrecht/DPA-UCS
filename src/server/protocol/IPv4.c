@@ -39,7 +39,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     .ipPacketInfo = {
       .type = DPAUCS_FRAGMENT_TYPE_IPv4,
       .valid = true,
-      .onremove = handler->onrecivefailture,
+      .onrecivefailture = handler->onrecivefailture,
       .offset = 0
     },
     .src = {
@@ -103,16 +103,16 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
             )
          || !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
         ){
-          ipi->ipPacketInfo.onremove = 0;
+          ipi->ipPacketInfo.onrecivefailture = 0;
           DPAUCS_layer3_removePacket(f->ipFragment.info);
         }else{
-	  DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f_ptr);
-	}
+          DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f_ptr);
+        }
         f_ptr = (DPAUCS_IPv4_fragment_t**)DPAUCS_layer3_searchFollowingFragment(&(*f_ptr)->ipFragment);
         if(!f_ptr)
           break;
         f = *f_ptr;
-	payload = (uint8_t*)(f+1);
+        payload = DPAUCS_getFragmentData( &f->ipFragment.fragment );
       }
     }else{
       DPAUCS_IPv4_fragment_t** f_ptr = (DPAUCS_IPv4_fragment_t**)DPAUCS_layer3_allocFragment(&ipi->ipPacketInfo,fragment.ipFragment.length);
@@ -121,7 +121,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
       (*f_ptr)->ipFragment.offset = fragment.ipFragment.offset;
       (*f_ptr)->ipFragment.length = fragment.ipFragment.length;
       (*f_ptr)->flags = fragment.flags;
-      memcpy((*f_ptr)+1,payload,fragment.ipFragment.length);
+      memcpy( DPAUCS_getFragmentData( &(*f_ptr)->ipFragment.fragment ), payload, fragment.ipFragment.length );
       return;
     }
   }else{
@@ -139,7 +139,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
       !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
     );
     if(ipi){
-      ipi->ipPacketInfo.onremove = 0;
+      ipi->ipPacketInfo.onrecivefailture = 0;
       DPAUCS_layer3_removePacket(&ipi->ipPacketInfo);
     }
     ipi = 0;

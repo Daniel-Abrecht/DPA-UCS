@@ -32,11 +32,15 @@ typedef struct DPAUCS_fragment {
 
 typedef struct {
   void(*destructor)(struct DPAUCS_fragment**);
+  void(*beforeTakeover)(struct DPAUCS_fragment**);
 } DPAUCS_fragment_info_t;
 
 DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t size );
 void DPAUCS_removeOldestFragment( void );
 void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment );
 void DPAUCS_eachFragment( enum DPAUCS_fragmentType filter, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg );
+unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type);
+void DPAUCS_takeover( DPAUCS_fragment_t** old, DPAUCS_fragment_t** new, enum DPAUCS_fragmentType type );
+void* DPAUCS_getFragmentData( DPAUCS_fragment_t* fragment );
 
 #endif

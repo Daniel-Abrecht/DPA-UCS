@@ -13,7 +13,7 @@
 typedef struct {
   enum DPAUCS_fragmentType type; // must be the first member
   bool valid;
-  void(*onremove)(void*);
+  void(*onrecivefailture)(void*);
   uint16_t offset;
 } DPAUCS_ip_packetInfo_t;
 
@@ -28,7 +28,7 @@ typedef struct {
 #endif
 
 typedef struct {
-  DPAUCS_fragment_t fragmentInfo; // must be the first member
+  DPAUCS_fragment_t fragment; // must be the first member
   DPAUCS_ip_packetInfo_t* info;
   uint16_t offset;
   uint16_t length;

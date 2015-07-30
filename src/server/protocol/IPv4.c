@@ -39,7 +39,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     .ipPacketInfo = {
       .type = DPAUCS_FRAGMENT_TYPE_IPv4,
       .valid = true,
-      .onrecivefailture = handler->onrecivefailture,
+      .onremove = handler->onrecivefailture,
       .offset = 0
     },
     .src = {
@@ -103,7 +103,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
             )
          || !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
         ){
-          ipi->ipPacketInfo.onrecivefailture = 0;
+          ipi->ipPacketInfo.onremove = 0;
           DPAUCS_layer3_removePacket(f->ipFragment.info);
         }else{
           DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f_ptr);
@@ -139,7 +139,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
       !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
     );
     if(ipi){
-      ipi->ipPacketInfo.onrecivefailture = 0;
+      ipi->ipPacketInfo.onremove = 0;
       DPAUCS_layer3_removePacket(&ipi->ipPacketInfo);
     }
     ipi = 0;

@@ -34,15 +34,21 @@ unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type){
   return 0;
 }
 
-void DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType newType ){
-  size_t oldFragmentTypeSize = DPAUCS_getFragmentTypeSize( (*fragment)->type );
-  size_t newFragmentTypeSize = DPAUCS_getFragmentTypeSize( newType );
-  void(*beforeTakeover)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->beforeTakeover;
-  if(beforeTakeover)
-    (*beforeTakeover)(fragment);
-  (void)oldFragmentTypeSize;
-  (void)newFragmentTypeSize;
-  // TODO
+bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType newType ){
+  bool(*beforeTakeover)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->beforeTakeover;
+  if( beforeTakeover )
+    if(! (*beforeTakeover)( fragment ) )
+      return false;
+  DPAUCS_fragment_t tmp = **fragment;
+  if( !DPAUCS_mempool_realloc( &mempool, (void**)fragment, tmp.size + DPAUCS_getFragmentTypeSize( newType ), true ) ){
+    void(*takeoverFailtureHandler)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->takeoverFailtureHandler;
+    if(takeoverFailtureHandler)
+      (*takeoverFailtureHandler)( fragment );
+    return false;
+  }
+  **fragment = tmp;
+  (*fragment)->packetNumber = packetNumberCounter++;
+  return true;
 }
 
 void* DPAUCS_getFragmentData( DPAUCS_fragment_t* fragment ){

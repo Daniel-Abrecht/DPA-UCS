@@ -146,11 +146,17 @@ static void ipFragmentDestructor(DPAUCS_fragment_t** f){
     DPAUCS_layer3_removePacket(((DPAUCS_ip_fragment_t*)*f)->info);
 }
 
-static void ipFragmentBeforeTakeover( DPAUCS_fragment_t** f ){
+static bool ipFragmentBeforeTakeover( DPAUCS_fragment_t** f ){
   DPAUCS_ip_packetInfo_t* ipf = ((DPAUCS_ip_fragment_t*)*f)->info;
   if(!ipf->valid)
-    return;
+    return false;
   ipf->valid = false;
+  return true;
+}
+
+static void takeoverFailtureHandler(DPAUCS_fragment_t** f){
+  ((DPAUCS_ip_fragment_t*)*f)->info->valid = true;
+  DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f);
 }
 
 void DPAUCS_layer3_removePacket( DPAUCS_ip_packetInfo_t* ipf ){
@@ -158,8 +164,8 @@ void DPAUCS_layer3_removePacket( DPAUCS_ip_packetInfo_t* ipf ){
     return;
   ipf->valid = false;
   DPAUCS_eachFragment( ipf->type, &removeIpFragment, ipf );
-  if(ipf->onrecivefailture)
-    (ipf->onrecivefailture)(ipf);
+  if(ipf->onremove)
+    (ipf->onremove)(ipf);
 }
 
 void DPAUCS_layer3_removeFragment( DPAUCS_ip_fragment_t** f ){
@@ -169,5 +175,6 @@ void DPAUCS_layer3_removeFragment( DPAUCS_ip_fragment_t** f ){
 extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
 const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info = {
   .destructor = &ipFragmentDestructor,
-  .beforeTakeover = &ipFragmentBeforeTakeover
+  .beforeTakeover = &ipFragmentBeforeTakeover,
+  .takeoverFailtureHandler = &takeoverFailtureHandler
 };

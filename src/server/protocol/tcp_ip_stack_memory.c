@@ -1,12 +1,21 @@
 #include <stdint.h>
 #include <protocol/tcp_ip_stack_memory.h>
 #include <protocol/ip_stack.h>
+#include <protocol/tcp_stack.h>
 
 
 extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
+extern const DPAUCS_fragment_info_t DPAUCS_tcp_fragment_info;
 
 static const DPAUCS_fragment_info_t*const fragmentTypeInfos[] = {
-  &DPAUCS_ip_fragment_info
+  &DPAUCS_tcp_fragment_info,
+#ifdef USE_IPv4
+  &DPAUCS_ip_fragment_info,
+#endif
+#ifdef USE_IPv6
+  &DPAUCS_ip_fragment_info,
+#endif
+  0
 };
 
 
@@ -27,6 +36,7 @@ static bool removeFragmentByPacketNumber(DPAUCS_fragment_t** fragment, void* pac
 
 unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
+    case DPAUCS_FRAGMENT_TYPE_TCP: return sizeof(DPAUCS_tcp_fragment_t);
 #ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_fragment_t);
 #endif
@@ -35,12 +45,14 @@ unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type){
 }
 
 bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType newType ){
-  bool(*beforeTakeover)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->beforeTakeover;
-  if( beforeTakeover )
-    if(! (*beforeTakeover)( fragment ) )
-      return false;
   DPAUCS_fragment_t tmp = **fragment;
-  if( !DPAUCS_mempool_realloc( &mempool, (void**)fragment, tmp.size + DPAUCS_getFragmentTypeSize( newType ), true ) ){
+  bool(*beforeTakeover)(DPAUCS_fragment_t***,enum DPAUCS_fragmentType) = fragmentTypeInfos[(*fragment)->type]->beforeTakeover;
+  if( beforeTakeover )
+    if(! (*beforeTakeover)( &fragment, newType ) )
+      return false;
+  if( fragment < fragments || fragment > fragments + DPAUCS_MAX_FRAGMANTS
+   || !DPAUCS_mempool_realloc( &mempool, (void**)fragment, tmp.size + DPAUCS_getFragmentTypeSize( newType ), true )
+  ){
     void(*takeoverFailtureHandler)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->takeoverFailtureHandler;
     if(takeoverFailtureHandler)
       (*takeoverFailtureHandler)( fragment );
@@ -48,6 +60,7 @@ bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType new
   }
   **fragment = tmp;
   (*fragment)->packetNumber = packetNumberCounter++;
+  (*fragment)->type = newType;
   return true;
 }
 
@@ -113,7 +126,7 @@ void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment ){
 }
 
 struct eachFragmentArgs {
-  enum DPAUCS_fragmentType filter;
+  enum DPAUCS_fragmentType type;
   bool(*handler)(DPAUCS_fragment_t**,void*);
   void* arg;
 };
@@ -121,12 +134,12 @@ struct eachFragmentArgs {
 static bool eachFragment_helper(void** mem,void* arg){
   struct eachFragmentArgs* args = arg;
   DPAUCS_fragment_t** fragment_ptr = (DPAUCS_fragment_t**)mem;
-  if( args->filter & (*fragment_ptr)->type )
+  if( !~args->type || args->type == (*fragment_ptr)->type )
     return (*args->handler)(fragment_ptr,args->arg);
   return true;
 }
 
-void DPAUCS_eachFragment( enum DPAUCS_fragmentType filter, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg ){
-  struct eachFragmentArgs args = {filter,handler,arg};
+void DPAUCS_eachFragment( enum DPAUCS_fragmentType type, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg ){
+  struct eachFragmentArgs args = {type,handler,arg};
   DPAUCS_mempool_each( &mempool, &eachFragment_helper, &args );
 }

@@ -41,11 +41,12 @@ enum icmp_types {
   ICMP_PHOTURIS
 };
 
-static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, DPAUCS_fragment_t** fragment, void* payload, bool last ){
   if(!last)
     return false;
   (void)offset;
   (void)length;
+  (void)fragment;
   (void)id;
   DPAUCS_icmp_t* icmp = payload;
   switch( icmp->type ){

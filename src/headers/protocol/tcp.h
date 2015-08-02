@@ -58,14 +58,20 @@ typedef enum {
   TCP_TIME_WAIT_STATE
 } TCP_state_t;
 
-typedef struct {
+typedef struct DPAUCS_tcp_fragment DPAUCS_tcp_fragment_t;
+
+typedef struct transmissionControlBlock {
 
   // internal stuff //
   bool active;
   uint16_t srcPort, destPort;
   DPAUCS_address_pair_t fromTo;
   DPAUCS_service_t* service;
+  struct {
+    DPAUCS_tcp_fragment_t **first, **last;
+  } fragments;
   void* currentId;
+  uint16_t next_length, checksum;
 
   // TCP stuff //
 

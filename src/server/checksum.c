@@ -10,6 +10,10 @@ uint16_t checksum( void* p, size_t l ){
     checksum += *(ptr++);
     checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
   }
+  if( l & 1 ){
+    checksum += htob16((uint16_t)*(char*)ptr<<8);
+    checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
+  }
   if( unaligned ){
     uint8_t* x = p;
     checksum += htob16(((uint16_t)x[0]<<8)|x[l-1]);

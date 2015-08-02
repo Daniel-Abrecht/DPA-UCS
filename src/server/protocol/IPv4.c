@@ -60,15 +60,16 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
   memcpy(ipInfo.src.address.mac,info->source_mac,6);
   memcpy(ipInfo.dest.address.mac,info->destination_mac,6);
 
+  uint8_t* payload = ((uint8_t*)ip) + headerlength;
+
   DPAUCS_IPv4_fragment_t fragment = {
     .ipFragment = {
       .offset = (uint16_t)( (uint16_t)( ip->flags_offset1 & 0x1F ) | (uint16_t)ip->offset2 << 5u ) * 8u,
-      .length = btoh16(ip->length) - headerlength
+      .length = btoh16(ip->length) - headerlength,
+      .datas = payload
     },
     .flags = ( ip->flags_offset1 >> 5 ) & 0x07
   };
-
-  uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
   DPAUCS_IPv4_packetInfo_t* ipi = (DPAUCS_IPv4_packetInfo_t*)DPAUCS_layer3_normalize_packet_info_ptr(&ipInfo.ipPacketInfo);
   bool isNext;
@@ -98,6 +99,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
               &DPAUCS_layer3_destroyTransmissionStream,
               f->ipFragment.offset,
               f->ipFragment.length,
+              (DPAUCS_fragment_t**)f_ptr,
               payload,
               !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
             )
@@ -121,6 +123,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
       (*f_ptr)->ipFragment.offset = fragment.ipFragment.offset;
       (*f_ptr)->ipFragment.length = fragment.ipFragment.length;
       (*f_ptr)->flags = fragment.flags;
+      (*f_ptr)->ipFragment.datas = 0;
       memcpy( DPAUCS_getFragmentData( &(*f_ptr)->ipFragment.fragment ), payload, fragment.ipFragment.length );
       return;
     }
@@ -135,6 +138,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
       &DPAUCS_layer3_destroyTransmissionStream,
       fragment.ipFragment.offset,
       fragment.ipFragment.length,
+      (DPAUCS_fragment_t*[]){(DPAUCS_fragment_t*)&fragment},
       payload,
       !(fragment.flags & IPv4_FLAG_MORE_FRAGMENTS)
     );

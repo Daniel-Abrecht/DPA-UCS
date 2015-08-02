@@ -6,10 +6,24 @@
 
 #define MAX_LAYER3_PROTO_HANDLERS 3
 
+typedef struct DPAUCS_fragment DPAUCS_fragment_t;
+
 typedef DPAUCS_stream_t*(*DPAUCS_createTransmissionStream)();
 typedef void(*DPAUCS_transmit)( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type );
 typedef void(*DPAUCS_destroyTransmissionStream)( DPAUCS_stream_t* );
-typedef bool(*DPAUCS_layer3_ProtocolReciveHandler_func)( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream, uint16_t, uint16_t, void*, bool );
+typedef bool(*DPAUCS_layer3_ProtocolReciveHandler_func)(
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to,
+  DPAUCS_createTransmissionStream,
+  DPAUCS_transmit,
+  DPAUCS_destroyTransmissionStream,
+  uint16_t,
+  uint16_t,
+  DPAUCS_fragment_t**,
+  void*,
+  bool
+);
 typedef void(*DPAUCS_layer3_ProtocolFailtureHandler_func)( void* id );
 
 typedef struct {

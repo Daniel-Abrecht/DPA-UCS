@@ -18,11 +18,16 @@ AVR_MCU=atmega16
 AVR_NET_DRIVER=dummy
 AVR_F_CPU = 3686400UL
 
-OPTIONS        += -std=c11 -Os #-flto
+OPTIONS        += -std=c11
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
+ifdef DEBUG
+OPTIONS        += -Og -g
+else
+OPTIONS        += -Os #-flto
 OPTIONS        += -ffast-math
 OPTIONS        += -s -ffunction-sections -fdata-sections
+endif
 
 GEN_DEST = FilesAsCArrays
 URL_FILE_BASE   = static/
@@ -32,7 +37,7 @@ USE_IPv4=true
 
 OPTIONAL_FILES += server/protocol/icmp.o
 OPTIONAL_FILES += server/adelay.o
-OPTIONAL_FILES += server/protocol/tcp.o server/protocol/tcp_retransmission_cache.o
+OPTIONAL_FILES += server/protocol/tcp.o server/protocol/tcp_stack.o server/protocol/tcp_retransmission_cache.o
 OPTIONAL_FILES += server/services/http.o
 
 ifdef USE_IPv4

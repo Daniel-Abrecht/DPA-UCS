@@ -6,6 +6,7 @@ static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPAUCS_MAX_INCOMPLETE_L
 
 unsigned DPAUCS_layer3_getPacketTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
+    case DPAUCS_FRAGMENT_TYPE_TCP: break;
 #ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_packetInfo_t);
 #endif
@@ -24,6 +25,7 @@ bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS
     || (DPAUCS_layer3_packetInfo_t*)b >= incompletePackageInfos + DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS
   ){
     switch( a->type ){
+      case DPAUCS_FRAGMENT_TYPE_TCP: break;
 #ifdef USE_IPv4
       case DPAUCS_FRAGMENT_TYPE_IPv4: return DPAUCS_areFragmentsFromSameIPv4Packet(
         (DPAUCS_IPv4_packetInfo_t*)a,
@@ -141,16 +143,24 @@ static bool removeIpFragment( DPAUCS_fragment_t** f, void* packet_ptr ){
   return true;
 }
 
-static void ipFragmentDestructor(DPAUCS_fragment_t** f){
+static void fragmentDestructor(DPAUCS_fragment_t** f){
   if(removePacketToo)
     DPAUCS_layer3_removePacket(((DPAUCS_ip_fragment_t*)*f)->info);
 }
 
-static bool ipFragmentBeforeTakeover( DPAUCS_fragment_t** f ){
-  DPAUCS_ip_packetInfo_t* ipf = ((DPAUCS_ip_fragment_t*)*f)->info;
-  if(!ipf->valid)
+static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, enum DPAUCS_fragmentType newType ){
+  DPAUCS_ip_fragment_t** ipf = (DPAUCS_ip_fragment_t**)*f;
+  DPAUCS_ip_packetInfo_t* ipfi = (*ipf)->info;
+  if( !ipfi->valid )
     return false;
-  ipf->valid = false;
+  if( (*ipf)->datas ){
+    DPAUCS_fragment_t** result = DPAUCS_createFragment( newType, (*ipf)->length );
+    if(!result)
+      return false;
+    *f = result;
+    memcpy( DPAUCS_getFragmentData( *result ), (*ipf)->datas,(*ipf)->length );
+  }
+  ipfi->valid = false;
   return true;
 }
 
@@ -174,7 +184,7 @@ void DPAUCS_layer3_removeFragment( DPAUCS_ip_fragment_t** f ){
 
 extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
 const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info = {
-  .destructor = &ipFragmentDestructor,
-  .beforeTakeover = &ipFragmentBeforeTakeover,
+  .destructor = &fragmentDestructor,
+  .beforeTakeover = &fragmentBeforeTakeover,
   .takeoverFailtureHandler = &takeoverFailtureHandler
 };

@@ -30,7 +30,7 @@ bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size
   void* secondLargestContiguousFreeMemoryBegin = 0;
   size_t secondLargestContiguousFreeMemorySize = 0;
   void* result = 0;
-  DPAUCS_mempoolEntry_t* lastEntry;
+  DPAUCS_mempoolEntry_t* lastEntry = 0;
 
   for(
     DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry; // dummyentry with mempool->firstEntry->size=0
@@ -68,7 +68,8 @@ bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size
 
   newEntry->nextEntry = lastEntry->nextEntry;
   newEntry->lastEntry = lastEntry;
-  lastEntry->nextEntry = newEntry;
+  if(lastEntry)
+    lastEntry->nextEntry = newEntry;
   if(newEntry->nextEntry)
     newEntry->nextEntry->lastEntry = newEntry;
 

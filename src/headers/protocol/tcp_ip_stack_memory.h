@@ -12,11 +12,12 @@
 // sizeof(enum) is equal to sizeof(int)
 // int is 16 bit large on some platforms
 enum DPAUCS_fragmentType {
+  DPAUCS_FRAGMENT_TYPE_TCP,
 #ifdef USE_IPv4
-  DPAUCS_FRAGMENT_TYPE_IPv4 = 1 << 0,
+  DPAUCS_FRAGMENT_TYPE_IPv4,
 #endif
 #ifdef USE_IPv6
-  DPAUCS_FRAGMENT_TYPE_IPv6 = 1 << 1,
+  DPAUCS_FRAGMENT_TYPE_IPv6,
 #endif
 };
 
@@ -32,7 +33,7 @@ typedef struct DPAUCS_fragment {
 
 typedef struct {
   void(*destructor)(DPAUCS_fragment_t**);
-  bool(*beforeTakeover)(DPAUCS_fragment_t**);
+  bool(*beforeTakeover)(DPAUCS_fragment_t***,enum DPAUCS_fragmentType);
   void(*takeoverFailtureHandler)(DPAUCS_fragment_t**);
 } DPAUCS_fragment_info_t;
 

@@ -32,6 +32,7 @@ typedef struct {
   DPAUCS_ip_packetInfo_t* info;
   uint16_t offset;
   uint16_t length;
+  void* datas;
 } DPAUCS_ip_fragment_t;
 
 typedef struct {

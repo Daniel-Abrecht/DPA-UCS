@@ -8,6 +8,8 @@
 #include <protocol/tcp.h>
 #include <protocol/arp.h>
 #include <protocol/IPv4.h>
+#include <protocol/tcp_stack.h>
+#include <protocol/tcp_ip_stack_memory.h>
 #include <protocol/tcp_retransmission_cache.h>
 
 DPAUCS_MODUL( tcp ){
@@ -17,14 +19,14 @@ DPAUCS_MODUL( tcp ){
 transmissionControlBlock_t transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
 
-static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream, uint16_t, uint16_t, void*, bool );
+static bool tcp_reciveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream, uint16_t, uint16_t, DPAUCS_fragment_t**, void*, bool );
 static void tcp_reciveFailtureHandler( void* );
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
 static void removeTCB( transmissionControlBlock_t* tcb );
 static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
-static transmissionControlBlock_t* getTcbByCurrentId(const void*const);
+static transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG, DPAUCS_createTransmissionStream, DPAUCS_transmit, DPAUCS_destroyTransmissionStream );
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
 
@@ -152,9 +154,7 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
 }
 #endif
 
-static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
-
-  (void)stream;
+static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
 
   switch( tcb->fromTo.source->type ){
 #ifdef USE_IPv4
@@ -168,7 +168,7 @@ static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, stream );
 
-  uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, stream, length );
+  uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
   uint16_t data_checksum = ~checksumOfStream( stream );
 
   uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum;
@@ -198,7 +198,7 @@ inline uint32_t tcp_SEG_LEN( uint32_t datalen, uint32_t flags ){
    * > control flags in the sequence space
    * > ... 
    * > The segment length (SEG.LEN) includes both 
-   * > data and sequqence space occupying controls
+   * > data and sequence space occupying controls
    */
   if( flags & ( TCP_FLAG_SYN | TCP_FLAG_FIN ) )
     return datalen + 1;
@@ -243,36 +243,18 @@ static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, tc
 
 }
 
-static bool tcp_processDatas(
+static void tcp_processDatas(
   transmissionControlBlock_t* tcb,
-  DPAUCS_createTransmissionStream createStream,
-  DPAUCS_transmit transmit,
-  DPAUCS_destroyTransmissionStream destroyStream, 
-  uint16_t offset,
-  uint16_t length,
   void* payload,
-  bool last
+  size_t length
 ){
 
-  (void)createStream;
-  (void)transmit;
-  (void)destroyStream;
-  (void)offset;
-
-  tcb->RCV.NXT += length;
+  (void)tcb;
 
   printf("\n-- data begin --\n");
   fwrite( payload, 1, length, stdout );
   printf("\n-- data end --\n");
-  if(last){
-    tcp_segment_t segment = {
-      .flags = TCP_FLAG_ACK,
-      .SEQ = tcb->SND.NXT
-    };
-    tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
-  }
 
-  return true;
 }
 
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
@@ -283,47 +265,288 @@ static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
       || ( stcb->state == TCP_LAST_ACK_STATE   );
 }
 
-static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
+void tcb_from_tcp(
+  transmissionControlBlock_t* tcb,
+  DPAUCS_tcp_t* tcp,
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to
+){
+  tcb->active      = true;
+  tcb->srcPort     = btoh16( tcp->destination );
+  tcb->destPort    = btoh16( tcp->source );
+  tcb->service     = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) );
+  tcb->currentId   = id;
+  tcb->next_length = 0;
+
+  tcb->fragments.first = 0;
+  tcb->fragments.last  = 0;
+
+  tcb->fromTo.source      = to;
+  tcb->fromTo.destination = from;
+}
+
+static inline void tcp_init_variables(
+  DPAUCS_tcp_t* tcp,
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to,
+  tcp_segment_t* SEG,
+  transmissionControlBlock_t* tcb,
+  uint32_t* ACK
+){
+
+  SEG->SEQ   = btoh32( tcp->sequence );
+  SEG->flags = btoh16( tcp->flags );
+
+  tcb_from_tcp(tcb,tcp,id,from,to);
+
+  *ACK = btoh32( tcp->acknowledgment );
+
+}
+
+static inline bool tcp_is_tcb_valid( transmissionControlBlock_t* tcb ){
+  return tcb->service
+      && tcb->destPort
+      && DPAUCS_isValidHostAddress( &tcb->fromTo.destination->logicAddress );
+}
+
+static inline bool tcp_get_recivewindow_data_offset( transmissionControlBlock_t* tcb, tcp_segment_t* SEG, uint16_t* offset ){
+  uint32_t off = tcb->RCV.NXT - SEG->SEQ;
+  *offset = off;
+  return off + 1 <= tcb->RCV.WND;
+}
+
+static bool tcp_processPacket(
+  transmissionControlBlock_t* tcb,
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to,
+  DPAUCS_createTransmissionStream createStream,
+  DPAUCS_transmit transmit,
+  DPAUCS_destroyTransmissionStream destroyStream,
+  uint16_t last_length,
+  void* last_payload
+){
+
+  // Initialisation and checks //
+
+  tcp_segment_t SEG;
+  transmissionControlBlock_t tmp_tcb;
+
+  DPAUCS_tcp_t* tcp = last_payload;
+  uint16_t chunck_len = last_length;
+
+  if( tcb && tcb->fragments.first ){
+    tcp = DPAUCS_getFragmentData(&(*tcb->fragments.first)->fragment);
+    chunck_len = (*tcb->fragments.first)->fragment.size;
+  }
+
+  if( chunck_len < sizeof(DPAUCS_tcp_t) )
+    return false;
+
+  uint16_t headerLength = ( tcp->dataOffset >> 2 ) & ~3u;
+  if( headerLength > chunck_len )
+    return false;
+
+  chunck_len -= headerLength;
+
+  SEG.SEQ   = btoh32( tcp->sequence );
+  SEG.flags = btoh16( tcp->flags );
+
+  uint32_t ACK = btoh32( tcp->acknowledgment );
+
+  if(!tcb){
+    tcb_from_tcp(&tmp_tcb,tcp,id,from,to);
+    tcb = searchTCB( &tmp_tcb );
+    if(!tcb)
+      return false;
+    if( tcb->currentId && tcb->currentId != tmp_tcb.currentId )
+      return false;
+  }
+
+  uint16_t n = tcb->next_length - headerLength;
+  void* payload = (char*)tcp + headerLength;
+
+  if( !tcp_is_tcb_valid( tcb ) ){
+    tcp_segment_t segment = {
+      .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
+      .SEQ = ISS
+    };
+    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){tcb}, &segment, createStream, transmit, destroyStream );
+    return false;
+  }
+
+  if(!(
+    SEG.SEQ - tcb->RCV.NXT < tcb->RCV.WND ||
+    SEG.SEQ + tcp_SEG_LEN( n, SEG.flags ) - tcb->RCV.NXT < tcb->RCV.WND
+  )) return false;
+
+  uint16_t offset;
+  tcp_get_recivewindow_data_offset( tcb, &SEG, &offset );
+
+  if( n < offset && !( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ) )
+    return false;
+
+  if( SEG.flags & TCP_FLAG_ACK ){
+    uint32_t ackrel = ACK - tcb->SND.UNA;
+    uint32_t ackwnd = tcb->SND.NXT - tcb->SND.UNA;
+    printf( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
+    if( ackrel > ackwnd )
+      return false;
+  }
+
+  // Statechanges //
+
+  printf("n: %lu\n",(unsigned long)n);
+  printf("tcb->RCV.NXT: %lu => ",(unsigned long)tcb->RCV.NXT);
+  tcb->RCV.NXT = SEG.SEQ + tcp_SEG_LEN( n, SEG.flags );
+  printf("%lu\n",(unsigned long)tcb->RCV.NXT);
+
+  if( SEG.flags & TCP_FLAG_ACK ){
+    tcb->SND.UNA = btoh32(tcp->acknowledgment);
+    if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
+      printf("TCP Keep-Alive\n");
+      tcp_segment_t segment = {
+        .flags = TCP_FLAG_ACK,
+        .SEQ = tcb->SND.NXT
+      };
+      tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
+    }else{
+      switch( tcb->state ){
+        case TCP_SYN_RCVD_STATE: {
+          tcb->state = TCP_ESTAB_STATE;
+          printf("Connection established.\n");
+        } break;
+        case TCP_CLOSING_STATE: {
+          tcb->state = TCP_TIME_WAIT_STATE;
+        } break;
+        case TCP_LAST_ACK_STATE: {
+          removeTCB( tcb );
+        } break;
+        case TCP_FIN_WAIT_1_STATE: {
+          tcb->state = TCP_FIN_WAIT_2_STATE;
+        } break;
+        default: break;
+      }
+    }
+  }
+
+  if( SEG.flags & TCP_FLAG_FIN ){
+    switch( tcb->state ){
+      case TCP_ESTAB_STATE: {
+        tcb->state = TCP_CLOSE_WAIT_STATE;
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .SEQ = tcb->SND.NXT
+        };
+        tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
+      } break;
+      case TCP_FIN_WAIT_1_STATE: {
+        tcb->state = TCP_CLOSING_STATE;
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .SEQ = tcb->SND.NXT
+        };
+        tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
+      } break;
+      case TCP_FIN_WAIT_2_STATE: {
+        tcb->state = TCP_TIME_WAIT_STATE;
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK,
+          .SEQ = tcb->SND.NXT
+        };
+        tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
+      } break;
+      default: break;
+    }
+  }
+
+  // ack received datas //
+
+  if(n){
+    tcp_segment_t segment = {
+      .flags = TCP_FLAG_ACK,
+      .SEQ = tcb->SND.NXT
+    };
+    tcp_sendNoData( 1, &tcb, &segment, createStream, transmit, destroyStream );
+ 
+    // process received datas //
+    DPAUCS_tcp_fragment_t** it = tcb->fragments.first;
+    {
+
+      prepare: {
+        if( chunck_len <= offset ){
+          offset -= chunck_len;
+          goto next;
+        }else{
+          chunck_len -= offset;
+          payload = (char*)payload + offset;
+          offset = 0;
+        }
+        goto process;
+      }
+
+      process: {
+        tcp_processDatas( tcb, payload, chunck_len );
+      }
+
+      next: {
+        if(!it){
+          goto end;
+        }else{
+          it=(*it)->next;
+        }
+        if(it){
+          payload = DPAUCS_getFragmentData(&(*it)->fragment);
+          chunck_len = (*it)->fragment.size;
+        }else{
+          payload = last_payload;
+          chunck_len = last_length;
+        }
+        goto prepare;
+      }
+
+      end:;
+    }
+
+  }
+
+  return true;
+}
+
+static bool tcp_processHeader(
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to,
+  DPAUCS_createTransmissionStream createStream,
+  DPAUCS_transmit transmit,
+  DPAUCS_destroyTransmissionStream destroyStream,
+  uint16_t offset,
+  uint16_t length,
+  DPAUCS_fragment_t** fragment,
+  void* payload,
+  bool last
+){
+
   ISS += length;
   if( length < sizeof(DPAUCS_tcp_t) )
     return false;
-
-  (void)id;
-  (void)last;
 
   DPAUCS_tcp_t* tcp = payload;
 
   uint16_t headerLength = ( tcp->dataOffset >> 2 ) & ~3u;
   if( headerLength > length )
     return false;
+  length -= headerLength;
 
-  tcp_segment_t SEG = {
-    .SEQ = btoh32(tcp->sequence),
-    .flags = btoh16( tcp->flags )
-  };
+  tcp_segment_t SEG;
+  transmissionControlBlock_t tcb;
+  uint32_t ACK;
 
-  transmissionControlBlock_t tcb = {
-    .active = true,
-    .srcPort = btoh16(tcp->destination),
-    .destPort = btoh16(tcp->source),
-    .fromTo = {
-      .source = to,
-      .destination = from
-    },
-    .RCV = {
-      .NXT = SEG.SEQ + tcp_SEG_LEN( 0, SEG.flags )
-    },
-    .service = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) ),
-    .currentId = id
-  };
-  uint32_t ACK = btoh32(tcp->acknowledgment);
+  tcp_init_variables( tcp, id, from, to, &SEG, &tcb, &ACK );
 
-  if(
-      !tcb.service
-   || !tcb.destPort
-   || !DPAUCS_isValidHostAddress( &tcb.fromTo.destination->logicAddress )
-   || !tcb.service
-  ){
+  if( !tcp_is_tcb_valid( &tcb ) ){
     tcp_segment_t segment = {
       .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
       .SEQ = ISS
@@ -333,39 +556,21 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
   }
 
   printf("-- tcp_reciveHandler | id: %p offset: %u size: %u --\n",id,(unsigned)offset,(unsigned)length);
-
-  enum {
-    SEG_POS_LAST_OCTET,
-    SEG_POS_NEXT_OCTET,
-    SEG_POS_FUTUR_OCTET
-  } segment_position = SEG_POS_NEXT_OCTET;
+  printFrame( tcp );
 
   transmissionControlBlock_t* stcb = searchTCB( &tcb );
   if( stcb ){
-    // relSeq == 1 and no data is allowed as specified by
-    // RFC 763  Page 25/26
-    uint32_t relSeq = stcb->RCV.NXT - SEG.SEQ;
-    if( relSeq == 1 )
-      segment_position = SEG_POS_LAST_OCTET;
-    else if( relSeq == 0 )
-      segment_position = SEG_POS_NEXT_OCTET;
-    else
-      segment_position = SEG_POS_FUTUR_OCTET;
-    printf("relSeq: %u\n",(unsigned)relSeq);
-    switch( segment_position ){
-      case SEG_POS_NEXT_OCTET: {
-        printf("RCV.NXT: %u => %u\n",(unsigned)stcb->RCV.NXT,(unsigned)tcb.RCV.NXT);
-        stcb->RCV.NXT = tcb.RCV.NXT;
-      } break;
-      case SEG_POS_LAST_OCTET:
-        if( length==headerLength )
-          break;
-      case SEG_POS_FUTUR_OCTET:
-      default:
-        printf("Out of order: SEG.SEQ = %u\n",(unsigned)SEG.SEQ);
-        return false;
-    }
+    if( stcb->currentId && stcb->currentId != tcb.currentId )
+      return false;
+    stcb->currentId = tcb.currentId;
+    uint16_t rcv_data_offset;
+    if( tcp_get_recivewindow_data_offset( stcb, &SEG, &rcv_data_offset ) )
+      return false; // out of window
+    // may be in window
+    if(!last)
+      return DPAUCS_tcp_cache_add( fragment, stcb );
   }
+
   if( SEG.flags & TCP_FLAG_SYN ){
     if( stcb ){
       printf( "Dublicate SYN or already opened connection detected.\n" );
@@ -391,6 +596,7 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
       .SEQ = ISS
     };
     tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
+    return last;
   }else if( !stcb ){
     printf( "Connection unavaiable.\n" );
     tcp_segment_t segment = {
@@ -401,120 +607,88 @@ static bool tcp_processHeader( void* id, DPAUCS_address_t* from, DPAUCS_address_
     return false;
   }
 
-  printFrame( tcp );
-
-  if( SEG.flags & TCP_FLAG_ACK ){
-    uint32_t ackrel = ACK - stcb->SND.UNA;
-    uint32_t ackwnd = stcb->SND.NXT - stcb->SND.UNA;
-    printf( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
-    if( ackrel > ackwnd )
-      return false;
-    stcb->SND.UNA = btoh32(tcp->acknowledgment);
-    switch( segment_position ){
-      case SEG_POS_NEXT_OCTET: {
-        switch( stcb->state ){
-          case TCP_SYN_RCVD_STATE: {
-            stcb->state = TCP_ESTAB_STATE;
-            printf("Connection established.\n");
-          } break;
-          case TCP_CLOSING_STATE: {
-            stcb->state = TCP_TIME_WAIT_STATE;
-          } break;
-          case TCP_LAST_ACK_STATE: {
-            removeTCB( stcb );
-          } break;
-          case TCP_FIN_WAIT_1_STATE: {
-            stcb->state = TCP_FIN_WAIT_2_STATE;
-          } break;
-          default: break;
-        }
-      } break;
-      case SEG_POS_LAST_OCTET: {
-        printf("TCP Keep-Alive\n");
-        tcp_segment_t segment = {
-          .flags = TCP_FLAG_ACK,
-          .SEQ = stcb->SND.NXT
-        };
-        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
-      } break;
-      case SEG_POS_FUTUR_OCTET:
-      default: break;
-    }
-  }
-
-  if( SEG.flags & TCP_FLAG_FIN ){
-    switch( stcb->state ){
-      case TCP_ESTAB_STATE: {
-        stcb->state = TCP_CLOSE_WAIT_STATE;
-        tcp_segment_t segment = {
-          .flags = TCP_FLAG_ACK,
-          .SEQ = stcb->SND.NXT
-        };
-        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
-      } break;
-      case TCP_FIN_WAIT_1_STATE: {
-        stcb->state = TCP_CLOSING_STATE;
-        tcp_segment_t segment = {
-          .flags = TCP_FLAG_ACK,
-          .SEQ = stcb->SND.NXT
-        };
-        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
-      } break;
-      case TCP_FIN_WAIT_2_STATE: {
-        stcb->state = TCP_TIME_WAIT_STATE;
-        tcp_segment_t segment = {
-          .flags = TCP_FLAG_ACK,
-          .SEQ = stcb->SND.NXT
-        };
-        tcp_sendNoData( 1, &stcb, &segment, createStream, transmit, destroyStream );
-      } break;
-      default: break;
-    }
-  }
-
-  /*
-  uint8_t* options = (uint8_t*)payload + 40;
-  while( options < (uint8_t*)payload+headerLength ){
-    printf("option %.2X\n",(int)options[0]);
-    switch(options[0]){
-      case 0: goto afterOptionLoop; // end
-      case 1: options++; continue; // noop
-      default: { // other
-        uint8_t size = options[1];
-        if( size < 2 || options+size > (uint8_t*)payload+headerLength )
-          goto afterOptionLoop;
-        printf("size: %u\n",(unsigned)size);
-        hexdump(options+2,size-2,16);
-        options += size;
-      } break;
-    }
-  }
-  afterOptionLoop:;
-*/
-  if( tcp_connectionUnstable(stcb)
-   || headerLength >= length
-   || segment_position != SEG_POS_NEXT_OCTET
-  ){
-    return !last;
-  }else{
-    return tcp_processDatas( stcb, createStream, transmit, destroyStream, offset+headerLength, length-headerLength, (char*)payload+headerLength, last );
-  }
+  return true;
 }
 
-static bool tcp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, void* payload, bool last ){
+static bool tcp_reciveHandler(
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to,
+  DPAUCS_createTransmissionStream createStream,
+  DPAUCS_transmit transmit,
+  DPAUCS_destroyTransmissionStream destroyStream,
+  uint16_t offset,
+  uint16_t length,
+  DPAUCS_fragment_t** fragment,
+  void* payload,
+  bool last
+){
 
-  bool ret;
+  bool ret = true;
+
+  uint32_t tmp_ch = ~checksum( payload, length ) & 0xFFFF;
 
   transmissionControlBlock_t* tcb = getTcbByCurrentId(id);
-  if(tcb)
-    ret = tcp_processDatas( tcb, createStream, transmit, destroyStream, offset, length, payload, last );
-  else
-    ret = tcp_processHeader( id, from, to, createStream, transmit, destroyStream, offset, length, payload, last );
+  if(tcb){
+    if( tcb->next_length & 1 )
+      tmp_ch = ( ( tmp_ch >> 8 ) & 0xFF ) | ( ( tmp_ch & 0xFF ) << 8 );
+    tmp_ch += (uint32_t)tcb->checksum;
+    tmp_ch  = ( tmp_ch & 0xFFFF ) + ( ( tmp_ch >> 16 ) & 0xFFFF );
+    if(!last)
+      ret = DPAUCS_tcp_cache_add( fragment, tcb ) || last;
+  }
 
   if(last){
-    tcb = getTcbByCurrentId(id);
-    if(tcb)
+    DPAUCS_tcp_t* tcp;
+    if( tcb ){
+      if(!tcb->fragments.first)
+        return false;
+      tcp = DPAUCS_getFragmentData( &(*tcb->fragments.first)->fragment );
+    }else{
+      if( length < sizeof(DPAUCS_tcp_t) )
+        return false;
+      tcp = payload;
+    }
+    transmissionControlBlock_t* tcb_ptr;
+    if(!tcb){
+      transmissionControlBlock_t tcb_tmp;
+      tcb_from_tcp( &tcb_tmp, tcp, id, from, to );
+      tcb_ptr = &tcb_tmp;
+    }else{
+      tcb_ptr = tcb;
+    }
+    tmp_ch += ~tcp_pseudoHeaderChecksum( tcb_ptr, tcp, tcb_ptr->next_length + length )  & 0xFFFF;
+    uint16_t ch = ~( ( tmp_ch & 0xFFFF ) + ( tmp_ch >> 16 ) );
+    if(!ch){
+      printf("\nchecksum OK\n\n");
+    }else{
+      printf("\nbad checksum (%.4x)\n\n",(int)ch);
+      return false;
+    }
+    //uint16_t ch = btoh16( tcp->checksum );
+    //printf("%x %x\n",res,(unsigned)ch);
+  }
+
+  if(!tcb){
+    ret = tcp_processHeader( id, from, to, createStream, transmit, destroyStream, offset, length, fragment, payload, last );
+  }
+
+  tcb = getTcbByCurrentId(id);
+  if(tcb)
+    tcb->next_length += length;
+
+  if(last)
+    ret = tcp_processPacket( tcb, id, from, to, createStream, transmit, destroyStream, length, payload );
+
+  if(tcb){
+    if( last ){
       tcb->currentId = 0;
+      tcb->checksum = 0;
+      tcb->next_length = 0;
+      DPAUCS_tcp_cache_remove( tcb );
+    }else{
+      tcb->checksum = tmp_ch;
+    }
   }
 
   return ret;

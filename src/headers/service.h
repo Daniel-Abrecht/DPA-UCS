@@ -8,7 +8,7 @@
 typedef struct {
   uint8_t tos; // type of service
   void(*start)();
-  void(*onrecive)( uint16_t cd, void* data, size_t size );
+  void(*onreceive)( void* cid, void* data, size_t size );
   void(*stop)();
 } DPAUCS_service_t;
 

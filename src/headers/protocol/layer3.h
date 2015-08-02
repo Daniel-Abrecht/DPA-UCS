@@ -15,9 +15,6 @@ typedef bool(*DPAUCS_layer3_ProtocolReciveHandler_func)(
   void* id,
   DPAUCS_address_t* from,
   DPAUCS_address_t* to,
-  DPAUCS_createTransmissionStream,
-  DPAUCS_transmit,
-  DPAUCS_destroyTransmissionStream,
   uint16_t,
   uint16_t,
   DPAUCS_fragment_t**,
@@ -28,8 +25,8 @@ typedef void(*DPAUCS_layer3_ProtocolFailtureHandler_func)( void* id );
 
 typedef struct {
   uint8_t protocol;
-  DPAUCS_layer3_ProtocolReciveHandler_func onrecive;
-  DPAUCS_layer3_ProtocolFailtureHandler_func onrecivefailture;
+  DPAUCS_layer3_ProtocolReciveHandler_func onreceive;
+  DPAUCS_layer3_ProtocolFailtureHandler_func onreceivefailture;
 } DPAUCS_layer3_protocolHandler_t;
 
 extern DPAUCS_layer3_protocolHandler_t* layer3_protocolHandlers[MAX_LAYER3_PROTO_HANDLERS];

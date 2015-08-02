@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <services/http.h>
 #include <protocol/tcp.h>
 
@@ -17,15 +18,15 @@ static void stop(){
   DPAUCS_tcpShutdown();
 }
 
-static void onrecive( uint16_t cd, void* data, size_t size ){
-  (void)cd;
-  (void)data;
-  (void)size;
+static void onreceive( void* cid, void* data, size_t size ){
+  printf("http_service->onrecive: \n");
+  fwrite( data, 1, size, stdout );
+  (void)cid;
 }
 
 DPAUCS_service_t http_service = {
   .tos = PROTOCOL_TCP,
   .start = start,
   .stop = stop,
-  .onrecive = onrecive
+  .onreceive = &onreceive
 };

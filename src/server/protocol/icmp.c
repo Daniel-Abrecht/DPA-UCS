@@ -41,7 +41,7 @@ enum icmp_types {
   ICMP_PHOTURIS
 };
 
-static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, DPAUCS_createTransmissionStream createStream, DPAUCS_transmit transmit, DPAUCS_destroyTransmissionStream destroyStream, uint16_t offset, uint16_t length, DPAUCS_fragment_t** fragment, void* payload, bool last ){
+static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, uint16_t offset, uint16_t length, DPAUCS_fragment_t** fragment, void* payload, bool last ){
   if(!last)
     return false;
   (void)offset;
@@ -58,10 +58,10 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
         .source = to,
         .destination = from
       };
-      DPAUCS_stream_t* stream = (*createStream)();
+      DPAUCS_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
       DPAUCS_stream_referenceWrite( stream, payload, length );
-      (*transmit)( stream, &fromTo, PROTOCOL_ICMP );
-      (*destroyStream)( stream );
+      DPAUCS_layer3_transmit( stream, &fromTo, PROTOCOL_ICMP );
+      DPAUCS_layer3_destroyTransmissionStream( stream );
     } break;
   }
   return true;
@@ -69,7 +69,7 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
 
 static DPAUCS_layer3_protocolHandler_t icmp_handler = {
   .protocol = PROTOCOL_ICMP,
-  .onrecive = &icmp_reciveHandler
+  .onreceive = &icmp_reciveHandler
 };
 
 static int counter = 0;

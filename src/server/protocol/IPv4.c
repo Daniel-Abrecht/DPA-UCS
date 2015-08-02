@@ -39,7 +39,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     .ipPacketInfo = {
       .type = DPAUCS_FRAGMENT_TYPE_IPv4,
       .valid = true,
-      .onremove = handler->onrecivefailture,
+      .onremove = handler->onreceivefailture,
       .offset = 0
     },
     .src = {
@@ -90,13 +90,10 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
       DPAUCS_IPv4_fragment_t** f_ptr = &f;
       while(true){
         if(
-            !(*handler->onrecive)(
+            !(*handler->onreceive)(
               ipi,
               &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->src.address,
               &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->dest.address,
-              &DPAUCS_layer3_createTransmissionStream,
-              &DPAUCS_layer3_transmit,
-              &DPAUCS_layer3_destroyTransmissionStream,
               f->ipFragment.offset,
               f->ipFragment.length,
               (DPAUCS_fragment_t**)f_ptr,
@@ -129,13 +126,10 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
     }
   }else{
     DPAUCS_IPv4_packetInfo_t* ipp = ipi ? ipi : &ipInfo;
-    (*handler->onrecive)(
+    (*handler->onreceive)(
       ipp,
       &ipp->src.address,
       &ipp->dest.address,
-      &DPAUCS_layer3_createTransmissionStream,
-      &DPAUCS_layer3_transmit,
-      &DPAUCS_layer3_destroyTransmissionStream,
       fragment.ipFragment.offset,
       fragment.ipFragment.length,
       (DPAUCS_fragment_t*[]){(DPAUCS_fragment_t*)&fragment},

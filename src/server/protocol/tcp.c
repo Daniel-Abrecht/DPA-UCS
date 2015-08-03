@@ -254,7 +254,8 @@ static void tcp_processDatas(
   size_t length
 ){
 
-  (*tcb->service->onreceive)( tcb, payload, length );
+  if(tcb->service->onreceive)
+    (*tcb->service->onreceive)( tcb, payload, length );
 
 }
 
@@ -517,12 +518,11 @@ static bool tcp_processHeader(
   void* id,
   DPAUCS_address_t* from,
   DPAUCS_address_t* to,
-  uint16_t offset,
   uint16_t length,
   DPAUCS_fragment_t** fragment,
   void* payload,
   bool last
-){(void)offset;
+){
 
   ISS += length;
   if( length < sizeof(DPAUCS_tcp_t) )
@@ -583,6 +583,17 @@ static bool tcp_processHeader(
       DEBUG_PRINTF("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
       return false;
     }
+    if(*stcb->service->onopen){
+      if(!(*stcb->service->onopen)(stcb)){
+        tcp_segment_t segment = {
+          .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
+          .SEQ = ISS
+        };
+        tcp_sendNoData( 1, &stcb, &segment );
+        DEBUG_PRINTF( "tcb->service->onopen: connection rejected\n" );
+        return false;
+      }
+    }
     stcb->SND.UNA = ISS + 1;
     stcb->SND.NXT = ISS + 1;
     stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
@@ -614,7 +625,7 @@ static bool tcp_receiveHandler(
   DPAUCS_fragment_t** fragment,
   void* payload,
   bool last
-){
+){(void)offset;
 
   bool ret = true;
 
@@ -657,12 +668,10 @@ static bool tcp_receiveHandler(
       DEBUG_PRINTF("\nbad checksum (%.4x)\n\n",(int)ch);
       return false;
     }
-    //uint16_t ch = btoh16( tcp->checksum );
-    //DEBUG_PRINTF("%x %x\n",res,(unsigned)ch);
   }
 
   if(!tcb){
-    ret = tcp_processHeader( id, from, to, offset, length, fragment, payload, last );
+    ret = tcp_processHeader( id, from, to, length, fragment, payload, last );
   }
 
   tcb = getTcbByCurrentId(id);

@@ -1,21 +1,12 @@
 #include <stdio.h>
 #include <services/http.h>
-#include <protocol/tcp.h>
 
-DPAUCS_MODUL( http ){
-  DPAUCS_DEPENDENCY( tcp );
-}
+DPAUCS_MODUL( http ){}
 
-static int counter = 0;
-
-static void start(){
-  if(counter++) return;
-  DPAUCS_tcpInit();
-}
-
-static void stop(){
-  if(--counter) return;
-  DPAUCS_tcpShutdown();
+static bool onopen( void* cid ){
+  printf("http_service->onopen\n");
+  (void)cid;
+  return true;
 }
 
 static void onreceive( void* cid, void* data, size_t size ){
@@ -24,9 +15,19 @@ static void onreceive( void* cid, void* data, size_t size ){
   (void)cid;
 }
 
+static void oneof( void* cid ){
+  printf("http_service->oneof\n");
+  (void)cid;
+}
+
+static void onclose( void* cid ){
+  printf("http_service->onclose\n");
+  (void)cid;
+}
+
 DPAUCS_service_t http_service = {
-  .tos = PROTOCOL_TCP,
-  .start = start,
-  .stop = stop,
-  .onreceive = &onreceive
+  .onopen = &onopen,
+  .onreceive = &onreceive,
+  .oneof = &oneof,
+  .onclose = &onclose
 };

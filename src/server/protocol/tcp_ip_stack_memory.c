@@ -8,7 +8,9 @@ extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;
 extern const DPAUCS_fragment_info_t DPAUCS_tcp_fragment_info;
 
 static const DPAUCS_fragment_info_t*const fragmentTypeInfos[] = {
+#ifdef USE_TCP
   &DPAUCS_tcp_fragment_info,
+#endif
 #ifdef USE_IPv4
   &DPAUCS_ip_fragment_info,
 #endif
@@ -36,7 +38,9 @@ static bool removeFragmentByPacketNumber(DPAUCS_fragment_t** fragment, void* pac
 
 unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
+#ifdef USE_TCP
     case DPAUCS_FRAGMENT_TYPE_TCP: return sizeof(DPAUCS_tcp_fragment_t);
+#endif
 #ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_fragment_t);
 #endif

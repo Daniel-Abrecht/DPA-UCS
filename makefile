@@ -22,7 +22,7 @@ OPTIONS        += -std=c11
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 ifdef DEBUG
-OPTIONS        += -Og -g
+OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os #-flto
 OPTIONS        += -ffast-math
@@ -35,10 +35,15 @@ URL_FILE_BASE   = static/
 USE_IPv4=true
 #USE_IPv6=true
 
-OPTIONAL_FILES += server/protocol/icmp.o
-OPTIONAL_FILES += server/adelay.o
-OPTIONAL_FILES += server/protocol/tcp.o server/protocol/tcp_stack.o server/protocol/tcp_retransmission_cache.o
-OPTIONAL_FILES += server/services/http.o
+OPTIONAL_FILES  += server/protocol/icmp.o
+OPTIONAL_FILES  += server/adelay.o
+OPTIONAL_FILES  += server/services/http.o
+ifndef NO_TCP
+OPTIONAL_FILES  += server/protocol/tcp.o server/protocol/tcp_stack.o server/protocol/tcp_retransmission_cache.o
+DPAUCS_INIT     += X(DPAUCS_tcpInit)
+DPAUCS_SHUTDOWN += X(DPAUCS_tcpShutdown)
+OPTIONS += -DUSE_TCP
+endif
 
 ifdef USE_IPv4
 OPTIONAL_FILES += server/protocol/IPv4.o
@@ -77,6 +82,19 @@ LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
 LINUX_FILES_TMP += server/drivers/adelay_clock.o
 
+ifdef DPAUCS_INIT
+LINUX_DPAUCS_INIT += $(DPAUCS_INIT)
+endif
+ifdef LINUX_DPAUCS_INIT
+LINUX_OPTIONS     += -DDPAUCS_INIT='$(LINUX_DPAUCS_INIT)'
+endif
+
+ifdef DPAUCS_SHUTDOWN
+LINUX_DPAUCS_SHUTDOWN += $(DPAUCS_SHUTDOWN)
+endif
+ifdef LINUX_DPAUCS_SHUTDOWN
+LINUX_OPTIONS  += -DDPAUCS_SHUTDOWN='$(LINUX_DPAUCS_SHUTDOWN)'
+endif
 
 LINUX_FILES = $(shell \
   for file in ${LINUX_FILES_TMP}; \
@@ -99,12 +117,22 @@ AVR_FILES_TMP  = $(FILES)
 AVR_FILES_TMP += server/drivers/$(AVR_NET_DRIVER).o
 
 ifndef NO_ADELAY_DRIVER
-AVR_FILES_TMP += server/drivers/adelay_timer.o
-DPAUCS_INIT   += X(adelay_timer_init)
+AVR_FILES_TMP   += server/drivers/adelay_timer.o
+AVR_DPAUCS_INIT += X(adelay_timer_init)
 endif
 
 ifdef DPAUCS_INIT
-AVR_OPTIONS   += -DDPAUCS_INIT='$(DPAUCS_INIT)'
+AVR_DPAUCS_INIT += $(DPAUCS_INIT)
+endif
+ifdef AVR_DPAUCS_INIT
+AVR_OPTIONS += -DDPAUCS_INIT='$(AVR_DPAUCS_INIT)'
+endif
+
+ifdef DPAUCS_SHUTDOWN
+AVR_DPAUCS_SHUTDOWN = $(DPAUCS_SHUTDOWN)
+endif
+ifdef AVR_DPAUCS_SHUTDOWN
+AVR_OPTIONS += -DDPAUCS_SHUTDOWN='$(AVR_DPAUCS_SHUTDOWN)'
 endif
 
 AVR_FILES = $(shell \

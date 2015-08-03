@@ -2,13 +2,15 @@
 #define SERVICE_H
 
 #include <stddef.h>
-#include <stdint.h>
+#include <stdbool.h>
 #include <helper_macros.h>
 
 typedef struct {
-  uint8_t tos; // type of service
   void(*start)();
+  bool(*onopen)( void* cid );
   void(*onreceive)( void* cid, void* data, size_t size );
+  void(*oneof)( void* cid );
+  void(*onclose)( void* cid );
   void(*stop)();
 } DPAUCS_service_t;
 

@@ -12,7 +12,9 @@
 // sizeof(enum) is equal to sizeof(int)
 // int is 16 bit large on some platforms
 enum DPAUCS_fragmentType {
+#ifdef USE_TCP
   DPAUCS_FRAGMENT_TYPE_TCP,
+#endif
 #ifdef USE_IPv4
   DPAUCS_FRAGMENT_TYPE_IPv4,
 #endif

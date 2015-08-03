@@ -49,6 +49,12 @@ void DPAUCS_shutdown( void ){
 
   DPAUCS_ethShutdown();
 
+#ifdef DPAUCS_SHUTDOWN // Allows to add shutdown functions using makefile
+#define X(F) void F( void ); F();
+  DPAUCS_SHUTDOWN
+#undef X
+#endif
+
 }
 
 void DPAUCS_add_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){

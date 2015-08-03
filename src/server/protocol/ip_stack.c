@@ -6,7 +6,9 @@ static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPAUCS_MAX_INCOMPLETE_L
 
 unsigned DPAUCS_layer3_getPacketTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
+#ifdef USE_TCP
     case DPAUCS_FRAGMENT_TYPE_TCP: break;
+#endif
 #ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_packetInfo_t);
 #endif
@@ -25,7 +27,9 @@ bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS
     || (DPAUCS_layer3_packetInfo_t*)b >= incompletePackageInfos + DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS
   ){
     switch( a->type ){
+#ifdef USE_TCP
       case DPAUCS_FRAGMENT_TYPE_TCP: break;
+#endif
 #ifdef USE_IPv4
       case DPAUCS_FRAGMENT_TYPE_IPv4: return DPAUCS_areFragmentsFromSameIPv4Packet(
         (DPAUCS_IPv4_packetInfo_t*)a,

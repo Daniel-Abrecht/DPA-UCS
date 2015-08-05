@@ -120,15 +120,18 @@ size_t DPAUCS_stream_read( DPAUCS_stream_t*const stream, void* p, size_t max_siz
   size_t n = max_size;
   while( n && !BUFFER_EOF(stream->buffer_buffer) ){
     bufferInfo_t* info = BUFFER_BEGIN(stream->buffer_buffer);
+    size_t size = 0;
     switch( info->type ){
       case BUFFER_ARRAY:
-        n -= stream_read_from_array(info,p,n);
+        size = stream_read_from_array(info,p,n);
       break;
       case BUFFER_BUFFER:
-        n -= stream_read_from_buffer(info,p,n);
+        size = stream_read_from_buffer(info,p,n);
       break;
       default: return max_size - n;
     }
+    n -= size;
+    p = (char*)p+size;
     if( info->offset >= info->size ){
       info->offset = 0;
       BUFFER_SKIP(stream->buffer_buffer,1);

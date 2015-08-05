@@ -22,7 +22,7 @@ static struct {
   bool active;
   const DPAUCS_logicAddress_t* logicAddress;
   uint16_t port;
-  DPAUCS_service_t service;
+  DPAUCS_service_t* service;
 } services[MAX_SERVICES];
 
 void DPAUCS_init( void ){
@@ -97,9 +97,9 @@ void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_
       services[i].active = true;
       services[i].port = port;
       services[i].logicAddress = logicAddress;
-      services[i].service = *service;
-      if(services[i].service.start)
-        (*services[i].service.start)();
+      services[i].service = service;
+      if(services[i].service->start)
+        (*services[i].service->start)();
       break;
     }
   }
@@ -114,21 +114,22 @@ void DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint
      ) && services[i].port == port
     ){
       services[i].active = false;
-      if(services[i].service.stop)
-        (*services[i].service.stop)();
+      if(services[i].service->stop)
+        (*services[i].service->stop)();
       break;
     }
   }
 }
 
-DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port ){
+DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, uint8_t tos ){
   for(int i=0;i<MAX_SERVICES;i++)
     if( services[i].active
-       && ( 
+        && ( 
            !services[i].logicAddress
         || DPAUCS_compare_logicAddress( services[i].logicAddress, logicAddress )
       ) && services[i].port == port
-    ) return &services[i].service;
+        && services[i].service->tos == tos
+    ) return services[i].service;
     return 0;
 }
 

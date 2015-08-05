@@ -1,6 +1,7 @@
 #include <string.h>
 #include <server.h>
 #include <adelay.h>
+#include <alloca.h>
 #include <service.h>
 #include <checksum.h>
 #include <binaryUtils.h>
@@ -70,6 +71,8 @@ static void removeTCB( transmissionControlBlock_t* tcb ){
   if( !tcb->active )
     return;
   DPAUCS_arpCache_deregister( tcb->fromTo.destination );
+  if(tcb->service->onclose)
+    (*tcb->service->onclose)(tcb);
   tcb->active = false;
   tcb->currentId = 0;
   DEBUG_PRINTF("Connection removed.\n");
@@ -277,7 +280,7 @@ void tcb_from_tcp(
   tcb->active      = true;
   tcb->srcPort     = btoh16( tcp->destination );
   tcb->destPort    = btoh16( tcp->source );
-  tcb->service     = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ) );
+  tcb->service     = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ), PROTOCOL_TCP );
   tcb->currentId   = id;
   tcb->next_length = 0;
 
@@ -440,7 +443,7 @@ static bool tcp_processPacket(
           .SEQ = tcb->SND.NXT
         };
         tcp_sendNoData( 1, &tcb, &segment );
-      } break;
+      } goto eof_code;
       case TCP_FIN_WAIT_1_STATE: {
         tcb->state = TCP_CLOSING_STATE;
         tcp_segment_t segment = {
@@ -448,7 +451,7 @@ static bool tcp_processPacket(
           .SEQ = tcb->SND.NXT
         };
         tcp_sendNoData( 1, &tcb, &segment );
-      } break;
+      } goto eof_code;
       case TCP_FIN_WAIT_2_STATE: {
         tcb->state = TCP_TIME_WAIT_STATE;
         tcp_segment_t segment = {
@@ -456,6 +459,10 @@ static bool tcp_processPacket(
           .SEQ = tcb->SND.NXT
         };
         tcp_sendNoData( 1, &tcb, &segment );
+      } goto eof_code;
+      eof_code: {
+        if(tcb->service->oneof)
+          (*tcb->service->oneof)(tcb);
       } break;
       default: break;
     }
@@ -550,7 +557,6 @@ static bool tcp_processHeader(
     return false;
   }
 
-  DEBUG_PRINTF("-- tcp_reciveHandler | id: %p offset: %u size: %u --\n",id,(unsigned)offset,(unsigned)length);
   printFrame( tcp );
 
   transmissionControlBlock_t* stcb = searchTCB( &tcb );
@@ -583,7 +589,7 @@ static bool tcp_processHeader(
       DEBUG_PRINTF("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
       return false;
     }
-    if(*stcb->service->onopen){
+    if(stcb->service->onopen){
       if(!(*stcb->service->onopen)(stcb)){
         tcp_segment_t segment = {
           .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
@@ -591,6 +597,7 @@ static bool tcp_processHeader(
         };
         tcp_sendNoData( 1, &stcb, &segment );
         DEBUG_PRINTF( "tcb->service->onopen: connection rejected\n" );
+        removeTCB(stcb);
         return false;
       }
     }
@@ -693,6 +700,31 @@ static bool tcp_receiveHandler(
   }
 
   return ret;
+}
+
+bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream ), void** cids, size_t count ){
+  if( count > TRANSMISSION_CONTROL_BLOCK_COUNT )
+    return false;
+
+  DPAUCS_tcp_t tcp;
+  DPAUCS_tcp_transmission_t t = tcp_begin( &tcp );
+
+  tcp_segment_t* SEGs = alloca( count * sizeof(tcp_segment_t) );
+  if(!SEGs)
+    return false;
+
+  for(size_t i=0;i<count;i++)
+    SEGs[i] = (tcp_segment_t){
+      .flags = TCP_FLAG_ACK,
+      .SEQ = ((struct transmissionControlBlock*)cids[i])->SND.NXT
+    };
+
+  if(!(*func)(t.stream)){
+    DPAUCS_layer3_destroyTransmissionStream( t.stream );
+    return false;
+  };
+
+  return tcp_end( &t, count, (struct transmissionControlBlock**)cids, SEGs );
 }
 
 static void tcp_receiveFailtureHandler( void* id ){

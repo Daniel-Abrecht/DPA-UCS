@@ -6,6 +6,7 @@
 #include <helper_macros.h>
 
 typedef struct {
+  uint8_t tos;
   void(*start)();
   bool(*onopen)( void* cid );
   void(*onreceive)( void* cid, void* data, size_t size );

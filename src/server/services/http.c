@@ -13,8 +13,8 @@ static bool onopen( void* cid ){
 }
 
 bool testfunc( DPAUCS_stream_t* stream ){
-  static char ch[] = "HTTP/1.0 200 OK\r\n\r\n<h1>Hello World!</h1>";
-  DPAUCS_stream_referenceWrite(stream,ch,sizeof(ch));
+  static char ch[] = "HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Length: 21\r\n\r\n<h1>Hello World!</h1>";
+  DPAUCS_stream_referenceWrite(stream,ch,sizeof(ch)-1);
   return true;
 }
 
@@ -27,7 +27,7 @@ static void onreceive( void* cid, void* data, size_t size ){
 
 static void oneof( void* cid ){
   printf("http_service->oneof\n");
-  (void)cid;
+  DPAUCS_tcp_close( cid );
 }
 
 static void onclose( void* cid ){

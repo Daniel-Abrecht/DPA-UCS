@@ -46,37 +46,32 @@ enum tcp_flags {
   TCP_FLAG_NS  = 1<<8
 };
 
+#define TCP_STATES(X) \
+  X(TCP_CLOSED_STATE), \
+  X(TCP_SYN_RCVD_STATE), \
+  X(TCP_SYN_SENT_STATE), \
+  X(TCP_ESTAB_STATE), \
+  X(TCP_FIN_WAIT_1_STATE), \
+  X(TCP_CLOSE_WAIT_STATE), \
+  X(TCP_FIN_WAIT_2_STATE), \
+  X(TCP_CLOSING_STATE), \
+  X(TCP_LAST_ACK_STATE), \
+  X(TCP_TIME_WAIT_STATE)
+
+#define DPAUCS_EVAL(X) X
+
 typedef enum {
-  TCP_SYN_RCVD_STATE,
-  TCP_SYN_SENT_STATE,
-  TCP_ESTAB_STATE,
-  TCP_FIN_WAIT_1_STATE,
-  TCP_CLOSE_WAIT_STATE,
-  TCP_FIN_WAIT_2_STATE,
-  TCP_CLOSING_STATE,
-  TCP_LAST_ACK_STATE,
-  TCP_TIME_WAIT_STATE
+  TCP_STATES(DPAUCS_EVAL)
 } TCP_state_t;
 
 typedef struct DPAUCS_tcp_fragment DPAUCS_tcp_fragment_t;
 
 typedef struct transmissionControlBlock {
 
-  // internal stuff //
-  bool active;
-  uint16_t srcPort, destPort;
-  DPAUCS_address_pair_t fromTo;
-  DPAUCS_service_t* service;
-  struct {
-    DPAUCS_tcp_fragment_t **first, **last;
-  } fragments;
-  void* currentId;
-  uint16_t next_length, checksum;
-
   // TCP stuff //
 
   TCP_state_t state;
-  
+
   struct {
     uint32_t
       UNA,
@@ -92,8 +87,23 @@ typedef struct transmissionControlBlock {
     ;
   } RCV;
 
-  ///////////////
-  
+  DPAUCS_address_pair_t fromTo;
+  uint16_t srcPort, destPort;
+
+  // internal stuff //
+  DPAUCS_service_t* service;
+  struct {
+    DPAUCS_tcp_fragment_t **first, **last;
+  } fragments;
+  void* currentId;
+  uint16_t next_length, checksum;
+
+  struct {
+    bool ackAlreadySent : 1;
+  } flags;
+
+  ////////////////////
+
 } transmissionControlBlock_t;
 
 typedef struct {
@@ -114,6 +124,7 @@ void WEAK DPAUCS_tcpShutdown();
 void WEAK tcp_do_next_task( void );
 
 bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream ), void** cids, size_t count );
+void DPAUCS_tcp_close( void* cid );
 
 
 #endif

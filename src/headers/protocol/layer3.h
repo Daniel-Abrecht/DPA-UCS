@@ -6,6 +6,14 @@
 
 #define MAX_LAYER3_PROTO_HANDLERS 3
 
+#ifndef OUTSTREAM_BYTE_BUFFER_SIZE
+#define OUTSTREAM_BYTE_BUFFER_SIZE 256
+#endif
+
+#ifndef OUTSTREAM_REFERENCE_BUFFER_SIZE
+#define OUTSTREAM_REFERENCE_BUFFER_SIZE 16
+#endif
+
 typedef struct DPAUCS_fragment DPAUCS_fragment_t;
 
 typedef DPAUCS_stream_t*(*DPAUCS_createTransmissionStream)();

@@ -123,8 +123,8 @@ void WEAK DPAUCS_tcpInit();
 void WEAK DPAUCS_tcpShutdown();
 void WEAK tcp_do_next_task( void );
 
-bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream ), void** cids, size_t count );
+bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream, void* ptr ), void** cids, size_t count, void* ptr );
 void DPAUCS_tcp_close( void* cid );
-
+void DPAUCS_tcp_abord( void* cid );
 
 #endif

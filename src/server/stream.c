@@ -65,12 +65,12 @@ bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t*const stream, bufferInfo_t* bm
   return true;
 }
 
-bool DPAUCS_stream_copyWrite( DPAUCS_stream_t*const stream, void* p, size_t size ){
+bool DPAUCS_stream_copyWrite( DPAUCS_stream_t*const stream, const void* p, size_t size ){
   if( BUFFER_FULL(stream->buffer_buffer) )
     return false;
-  if( BUFFER_SIZE(stream->buffer) < size )
+  if( stream->buffer->size < size )
     return false;
-  unsigned char* buff = p;
+  const unsigned char* buff = p;
   bufferInfo_t entry = {0};
   entry.type = BUFFER_BUFFER;
   entry.size = size;
@@ -82,7 +82,7 @@ bool DPAUCS_stream_copyWrite( DPAUCS_stream_t*const stream, void* p, size_t size
   return true;
 }
 
-bool DPAUCS_stream_referenceWrite( DPAUCS_stream_t*const stream, void* p, size_t size ){
+bool DPAUCS_stream_referenceWrite( DPAUCS_stream_t*const stream, const void* p, size_t size ){
   if(BUFFER_FULL(stream->buffer_buffer))
     return false;
   bufferInfo_t entry = {0};
@@ -97,7 +97,7 @@ bool DPAUCS_stream_referenceWrite( DPAUCS_stream_t*const stream, void* p, size_t
 static inline size_t stream_read_from_buffer( bufferInfo_t* info, void* p, size_t max_size ){
   unsigned char* uch = p;
   size_t size = info->size - info->offset;
-  uchar_buffer_t* buffer = info->ptr;
+  uchar_buffer_t* buffer = (uchar_buffer_t*)info->ptr;
   size_t i, n;
   for(
     i = 0, n = size < max_size ? size : max_size;

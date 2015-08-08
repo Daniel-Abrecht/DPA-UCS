@@ -48,7 +48,7 @@ typedef struct {
   buffer_type type;
   size_t size;
   size_t offset;
-  void* ptr;
+  const void* ptr;
 } bufferInfo_t;
 
 BUFFER_TEMPLATE(char) char_buffer_t;

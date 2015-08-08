@@ -10,20 +10,20 @@
 #endif
 
 typedef enum {
-  FILE_ENTRY,
-  FUNCTION_ENTRY
-} entry_type;
+  DPAUCS_RESOURCE_FILE_ENTRY,
+  DPAUCS_RESOURCE_FUNCTION_ENTRY
+} DPAUCS_resource_entry_type;
 
 typedef struct {
-  const entry_type type;
+  const DPAUCS_resource_entry_type type;
   DP_FLASH const char* path;
-} entry_t;
+} DPAUCS_resource_entry_t;
 
 typedef struct {
-  entry_t entry;
+  DPAUCS_resource_entry_t entry;
   const DP_FLASH char* mime;
   size_t size;
   const DP_FLASH char* content;
-} file_t;
+} DPAUCS_resource_file_t;
 
 #endif

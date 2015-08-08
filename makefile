@@ -55,6 +55,7 @@ endif
 
 FILES += main.o
 FILES += server/server.o
+FILES += server/utils.o
 FILES += server/stream.o
 FILES += server/mempool.o
 FILES += server/checksum.o

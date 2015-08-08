@@ -13,7 +13,6 @@
 #include <protocol/tcp_ip_stack_memory.h>
 #include <protocol/tcp_retransmission_cache.h>
 
-#include <stdio.h>
 #ifdef DEBUG
 #include <stdio.h>
 #define DEBUG_PRINTF(...) printf(__VA_ARGS__)
@@ -280,9 +279,10 @@ static void tcp_processDatas(
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
   return ( stcb->state == TCP_SYN_RCVD_STATE   )
       || ( stcb->state == TCP_SYN_SENT_STATE   )
-      || ( stcb->state == TCP_FIN_WAIT_2_STATE )
+      || ( stcb->state == TCP_TIME_WAIT_STATE  )
       || ( stcb->state == TCP_CLOSING_STATE    )
-      || ( stcb->state == TCP_LAST_ACK_STATE   );
+      || ( stcb->state == TCP_LAST_ACK_STATE   )
+      || ( stcb->state == TCP_CLOSED_STATE     );
 }
 
 void tcb_from_tcp(
@@ -432,40 +432,21 @@ static bool tcp_processPacket(
         .SEQ = tcb->SND.NXT
       };
       tcp_sendNoData( 1, &tcb, &segment );
-    }else{
-      switch( tcb->state ){
-        case TCP_SYN_RCVD_STATE: {
-          tcp_setState( tcb, TCP_ESTAB_STATE );
-        } break;
-        case TCP_CLOSING_STATE: {
-          tcp_setState( tcb, TCP_TIME_WAIT_STATE );
-        } break;
-        case TCP_LAST_ACK_STATE: {
-          removeTCB( tcb );
-        } break;
-        case TCP_FIN_WAIT_1_STATE: {
-          tcp_setState( tcb, TCP_FIN_WAIT_2_STATE );
-        } break;
-        default: break;
-      }
+    }else switch( tcb->state ){
+      case TCP_SYN_RCVD_STATE  : tcp_setState( tcb, TCP_ESTAB_STATE      ); break;
+      case TCP_CLOSING_STATE   : tcp_setState( tcb, TCP_TIME_WAIT_STATE  ); break;
+      case TCP_FIN_WAIT_1_STATE: tcp_setState( tcb, TCP_FIN_WAIT_2_STATE ); break;
+      case TCP_LAST_ACK_STATE  : removeTCB( tcb ); break;
+      default: break;
     }
   }
 
   if( SEG.flags & TCP_FLAG_FIN ){
     switch( tcb->state ){
-      case TCP_ESTAB_STATE: {
-        tcp_setState( tcb, TCP_CLOSE_WAIT_STATE );
-      } goto eof_code;
-      case TCP_FIN_WAIT_1_STATE: {
-        tcp_setState( tcb, TCP_CLOSING_STATE );
-      } goto eof_code;
-      case TCP_FIN_WAIT_2_STATE: {
-        tcp_setState( tcb, TCP_TIME_WAIT_STATE );
-      } goto eof_code;
-      eof_code: {
-        if(tcb->service->oneof)
-          (*tcb->service->oneof)(tcb);
-      } break;
+      case TCP_ESTAB_STATE     : tcp_setState( tcb, TCP_CLOSE_WAIT_STATE ); goto eof_code;
+      case TCP_FIN_WAIT_1_STATE: tcp_setState( tcb, TCP_CLOSING_STATE    ); goto eof_code;
+      case TCP_FIN_WAIT_2_STATE: tcp_setState( tcb, TCP_TIME_WAIT_STATE  ); goto eof_code;
+      eof_code: if(tcb->service->oneof)(*tcb->service->oneof)(tcb); break;
       default: break;
     }
   }
@@ -553,6 +534,7 @@ static bool tcp_processHeader(
   tcp_init_variables( tcp, id, from, to, &SEG, &tcb, &ACK );
 
   if( !tcp_is_tcb_valid( &tcb ) ){
+    tcb.RCV.NXT = SEG.SEQ + 1;
     tcp_segment_t segment = {
       .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
       .SEQ = ISS
@@ -708,7 +690,7 @@ static bool tcp_receiveHandler(
   return ret;
 }
 
-bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream ), void** cids, size_t count ){
+bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t*, void* ), void** cids, size_t count, void* ptr ){
   if( count > TRANSMISSION_CONTROL_BLOCK_COUNT )
     return false;
 
@@ -725,12 +707,24 @@ bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream ), void** cids, size_
       .SEQ = ((struct transmissionControlBlock*)cids[i])->SND.NXT
     };
 
-  if(!(*func)(t.stream)){
+  if(!(*func)(t.stream,ptr)){
     DPAUCS_layer3_destroyTransmissionStream( t.stream );
     return false;
   };
 
   return tcp_end( &t, count, (transmissionControlBlock_t**)cids, SEGs );
+}
+
+void DPAUCS_tcp_abord( void* cid ){
+  transmissionControlBlock_t* tcb = cid;
+  if( tcb->state == TCP_CLOSED_STATE )
+    return;
+  tcp_segment_t segment = {
+    .flags = TCP_FLAG_FIN | TCP_FLAG_ACK,
+    .SEQ = tcb->SND.NXT
+  };
+  tcp_setState( tcb, TCP_CLOSED_STATE );
+  tcp_sendNoData( 1, &tcb, &segment );
 }
 
 void DPAUCS_tcp_close( void* cid ){

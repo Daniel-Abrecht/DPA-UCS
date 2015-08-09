@@ -10,17 +10,17 @@ bool mempos( size_t* position, void* haystack, size_t haystack_size, void* needl
   if( needle_size > haystack_size )
     return false;
 
-  size_t m = haystack_size - needle_size + 1;
+  size_t n = haystack_size - needle_size + 1;
   size_t i=0, j=0;
 
-  while( i < needle_size && m-- )
+  while( i < needle_size && n--+i )
     if( ((char*)needle)[i++] != ((char*)haystack)[j++] )
-      j-=i-1, i=0;
+      n-=i-1, j-=i-1, i=0;
 
-  if( i != needle_size )
+  if( i < needle_size )
     return false;
 
-  *position = j;
+  *position = j-i;
 
   return true;
 }
@@ -32,4 +32,11 @@ bool memrcharpos( size_t* position, size_t size, void* haystack, char needle ){
   if(!~i) return false;
   *position = i;
   return true;
+}
+
+void memtrim( const char**restrict mem, size_t*restrict size, char c ){
+  while( *size && **mem == c )
+    (*mem)++, (*size)--;
+  while( (*size) && (*mem)[(*size)-1] == ' ' )
+    (*size)--;
 }

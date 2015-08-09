@@ -15,13 +15,11 @@
 #define DPAUCS_MAX_HTTP_CONNECTIONS TRANSMISSION_CONTROL_BLOCK_COUNT
 #endif
 
-
 DPAUCS_MODUL( http ){
   DPAUCS_DEPENDENCY( tcp );
 }
 
 #define HTTP_METHODS(X) \
-  X( OPTIONS ) \
   X( HEAD ) \
   X( GET )
 
@@ -34,7 +32,8 @@ DPAUCS_MODUL( http ){
 
 enum HTTP_Method {
   HTTP_METHODS( HTTP_METHODS_ENUMERATE )
-  HTTP_METHOD_COUNT
+  HTTP_METHOD_COUNT,
+  HTTP_METHOD_UNKNOWN = HTTP_METHOD_COUNT
 };
 
 static const struct {
@@ -51,14 +50,19 @@ enum HTTP_ParseState {
   HTTP_PARSE_PATH,
   HTTP_PARSE_PROTOCOL,
   HTTP_PARSE_VERSION,
-  HTTP_PARSE_HEADER_KEY,
-  HTTP_PARSE_HEADER_VALUE,
+  HTTP_PARSE_SKIP_HEADER_FIELD_NEWLINE,
+  HTTP_PARSE_SKIP_HEADER_FIELD,
+  HTTP_PARSE_HEADER_FIELD,
   HTTP_PARSER_ERROR
 };
 
 typedef struct HTTP_Connection {
   void* cid;
   const DP_FLASH DPAUCS_resource_entry_t* resource;
+  uint16_t status;
+  struct {
+    uint8_t major, minor;
+  } version;
   enum HTTP_Method method;
   enum HTTP_ParseState parseState;
 } HTTP_Connections_t;
@@ -74,51 +78,54 @@ typedef struct HTTP_error {
   uint8_t length;
 } HTTP_error_t;
 
+#define S(STR) STR, sizeof(STR)-1
 static const HTTP_error_t HTTP_errors[] = {
-  { 400, "Bad Request", 11 },
-  { 401, "Unauthorized", 12 },
-  { 402, "Payment Required", 16 },
-  { 403, "Forbidden", 9 },
-  { 404, "Not Found", 9 },
-  { 405, "Method Not Allowed", 18 },
-  { 406, "Not Acceptable", 14 },
-  { 407, "Proxy Authentication Required", 29 },
-  { 408, "Request Time-out", 16 },
-  { 409, "Conflict", 8 },
-  { 410, "Gone", 4 },
-  { 411, "Length Required", 15 },
-  { 412, "Precondition Failed", 19 },
-  { 413, "Request Entity Too Large", 24 },
-  { 414, "Request-URL Too Long", 20 },
-  { 415, "Unsupported Media Type", 22 },
-  { 416, "Requested range not satisfiable", 31 },
-  { 417, "Expectation Failed", 18 },
-  { 418, "I’m a teapot", 12 },
-  { 420, "Policy Not Fulfilled", 20 },
-  { 421, "There are too many connections from your internet address", 57 },
-  { 422, "Unprocessable Entity", 20 },
-  { 423, "Locked", 6 },
-  { 424, "Failed Dependency", 17 },
-  { 425, "Unordered Collection", 20 },
-  { 426, "Upgrade Required", 16 },
-  { 428, "Precondition Required", 21 },
-  { 429, "Too Many Requests", 17 },
-  { 431, "Request Header Fields Too Large", 31 },
-  { 444, "No Response", 11 },
-  { 449, "The request should be retried after doing the appropriate action", 64 },
-  { 451, "Unavailable For Legal Reasons", 29 },
-  { 500, "Internal Server Error", 21 },
-  { 501, "Not Implemented", 15 },
-  { 502, "Bad Gateway", 11 },
-  { 503, "Service Unavailable", 19 },
-  { 504, "Gateway Time-out", 16 },
-  { 505, "HTTP Version not supported", 26 },
-  { 506, "Variant Also Negotiates", 27 },
-  { 507, "Insufficient Storage", 20 },
-  { 508, "Loop Detected", 13 },
-  { 509, "Bandwidth Limit Exceeded", 24 },
-  { 510, "Not Extended", 12 }
+  { 400, S("Bad Request") },
+  { 401, S("Unauthorized") },
+  { 402, S("Payment Required") },
+  { 403, S("Forbidden") },
+  { 404, S("Not Found") },
+  { 405, S("Method Not Allowed") },
+  { 406, S("Not Acceptable") },
+  { 407, S("Proxy Authentication Required") },
+  { 408, S("Request Time-out") },
+  { 409, S("Conflict") },
+  { 410, S("Gone") },
+  { 411, S("Length Required") },
+  { 412, S("Precondition Failed") },
+  { 413, S("Request Entity Too Large") },
+  { 414, S("Request-URL Too Long") },
+  { 415, S("Unsupported Media Type") },
+  { 416, S("Requested range not satisfiable") },
+  { 417, S("Expectation Failed") },
+  { 418, S("I’m a teapot") },
+  { 420, S("Policy Not Fulfilled") },
+  { 421, S("There are too many connections from your internet address") },
+  { 422, S("Unprocessable Entity") },
+  { 423, S("Locked") },
+  { 424, S("Failed Dependency") },
+  { 425, S("Unordered Collection") },
+  { 426, S("Upgrade Required") },
+  { 428, S("Precondition Required") },
+  { 429, S("Too Many Requests") },
+  { 431, S("Request Header Fields Too Large") },
+  { 444, S("No Response") },
+  { 480, S("Invalid Protocol") },
+  { 449, S("The request should be retried after doing the appropriate action") },
+  { 451, S("Unavailable For Legal Reasons") },
+  { 500, S("Internal Server Error") },
+  { 501, S("Not Implemented") },
+  { 502, S("Bad Gateway") },
+  { 503, S("Service Unavailable") },
+  { 504, S("Gateway Time-out") },
+  { 505, S("HTTP Version not supported") },
+  { 506, S("Variant Also Negotiates") },
+  { 507, S("Insufficient Storage") },
+  { 508, S("Loop Detected") },
+  { 509, S("Bandwidth Limit Exceeded") },
+  { 510, S("Not Extended") }
 };
+#undef S
 const size_t HTTP_error_count = sizeof(HTTP_errors)/sizeof(*HTTP_errors);
 
 struct writeErrorPageParams {
@@ -174,19 +181,10 @@ static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
 }
 #undef S
 
-void HTTP_sendErrorPageHead( void* cid, uint16_t code ){
+void HTTP_sendErrorPage( void* cid, uint16_t code, bool headOnly ){
   struct writeErrorPageParams params = {
     .code = code,
-    .headOnly = true
-  };
-  DPAUCS_tcp_send( &writeErrorPage, &cid, 1, &params );
-  DPAUCS_tcp_close( cid );
-}
-
-void HTTP_sendErrorPage( void* cid, uint16_t code ){
-  struct writeErrorPageParams params = {
-    .code = code,
-    .headOnly = false
+    .headOnly = headOnly
   };
   DPAUCS_tcp_send( &writeErrorPage, &cid, 1, &params );
   DPAUCS_tcp_close( cid );
@@ -227,86 +225,204 @@ static void onreceive( void* cid, void* data, size_t size ){
     return;
   }
 
+  if( c->status == HTTP_PARSE_START ){
+    c->status = 200;
+    c->method = HTTP_METHOD_UNKNOWN;
+    c->version.major = 1;
+    c->version.minor = 0;
+  }
+
   char* it = data;
   size_t n = size;
 
-  while( true ){
-  switch( c->parseState ){
 
 
-    case HTTP_PARSE_METHOD: {
+  while( n ){
+    switch( c->parseState ){
 
-      enum HTTP_Method method;
-      for( method=0; method<HTTP_METHOD_COUNT; method++ )
-      if( HTTP_methods[method].length < n
-       && !memcmp( HTTP_methods[method].name, it, HTTP_methods[method].length )
-       && it[HTTP_methods[method].length] == ' '
-      ) break;
 
-      if( method >= HTTP_METHOD_COUNT ){
-        HTTP_sendErrorPage( cid, 405 );
-        c->parseState = HTTP_PARSER_ERROR;
-        break;
+      case HTTP_PARSE_METHOD: {
+
+        char* methodEnd = memchr(it,' ',n);
+        if(!methodEnd){
+          c->status = 400;
+          c->parseState = HTTP_PARSER_ERROR;
+          break;
+        }
+
+        enum HTTP_Method method;
+        for( method=0; method<HTTP_METHOD_COUNT; method++ )
+        if( HTTP_methods[method].length == (size_t)(methodEnd-it)
+         && !memcmp( HTTP_methods[method].name, it, HTTP_methods[method].length )
+        ) break;
+
+        if( method == HTTP_METHOD_UNKNOWN )
+          c->status = 405;
+
+        c->method = method;
+        c->parseState = HTTP_PARSE_PATH;
+
+        n -= methodEnd - it + 1;
+        it = methodEnd + 1;
+
+      } continue;
+
+
+      case HTTP_PARSE_PATH: {
+
+        size_t lineEndPos;
+        if( !mempos( &lineEndPos, it, n, S("\r\n") ) ){
+          c->status = 400;
+          c->parseState = HTTP_PARSER_ERROR;
+          break;
+        }
+
+        size_t urlEnd;
+        if( !memrcharpos( &urlEnd, lineEndPos, it, '/' )
+         || !memrcharpos( &urlEnd, urlEnd,     it, ' ' )
+        ){
+          c->status = 400;
+          c->parseState = HTTP_PARSER_ERROR;
+          break;
+        }
+
+        c->resource = getResource( it, urlEnd );
+        c->parseState = HTTP_PARSE_PROTOCOL;
+
+        if(!c->resource)
+          c->status = 404;
+
+        n  -= urlEnd + 1;
+        it += urlEnd + 1;
+
+      } continue;
+
+
+      case HTTP_PARSE_PROTOCOL: {
+
+        size_t lineEndPos = 0;
+        size_t protocolEndPos = 0;
+
+        mempos( &lineEndPos, it, n, S("\r\n") );
+        memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
+        if( protocolEndPos != 4 || memcmp( it, S("HTTP") ) ){
+          c->status = 480;
+        }
+
+        c->parseState = HTTP_PARSE_VERSION;
+
+        n  -= protocolEndPos + 1;
+        it += protocolEndPos + 1;
+
+      } continue;
+
+
+      case HTTP_PARSE_VERSION: {
+
+        size_t lineEndPos = 0;
+        mempos( &lineEndPos, it, n, S("\r\n") );
+        if(!memchr(it,'.',lineEndPos)){
+          c->status = 400;
+          c->parseState = HTTP_PARSER_ERROR;
+          break;
+        }
+
+        const char* v = it;
+
+        c->version.major = 0;
+        while( *v >= '0' && *v <= '9' ){
+          c->version.major *= 10;
+          c->version.major += *v - '0';
+          v++;
+        }
+        v++;
+
+        c->version.minor = 0;
+        while( *v >= '0' && *v <= '9' ){
+          c->version.minor *= 10;
+          c->version.minor += *v - '0';
+          v++;
+        }
+
+        c->parseState = HTTP_PARSE_HEADER_FIELD;
+        n  -= lineEndPos + 2;
+        it += lineEndPos + 2;
+
+      } continue;
+
+
+      case HTTP_PARSE_SKIP_HEADER_FIELD_NEWLINE: if( *it == '\n' ){
+        it++; n--; c->parseState = HTTP_PARSE_HEADER_FIELD;
+        continue;
       }
+      case HTTP_PARSE_SKIP_HEADER_FIELD: {
+        size_t lineEndPos = 0;
+        if(!mempos( &lineEndPos, it, n, S("\r\n") ))
+          break;
+        n  -= lineEndPos + 2;
+        it += lineEndPos + 2;
+        c->parseState = HTTP_PARSE_HEADER_FIELD;
+      } continue;
 
-      c->method = method;
-      c->parseState = HTTP_PARSE_PATH;
-      it += HTTP_methods[method].length + 1;
-      n  -= HTTP_methods[method].length + 1;
 
-    } continue;
+      case HTTP_PARSE_HEADER_FIELD: {
+
+        if( ( n >= 1 && *it == '\n' ) || ( n >= 2 && it[0]=='\r' && it[1]=='\n' ) ){
+          c->parseState = HTTP_PARSE_END;
+          it += 1 + (*it != '\n');
+          n  -= 1 + (*it != '\n');
+          break;
+        }
+
+        size_t key_length=0, lineEndPos=0;
+        if( !mempos( &lineEndPos, it, n, S("\r\n") )
+         || !mempos( &key_length, it, lineEndPos, S(":") )
+        ){
+          if( it[n-1] == '\r' ){
+            c->parseState = HTTP_PARSE_SKIP_HEADER_FIELD_NEWLINE;
+          }else{
+            c->parseState = HTTP_PARSE_SKIP_HEADER_FIELD;
+          }
+          break;
+        }
+
+        const char* key = it;
+        const char* value = it + key_length + 1;
+        size_t value_length = lineEndPos - key_length - 1;
+        memtrim( &value, &value_length, ' ' );
+
+        printf("Header field: key=\"%.*s\" value=\"%.*s\"\n",
+          (int)key_length,key,
+          (int)value_length,value
+        );
+
+        n  -= lineEndPos + 2;
+        it += lineEndPos + 2;
+
+      } continue;
 
 
-    case HTTP_PARSE_PATH: {
+      case HTTP_PARSER_ERROR: return;
 
-      size_t lineEndPos;
-      if( !mempos( &lineEndPos, it, n, S("\r\n") ) ){
-        HTTP_sendErrorPage( cid, 400 );
-        c->parseState = HTTP_PARSER_ERROR;
-        break;
-      }
 
-      size_t urlEnd;
-      if( !memrcharpos( &urlEnd, lineEndPos, it, '/' )
-       || !memrcharpos( &urlEnd, urlEnd,     it, ' ' )
-      ){
-        HTTP_sendErrorPage( cid, 400 );
-        c->parseState = HTTP_PARSER_ERROR;
-        break;
-      }
+    }
+    break;
+  }
 
-      if( !( c->resource = getResource( it, urlEnd ) ) ){
-        printf("Resource \"%.*s\" not found\n",(int)urlEnd,it);
-        HTTP_sendErrorPage( cid, 404 );
-        c->parseState = HTTP_PARSER_ERROR;
-        break;
-      }
 
-      c->parseState = HTTP_PARSE_PROTOCOL;
-      it += urlEnd + 1;
-      n  -= urlEnd + 1;
 
-    } continue;
+  if( c->parseState == HTTP_PARSER_ERROR ){
+    HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
+    return;
+  }
 
-    case HTTP_PARSE_PROTOCOL: {
-      break;
-    } continue;
+  if( c->parseState != HTTP_PARSE_END )
+    return;
 
-    case HTTP_PARSE_VERSION: {
-      
-    } continue;
-
-    case HTTP_PARSE_HEADER_KEY: {
-      
-    } continue;
-
-    case HTTP_PARSE_HEADER_VALUE: {
-      
-    } continue;
-
-    case HTTP_PARSER_ERROR: break;
-
-  } break; }
+  if( c->status >= 400 ){
+    HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
+    return;
+  }
 
 }
 #undef S

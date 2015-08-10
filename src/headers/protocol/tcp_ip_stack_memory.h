@@ -6,8 +6,6 @@
 #define STACK_BUFFER_SIZE 1024u * 5u // 50 KB
 #define DPAUCS_MAX_FRAGMANTS 256
 
-#define ANY_FRAGMENT ~0u
-
 // Don't add more than 16 fragment types
 // sizeof(enum) is equal to sizeof(int)
 // int is 16 bit large on some platforms
@@ -21,6 +19,7 @@ enum DPAUCS_fragmentType {
 #ifdef USE_IPv6
   DPAUCS_FRAGMENT_TYPE_IPv6,
 #endif
+  DPAUCS_ANY_FRAGMENT
 };
 
 typedef struct DPAUCS_fragment {

@@ -624,14 +624,14 @@ static bool tcp_receiveHandler(
 
   bool ret = true;
 
-  uint32_t tmp_ch = ~checksum( payload, length ) & 0xFFFF;
+  uint32_t tmp_ch = (uint16_t)~checksum( payload, length );
 
   transmissionControlBlock_t* tcb = getTcbByCurrentId(id);
   if(tcb){
     if( tcb->next_length & 1 )
-      tmp_ch = ( ( tmp_ch >> 8 ) & 0xFF ) | ( ( tmp_ch & 0xFF ) << 8 );
+      tmp_ch = (uint16_t)( (uint16_t)( tmp_ch >> 8 ) & 0xFF ) | (uint16_t)( (uint16_t)( tmp_ch & 0xFF ) << 8 );
     tmp_ch += (uint32_t)tcb->checksum;
-    tmp_ch  = ( tmp_ch & 0xFFFF ) + ( ( tmp_ch >> 16 ) & 0xFFFF );
+    tmp_ch  = (uint16_t)tmp_ch + (uint16_t)( tmp_ch >> 16 );
     if(!last)
       ret = DPAUCS_tcp_cache_add( fragment, tcb ) || last;
   }
@@ -655,8 +655,8 @@ static bool tcp_receiveHandler(
     }else{
       tcb_ptr = tcb;
     }
-    tmp_ch += ~tcp_pseudoHeaderChecksum( tcb_ptr, tcp, tcb_ptr->next_length + length )  & 0xFFFF;
-    uint16_t ch = ~( ( tmp_ch & 0xFFFF ) + ( tmp_ch >> 16 ) );
+    tmp_ch += (uint16_t)~tcp_pseudoHeaderChecksum( tcb_ptr, tcp, tcb_ptr->next_length + length );
+    uint16_t ch = (uint16_t)~( (uint16_t)tmp_ch + (uint16_t)( tmp_ch >> 16 ) );
     if(!ch){
       DEBUG_PRINTF("\nchecksum OK\n\n");
     }else{

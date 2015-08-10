@@ -44,6 +44,7 @@ unsigned DPAUCS_getFragmentTypeSize(enum DPAUCS_fragmentType type){
 #ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_fragment_t);
 #endif
+    case DPAUCS_ANY_FRAGMENT: break;
   }
   return 0;
 }
@@ -75,7 +76,7 @@ void* DPAUCS_getFragmentData( DPAUCS_fragment_t* fragment ){
 DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t size ){
   size_t fragmentTypeSize = DPAUCS_getFragmentTypeSize( type );
   unsigned short packetNumber = packetNumberCounter++;
-  DPAUCS_eachFragment(ANY_FRAGMENT,&removeFragmentByPacketNumber,&packetNumber);
+  DPAUCS_eachFragment(DPAUCS_ANY_FRAGMENT,&removeFragmentByPacketNumber,&packetNumber);
   if( fragmentsUsed < DPAUCS_MAX_FRAGMANTS )
     DPAUCS_removeOldestFragment();
   unsigned short i;
@@ -115,7 +116,7 @@ static bool findOldestFragment( DPAUCS_fragment_t** fragment_ptr, void* _args ){
 
 void DPAUCS_removeOldestFragment( void ){
   struct findOldestFragmentArgs args = {(unsigned short)~0u,0};
-  DPAUCS_eachFragment(ANY_FRAGMENT,&findOldestFragment,&args);
+  DPAUCS_eachFragment(DPAUCS_ANY_FRAGMENT,&findOldestFragment,&args);
   if(!args.oldestFragment)
     return;
   DPAUCS_removeFragment(args.oldestFragment);
@@ -138,7 +139,7 @@ struct eachFragmentArgs {
 static bool eachFragment_helper(void** mem,void* arg){
   struct eachFragmentArgs* args = arg;
   DPAUCS_fragment_t** fragment_ptr = (DPAUCS_fragment_t**)mem;
-  if( !~args->type || args->type == (*fragment_ptr)->type )
+  if( args->type==DPAUCS_ANY_FRAGMENT || args->type == (*fragment_ptr)->type )
     return (*args->handler)(fragment_ptr,args->arg);
   return true;
 }

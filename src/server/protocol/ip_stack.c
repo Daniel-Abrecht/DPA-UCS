@@ -12,6 +12,7 @@ unsigned DPAUCS_layer3_getPacketTypeSize(enum DPAUCS_fragmentType type){
 #ifdef USE_IPv4
     case DPAUCS_FRAGMENT_TYPE_IPv4: return sizeof(DPAUCS_IPv4_packetInfo_t);
 #endif
+    case DPAUCS_ANY_FRAGMENT: break;
   }
   return 0;
 }
@@ -36,6 +37,7 @@ bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS
         (DPAUCS_IPv4_packetInfo_t*)b
       ); break;
 #endif
+      case DPAUCS_ANY_FRAGMENT: break;
     }
   }
   return false;

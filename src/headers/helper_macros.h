@@ -1,6 +1,7 @@
 #ifndef HELPER_MACROS_H
 #define HELPER_MACROS_H
 
+
 #if __STDC_VERSION__ < 201112L
 #pragma anon_unions
 #endif
@@ -20,5 +21,12 @@
 #else
 #define GCC_BUGFIX_50925
 #endif
+
+#ifdef __FLASH
+#define DP_FLASH //__flash
+#else
+#define DP_FLASH
+#endif
+
 
 #endif

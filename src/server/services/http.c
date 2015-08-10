@@ -4,6 +4,7 @@
 #include <string.h>
 #include <files.h>
 #include <utils.h>
+#include <ressource.h>
 #include <protocol/tcp.h>
 #include <services/http.h>
 
@@ -17,6 +18,7 @@
 
 DPAUCS_MODUL( http ){
   DPAUCS_DEPENDENCY( tcp );
+  DPAUCS_DEPENDENCY( ressource );
 }
 
 #define HTTP_METHODS(X) \
@@ -56,15 +58,32 @@ enum HTTP_ParseState {
   HTTP_PARSER_ERROR
 };
 
+enum HTTP_ConnectionAction {
+  HTTP_CONNECTION_CLOSE,
+  HTTP_CONNECTION_KEEP_ALIVE,
+  HTTP_CONNECTION_UPGRADE,
+  HTTP_CONNECTION_ACTION_COUNT,
+  HTTP_CONNECTION_ACTION_UNKNOWN = HTTP_CONNECTION_ACTION_COUNT
+};
+
+const char* HTTP_ConnectionActions[] = {
+  "Close",
+  "Keep-Alive",
+  "Upgrade"
+};
+
+
 typedef struct HTTP_Connection {
   void* cid;
-  const DP_FLASH DPAUCS_resource_entry_t* resource;
+  const DP_FLASH DPAUCS_ressource_entry_t* ressource;
   uint16_t status;
   struct {
     uint8_t major, minor;
   } version;
   enum HTTP_Method method;
   enum HTTP_ParseState parseState;
+  enum HTTP_ConnectionAction connectionAction;
+  const DPAUCS_service_t* upgradeService;
 } HTTP_Connections_t;
 
 static HTTP_Connections_t connections[DPAUCS_MAX_HTTP_CONNECTIONS];
@@ -132,12 +151,6 @@ struct writeErrorPageParams {
   uint16_t code;
   bool headOnly;
 };
-
-static DPAUCS_resource_entry_t* getResource( const char* path, unsigned length ){
-  (void)path;
-  (void)length;
-  return 0;
-}
 
 #define S(STR) STR, sizeof(STR)-1
 static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
@@ -214,7 +227,7 @@ static bool onopen( void* cid ){
 }
 
 
-
+#define MEMEQ( STR, MEM, N ) ( N == sizeof(STR)-1 && !memcmp( (MEM), (STR), sizeof(STR)-1 ) )
 #define S(STR) STR, sizeof(STR)-1
 static void onreceive( void* cid, void* data, size_t size ){
   printf("http_service->onrecive: \n");
@@ -228,6 +241,8 @@ static void onreceive( void* cid, void* data, size_t size ){
   if( c->status == HTTP_PARSE_START ){
     c->status = 200;
     c->method = HTTP_METHOD_UNKNOWN;
+    c->connectionAction = HTTP_CONNECTION_CLOSE;
+    c->upgradeService = 0;
     c->version.major = 1;
     c->version.minor = 0;
   }
@@ -286,10 +301,10 @@ static void onreceive( void* cid, void* data, size_t size ){
           break;
         }
 
-        c->resource = getResource( it, urlEnd );
+        c->ressource = getRessource( it, urlEnd );
         c->parseState = HTTP_PARSE_PROTOCOL;
 
-        if(!c->resource)
+        if(!c->ressource)
           c->status = 404;
 
         n  -= urlEnd + 1;
@@ -305,9 +320,8 @@ static void onreceive( void* cid, void* data, size_t size ){
 
         mempos( &lineEndPos, it, n, S("\r\n") );
         memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
-        if( protocolEndPos != 4 || memcmp( it, S("HTTP") ) ){
+        if( streq_nocase( "HTTP", it, protocolEndPos ) )
           c->status = 480;
-        }
 
         c->parseState = HTTP_PARSE_VERSION;
 
@@ -391,6 +405,17 @@ static void onreceive( void* cid, void* data, size_t size ){
         size_t value_length = lineEndPos - key_length - 1;
         memtrim( &value, &value_length, ' ' );
 
+        if( streq_nocase( "Connection", key, key_length ) ){
+          enum HTTP_ConnectionAction ca;
+          for( ca=0; ca<HTTP_CONNECTION_ACTION_COUNT; ca++ )
+            if( streq_nocase( HTTP_ConnectionActions[ca], value, value_length ) )
+              break;
+          c->connectionAction = ca;
+        }else if( streq_nocase( "Upgrade", key, key_length ) ){
+          
+        }
+
+
         printf("Header field: key=\"%.*s\" value=\"%.*s\"\n",
           (int)key_length,key,
           (int)value_length,value
@@ -426,6 +451,7 @@ static void onreceive( void* cid, void* data, size_t size ){
 
 }
 #undef S
+#undef MEMEQ
 
 static void oneof( void* cid ){
   printf("http_service->oneof\n");

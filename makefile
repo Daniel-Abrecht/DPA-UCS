@@ -18,7 +18,7 @@ AVR_MCU=atmega16
 AVR_NET_DRIVER=dummy
 AVR_F_CPU = 3686400UL
 
-OPTIONS        += -std=c11
+OPTIONS        += -std=c11 #--short-enums
 OPTIONS        += -I$(SRC)/headers/
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 ifdef DEBUG
@@ -59,6 +59,7 @@ FILES += server/utils.o
 FILES += server/stream.o
 FILES += server/mempool.o
 FILES += server/checksum.o
+FILES += server/ressource.o
 FILES += server/binaryUtils.o
 FILES += server/protocol/arp.o
 FILES += server/protocol/ip.o

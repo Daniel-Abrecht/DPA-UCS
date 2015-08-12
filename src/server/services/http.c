@@ -304,7 +304,7 @@ static void onreceive( void* cid, void* data, size_t size ){
         c->ressource = getRessource( it, urlEnd );
         c->parseState = HTTP_PARSE_PROTOCOL;
 
-        if(!c->ressource)
+        if( c->status < 400 && !c->ressource )
           c->status = 404;
 
         n  -= urlEnd + 1;
@@ -320,7 +320,7 @@ static void onreceive( void* cid, void* data, size_t size ){
 
         mempos( &lineEndPos, it, n, S("\r\n") );
         memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
-        if( streq_nocase( "HTTP", it, protocolEndPos ) )
+        if( !streq_nocase( "HTTP", it, protocolEndPos ) )
           c->status = 480;
 
         c->parseState = HTTP_PARSE_VERSION;

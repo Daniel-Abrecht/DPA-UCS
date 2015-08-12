@@ -42,6 +42,6 @@ void memtrim( const char**restrict mem, size_t*restrict size, char c ){
 }
 
 bool streq_nocase( const char* str, const char* mem, size_t size ){
-  while( size && ( ( *str >= 'A' && *str <= 'Z' ) ? *str - 'A' + 'a' : *str ) == ( ( *mem >= 'A' && *mem <= 'Z' ) ? *mem - 'A' + 'a' : *mem ) ) size--, str++, mem++;
+  while( size-- && ( ( *str >= 'A' && *str <= 'Z' ) ? (*str) - 'A' + 'a' : *str ) == ( ( *mem >= 'A' && *mem <= 'Z' ) ? (*mem) - 'A' + 'a' : *mem ) ) str++, mem++;
   return !~size;
 }

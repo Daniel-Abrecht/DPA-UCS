@@ -30,19 +30,32 @@ OPTIONS        += -s -ffunction-sections -fdata-sections
 endif
 
 GEN_DEST = FilesAsCArrays
-URL_FILE_BASE   = static/
+URL_FILE_BASE   = 
 
 USE_IPv4=true
 #USE_IPv6=true
 
 OPTIONAL_FILES  += server/protocol/icmp.o
 OPTIONAL_FILES  += server/adelay.o
-OPTIONAL_FILES  += server/services/http.o
+OPTIONAL_FILES  += server/ressource.o
+
 ifndef NO_TCP
+ifndef NO_HTTP
+OPTIONAL_FILES  += server/services/http.o
+endif
 OPTIONAL_FILES  += server/protocol/tcp.o server/protocol/tcp_stack.o server/protocol/tcp_retransmission_cache.o
 DPAUCS_INIT     += X(DPAUCS_tcpInit)
 DPAUCS_SHUTDOWN += X(DPAUCS_tcpShutdown)
 OPTIONS += -DUSE_TCP
+endif
+
+ifndef NO_FILE_RESSOURCES
+OPTIONAL_FILES  += server/fileRessource.o
+RESSOURCE_GETTER += X(FileRessource)
+endif
+
+ifdef RESSOURCE_GETTER
+OPTIONS += -DRESSOURCE_GETTER="$(RESSOURCE_GETTER)"
 endif
 
 ifdef USE_IPv4
@@ -59,7 +72,6 @@ FILES += server/utils.o
 FILES += server/stream.o
 FILES += server/mempool.o
 FILES += server/checksum.o
-FILES += server/ressource.o
 FILES += server/binaryUtils.o
 FILES += server/protocol/arp.o
 FILES += server/protocol/ip.o
@@ -70,7 +82,6 @@ FILES += server/protocol/tcp_ip_stack_memory.o
 FILES += files.g1.o
 FILES += $(OPTIONAL_FILES)
 
-
 ###################
 #      LINUX      #
 ###################
@@ -79,6 +90,8 @@ LINUX_OPTIONS	= $(OPTIONS)
 TEMP_LINUX	= tmp/linux
 LINUX_TARGET	= $(BIN)/linux
 LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
+
+LINUX_OPTIONS  += -I${TEMP_LINUX}
 
 LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
@@ -114,6 +127,8 @@ AVR_OPTIONS	= $(OPTIONS) -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
 TEMP_AVR	= tmp/avr_$(AVR_MCU)
 AVR_TARGET	= $(BIN)/avr_$(AVR_MCU)
 AVR_GENERATED   = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
+
+AVR_OPTIONS  += -I${TEMP_AVR}
 
 AVR_FILES_TMP  = $(FILES)
 AVR_FILES_TMP += server/drivers/$(AVR_NET_DRIVER).o
@@ -189,7 +204,7 @@ $(TEMP_LINUX)/%.g1.o: $(TEMP_LINUX)/%.g1.c $(TEMP_LINUX)/%.g1.h
 	$(LINUX_CC) $(LINUX_OPTIONS) -Wno-overlength-strings -c $< -o $@
 
 $(TEMP_LINUX)/%.g1.c $(TEMP_LINUX)/%.g1.h: 2cstr
-	./genCode.sh $(shell basename $@ | head -c -6) $(shell basename $@ | head -c -6) $(URL_FILE_BASE) $(TEMP_LINUX) $(GEN_DEST) $(shell basename $@ | head -c -6)
+	./genCode.sh "$(shell basename $@ | head -c -6)" "$(shell basename $@ | head -c -6)" "$(URL_FILE_BASE)" "$(TEMP_LINUX)" "$(GEN_DEST)" "$(shell basename $@ | head -c -6)"
 
 clean_linux:
 	rm -rf $(TEMP_LINUX) $(LINUX_TARGET)
@@ -210,7 +225,7 @@ $(TEMP_AVR)/%.g1.o: $(TEMP_AVR)/%.g1.c $(TEMP_AVR)/%.g1.h
 	$(AVR_CC) $(AVR_OPTIONS) -Wno-overlength-strings -c $< -o $@
 
 $(TEMP_AVR)/%.g1.c $(TEMP_AVR)/%.g1.h: 2cstr
-	./genCode.sh $(shell basename $@ | head -c -6) $(shell basename $@ | head -c -6) $(URL_FILE_BASE) $(TEMP_AVR) $(GEN_DEST) $(shell basename $@ | head -c -6)
+	./genCode.sh "$(shell basename $@ | head -c -6)" "$(shell basename $@ | head -c -6)" "$(URL_FILE_BASE)" "$(TEMP_AVR)" "$(GEN_DEST)" "$(shell basename $@ | head -c -6)"
 
 clean_avr:
 	rm -rf $(TEMP_AVR) $(AVR_TARGET)

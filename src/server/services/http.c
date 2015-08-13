@@ -99,6 +99,7 @@ typedef struct HTTP_error {
 
 #define S(STR) STR, sizeof(STR)-1
 static const HTTP_error_t HTTP_errors[] = {
+  { 200, S("OK") },
   { 400, S("Bad Request") },
   { 401, S("Unauthorized") },
   { 402, S("Payment Required") },
@@ -191,6 +192,46 @@ static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
 
   return true;
 
+}
+#undef S
+
+#define S(STR) STR, sizeof(STR)-1
+static bool writeRessource( DPAUCS_stream_t* stream, void* ptr ){
+
+  HTTP_Connections_t* c = ptr;
+
+  const HTTP_error_t* code = 0;
+
+  for( unsigned i=0,n=HTTP_error_count; i<n; i++ )
+  if( HTTP_errors[i].code == c->status ){
+    code = HTTP_errors + i;
+    break;
+  }
+
+  DPAUCS_stream_referenceWrite( stream, S("HTTP/1.0 ") );
+  char code_buf[7];
+  char* code_string = code_buf + sizeof(code_buf);
+  *--code_string = 0;
+  *--code_string = ' ';
+  {
+    uint16_t s = c->status;
+    do *--code_string = s % 10 + '0'; while( s /= 10 );
+  }
+
+  DPAUCS_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
+  if(code) DPAUCS_stream_referenceWrite( stream, code->message, code->length );
+
+  DPAUCS_stream_referenceWrite( stream, S( "\r\n"
+    "Connection: Close" "\r\n"
+  ));
+
+  DPAUCS_writeRessourceHeaders( stream, c->ressource );
+
+  DPAUCS_stream_referenceWrite( stream, S("\r\n") );
+
+  DPAUCS_writeRessource( stream, c->ressource );
+
+  return true;
 }
 #undef S
 
@@ -448,6 +489,9 @@ static void onreceive( void* cid, void* data, size_t size ){
     HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
     return;
   }
+
+  DPAUCS_tcp_send( &writeRessource, &cid, 1, c );
+  DPAUCS_tcp_close( cid );
 
 }
 #undef S

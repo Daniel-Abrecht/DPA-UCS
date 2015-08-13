@@ -45,8 +45,9 @@ const DP_FLASH DPAUCS_ressource_file_t $varname[] = {
 
     echo "{
     {
-      DPAUCS_RESSOURCE_FILE_ENTRY,
-      $basemacroname \"/\" $efile
+      DPAUCS_RESSOURCE_FileRessource,
+      \"/\" $basemacroname $efile,
+      sizeof(\"/\" $basemacroname $efile)-1
     },
     $mime,
     sizeof(

@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <server.h>
 #include <protocol/ip.h>
 #include <protocol/layer3.h>
@@ -32,10 +33,7 @@ DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream(){
   return &outputStream;
 }
 
-void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type ){
-
-  DPAUCS_stream_offsetStorage_t sros;
-  DPAUCS_stream_saveReadOffset( &sros, stream );
+void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type, size_t max_size ){
 
   switch( fromTo->source->type ){
 
@@ -44,13 +42,12 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
       stream,
       (const DPAUCS_IPv4_address_t*)fromTo->source,
       (const DPAUCS_IPv4_address_t*)fromTo->destination,
-      type
+      type,
+      max_size
     ); break;
 #endif
 
   }
-
-  DPAUCS_stream_restoreReadOffset( stream, &sros );
 
 }
 

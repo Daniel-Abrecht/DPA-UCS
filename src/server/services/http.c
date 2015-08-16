@@ -225,11 +225,18 @@ static bool writeRessource( DPAUCS_stream_t* stream, void* ptr ){
     "Connection: Close" "\r\n"
   ));
 
-  DPAUCS_writeRessourceHeaders( stream, c->ressource );
-
-  DPAUCS_stream_referenceWrite( stream, S("\r\n") );
-
-  DPAUCS_writeRessource( stream, c->ressource );
+  switch( c->method ){
+    case HTTP_METHOD_GET:
+    case HTTP_METHOD_HEAD: {
+      DPAUCS_writeRessourceHeaders( stream, c->ressource );
+      DPAUCS_stream_referenceWrite( stream, S("\r\n") );
+    } if( c->method == HTTP_METHOD_GET ) {
+      DPAUCS_writeRessource( stream, c->ressource );
+    } break;
+    default: {
+      DPAUCS_stream_referenceWrite( stream, S("\r\n") );
+    } break;
+  }
 
   return true;
 }

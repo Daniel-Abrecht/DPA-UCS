@@ -1,3 +1,4 @@
+#include <utils.h>
 #include <server.h>
 #include <protocol/layer3.h>
 #include <protocol/ip_stack.h>
@@ -145,13 +146,13 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
 
 }
 
-void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_address_t* src, const DPAUCS_IPv4_address_t* dst, uint8_t type ){
+void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_address_t* src, const DPAUCS_IPv4_address_t* dst, uint8_t type, size_t max_size ){
   const uint16_t hl = 5;
   static uint16_t id = 0;
 
   uint8_t offset = 0;
 
-  while(!DPAUCS_stream_eof(inputStream)){
+  while( !DPAUCS_stream_eof(inputStream) && offset < max_size ){
 
     // prepare next packet
     DPAUCS_packet_info p;
@@ -171,12 +172,17 @@ void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_addre
     ip->destination = htob32( dst->ip );
 
     // create content
-    size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, (PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t)) & ~7u );
+    size_t msize = (
+        max_size > (size_t)~7
+      ? PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t)
+      : DPAUCS_MIN( max_size - offset + 7, PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) )
+    ) & ~7u;
+    size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
 
     // complete ip header
     uint8_t flags = 0;
 
-    if(!DPAUCS_stream_eof(inputStream))
+    if( !DPAUCS_stream_eof(inputStream) && (offset+s) < max_size )
       flags |= IPv4_FLAG_MORE_FRAGMENTS;
 
     ip->length = htob16( p.size + hl * 4 + s );

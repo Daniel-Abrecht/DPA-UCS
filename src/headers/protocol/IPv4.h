@@ -9,8 +9,8 @@
 #include <protocol/address.h>
 
 enum DPAUCS_IPv4_flags {
-  IPv4_FLAG_DONT_FRAGMENT  = 0x02,
-  IPv4_FLAG_MORE_FRAGMENTS = 0x04
+  IPv4_FLAG_MORE_FRAGMENTS = 1<<0,
+  IPv4_FLAG_DONT_FRAGMENT  = 1<<1
 };
 
 typedef PACKED1 struct PACKED2 {
@@ -45,7 +45,8 @@ void DPAUCS_IPv4_transmit(
   DPAUCS_stream_t* inputStream,
   const DPAUCS_IPv4_address_t* src,
   const DPAUCS_IPv4_address_t* dst,
-  uint8_t type
+  uint8_t type,
+  size_t max_size
 );
 
 void DPAUCS_IPv4_handler(

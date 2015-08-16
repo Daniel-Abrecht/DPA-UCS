@@ -60,7 +60,7 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
       };
       DPAUCS_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
       DPAUCS_stream_referenceWrite( stream, payload, length );
-      DPAUCS_layer3_transmit( stream, &fromTo, PROTOCOL_ICMP );
+      DPAUCS_layer3_transmit( stream, &fromTo, PROTOCOL_ICMP, ~0 );
       DPAUCS_layer3_destroyTransmissionStream( stream );
     } break;
   }

@@ -178,7 +178,7 @@ static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   DPAUCS_stream_saveReadOffset( &sros, stream );
 
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
-  uint16_t data_checksum = ~checksumOfStream( stream );
+  uint16_t data_checksum = ~checksumOfStream( stream, length );
 
   uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum;
   uint16_t checksum = ~( ( tmp_checksum & 0xFFFF ) + ( tmp_checksum >> 16 ) );
@@ -212,7 +212,7 @@ static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t st
   return true;
 }
 
-inline uint32_t tcp_SEG_LEN( uint32_t datalen, uint32_t flags ){
+inline uint8_t tcp_flaglength( uint32_t flags ){
   /* RFC 793  Page 26
    * > ...
    * > is achived by implicitly including some
@@ -221,21 +221,19 @@ inline uint32_t tcp_SEG_LEN( uint32_t datalen, uint32_t flags ){
    * > The segment length (SEG.LEN) includes both 
    * > data and sequence space occupying controls
    */
-  if( flags & ( TCP_FLAG_SYN | TCP_FLAG_FIN ) )
-    return datalen + 1;
-  else
-    return datalen;
+  return (bool)( flags & ( TCP_FLAG_SYN | TCP_FLAG_FIN ) );
 }
 
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG ){
 
   size_t length = DPAUCS_stream_getLength( transmission->stream );
-  uint16_t len_tmp = length - sizeof(DPAUCS_tcp_t);
+  size_t headersize = sizeof(DPAUCS_tcp_t);
+  size_t datalen = length - headersize;
 
   for(unsigned i=count;i--;)
-    SEG[i].LEN = tcp_SEG_LEN( len_tmp, SEG[i].flags );
+    SEG[i].LEN = datalen + tcp_flaglength( SEG[i].flags );
 
-  if( len_tmp ){
+  if( datalen ){
     cleanupCache(); // TODO: add some checks if it's necessary
     if(!addToCache( transmission, count, tcb, SEG )){
       DEBUG_PRINTF("TCP Retransmission cache full.\n");
@@ -243,15 +241,48 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
     }
   }
 
+  DPAUCS_stream_offsetStorage_t sros;
+  DPAUCS_stream_saveReadOffset( &sros, transmission->stream );
+
   for(unsigned i=0;i<count;i++){
-    tcp_from_tcb( transmission->tcp, tcb[i], SEG+i );
-    tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, length );
-    DPAUCS_layer3_transmit(transmission->stream,&tcb[i]->fromTo, PROTOCOL_TCP);
-    tcb[i]->flags.ackAlreadySent = tcb[i]->flags.ackAlreadySent || SEG[i].flags & TCP_FLAG_ACK;
-    uint32_t next = SEG[i].SEQ + SEG[i].LEN;
-    if( tcb[i]->SND.NXT < next )
-      tcb[i]->SND.NXT = next;
+
+    size_t remaining = SEG[i].LEN - tcp_flaglength( SEG[i].flags );
+    uint32_t flags = SEG[i].flags;
+    uint32_t next = SEG[i].SEQ;
+    tcb[i]->flags.ackAlreadySent = tcb[i]->flags.ackAlreadySent || flags & TCP_FLAG_ACK;
+
+    do {
+
+      size_t segmentLength = remaining + tcp_flaglength( flags );
+      if( segmentLength > tcb[i]->SND.WND )
+        segmentLength = tcb[i]->SND.WND;
+
+      size_t data_length = segmentLength - tcp_flaglength( flags );
+      size_t packet_length = data_length + headersize;
+
+      tcp_from_tcb( transmission->tcp, tcb[i], SEG+i );
+      tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
+      DPAUCS_layer3_transmit(transmission->stream,&tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
+
+      if( remaining < data_length ){
+        DEBUG_PRINTF("Error: too much datas sent at \"" __FILE__ "\" \"%d\"\n",__LINE__);
+        break;
+      }
+
+      remaining -= data_length;
+
+      next += segmentLength;
+      if( tcb[i]->SND.NXT < next )
+        tcb[i]->SND.NXT = next;
+
+      flags &= TCP_FLAG_URG;
+
+    } while( remaining );
+
+    DPAUCS_stream_restoreReadOffset( transmission->stream, &sros );
+
   }
+
   DPAUCS_layer3_destroyTransmissionStream(transmission->stream);
 
   return true;
@@ -384,7 +415,7 @@ static bool tcp_processPacket(
   uint16_t n = tcb->next_length - headerLength;
   void* payload = (char*)tcp + headerLength;
 
-  SEG.LEN = tcp_SEG_LEN( n, SEG.flags );
+  SEG.LEN = n + tcp_flaglength( SEG.flags );
 
   if( !tcp_is_tcb_valid( tcb ) ){
     tcp_segment_t segment = {
@@ -397,7 +428,7 @@ static bool tcp_processPacket(
 
   if(!(
     SEG.SEQ - tcb->RCV.NXT < tcb->RCV.WND ||
-    SEG.SEQ + tcp_SEG_LEN( n, SEG.flags ) - tcb->RCV.NXT < tcb->RCV.WND
+    SEG.SEQ + n + tcp_flaglength( SEG.flags ) - tcb->RCV.NXT < tcb->RCV.WND
   )) return false;
 
   uint16_t offset;

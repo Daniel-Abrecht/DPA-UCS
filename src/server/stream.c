@@ -30,6 +30,30 @@ void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, DPAUCS_stream_of
   stream->buffer_buffer->write_offset = sros->bufferBufferOffset;
 }
 
+void DPAUCS_stream_swapEntries( streamEntry_t* a, streamEntry_t* b  ){
+  if( a == b )
+    return;
+  streamEntry_t c = *a;
+  *a = *b;
+  *b = c;
+}
+
+streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream ){
+  return &BUFFER_AT( stream->buffer_buffer, 0 );
+}
+
+bool DPAUCS_stream_skipEntry( DPAUCS_stream_t* stream ){
+  if(BUFFER_EOF( stream->buffer_buffer ))
+    return false;
+  BUFFER_GET(stream->buffer_buffer).offset = 0;
+  return true;
+}
+
+bool DPAUCS_stream_reverseSkipEntry( DPAUCS_stream_t* stream ){
+  BUFFER_SKIP( stream->buffer_buffer, -1 );
+  return true;
+}
+
 static inline void buffer_buffer_to_raw( void* src_cbuf, void* dst_cbuf, bufferInfo_t* dst, bufferInfo_t src ){
   *dst = src;
   switch( src.type ){
@@ -138,6 +162,20 @@ size_t DPAUCS_stream_read( DPAUCS_stream_t*const stream, void* p, size_t max_siz
     }
   }
   return max_size - n;
+}
+
+void DPAUCS_stream_seek( DPAUCS_stream_t*const stream, size_t size ){
+  while( !BUFFER_EOF(stream->buffer_buffer) ){
+    bufferInfo_t* info = BUFFER_BEGIN(stream->buffer_buffer);
+    if( info->size <= size ){
+      info->offset = 0;
+      size -= info->size;
+      BUFFER_SKIP( stream->buffer_buffer, 1 );
+    }else{
+      info->offset = size;
+      break;
+    }
+  }
 }
 
 size_t DPAUCS_stream_getLength( DPAUCS_stream_t* stream ){

@@ -1,17 +1,23 @@
-#include <stdbool.h>
+#include <setjmp.h>
 #include <string.h>
+#include <stdbool.h>
 #include <eth.h>
 #include <adelay.h>
 #include <server.h>
 #include <service.h>
 #include <packet.h>
 #include <binaryUtils.h>
+#include <helper_macros.h>
+#include <logger.h>
 #include <protocol/ethtypes.h>
 #include <protocol/address.h>
 #include <protocol/icmp.h>
 #include <protocol/arp.h>
 #include <protocol/tcp.h>
 #include <protocol/ip.h>
+
+static void DPAUCS_init( void );
+static void DPAUCS_shutdown( void );
 
 const DPAUCS_logicAddress_t* logicAddresses[MAX_LOGIC_ADDRESSES] = {0};
 
@@ -25,7 +31,30 @@ static struct {
   DPAUCS_service_t* service;
 } services[MAX_SERVICES];
 
-void DPAUCS_init( void ){
+static jmp_buf fatal_error_exitpoint;
+
+void WEAK DPAUCS_onfatalerror( const char* message ){
+  DPAUCS_LOG( "%s", message );
+}
+
+NORETURN void DPAUCS_fatal( const char* message ){
+  DPAUCS_onfatalerror( message );
+  longjmp(fatal_error_exitpoint,1);
+}
+
+void DPAUCS_run( void(*callback)(void*), void* arg ){
+  if(setjmp(fatal_error_exitpoint))
+    goto shutdown;
+
+  DPAUCS_init();
+
+  (*callback)(arg);
+
+ shutdown:
+  DPAUCS_shutdown();
+}
+
+static void DPAUCS_init( void ){
 
   memset(services,0,sizeof(services));
 
@@ -42,7 +71,7 @@ void DPAUCS_init( void ){
 
 }
 
-void DPAUCS_shutdown( void ){
+static void DPAUCS_shutdown( void ){
 
   if(DPAUCS_icmpShutdown)
     DPAUCS_icmpShutdown();

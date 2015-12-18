@@ -14,11 +14,12 @@
 #define MAX_SERVICES 16
 #endif
 
-
 extern uint8_t mac[6];
 
-void DPAUCS_init( void );
-void DPAUCS_shutdown( void );
+void DPAUCS_run( void(*)(void*), void* );
+
+NORETURN void DPAUCS_fatal( const char* message );
+void DPAUCS_onfatalerror( const char* message );
 
 void DPAUCS_add_logicAddress( const DPAUCS_logicAddress_t*const logicAddress );
 void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress );

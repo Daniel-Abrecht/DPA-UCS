@@ -6,7 +6,7 @@
 #     GENERAL     #
 ###################
 
-HEADERS 	= $(find . -iname "*.h")
+HEADERS = $(find . -iname "*.h")
 
 BIN=bin
 SRC=src
@@ -68,6 +68,7 @@ endif
 
 FILES += main.o
 FILES += server/server.o
+FILES += server/logger.o
 FILES += server/utils.o
 FILES += server/stream.o
 FILES += server/mempool.o
@@ -92,6 +93,7 @@ LINUX_TARGET	= $(BIN)/linux
 LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 
 LINUX_OPTIONS  += -I${TEMP_LINUX}
+LINUX_OPTIONS  += -DDPAUCS_LOG_TO_STDOUT
 
 LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o

@@ -2,14 +2,14 @@
 #include <protocol/address.h>
 #include <protocol/ip.h>
 #include <services/http.h>
+#include <helper_macros.h>
 
 #define MAC(X) X( 5c,f9,dd,55,96,c2 )
 
-uint8_t __attribute__((weak)) mac[] = MAC(MACCONST);
+uint8_t WEAK mac[] = MAC(MACCONST);
 
-int main(void){
-
-  DPAUCS_init();
+void server_main(void* arg){
+  (void)arg;
 
 #ifdef USE_IPv4
   static const DPAUCS_logicAddress_IPv4_t IPv4addrs[] = {
@@ -29,6 +29,11 @@ int main(void){
     DPAUCS_doNextTask();
   }
 
-  DPAUCS_shutdown();
+}
 
+int main(void){
+
+  DPAUCS_run(server_main,0);
+
+  return 0;
 }

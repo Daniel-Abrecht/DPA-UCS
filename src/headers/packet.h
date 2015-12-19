@@ -5,7 +5,8 @@
 #include <stdbool.h>
 #include <helper_macros.h>
 
-#define PACKET_SIZE 1522
+#define PACKET_SIZE 1518
+#define PACKET_SIZE_WITH_CHECKSUM PACKET_SIZE + 4
 #define PACKET_MAX_PAYLOAD 1500
 #define IEEE_802_1Q_TPID_CONST 0x8100
 
@@ -15,7 +16,7 @@ typedef PACKED1 struct PACKED2 {
   PACKED1 union PACKED2 {
     PACKED1 struct PACKED2 {
       uint8_t control; // ???
-      uint8_t payload[1500];
+      uint8_t payload[PACKET_MAX_PAYLOAD];
     } control;
     PACKED1 struct PACKED2 {
       uint16_t control;
@@ -26,7 +27,7 @@ typedef PACKED1 struct PACKED2 {
           };
           uint16_t type; // Should contain ethernet type filed value
         } snap; // only present if DSAP equals 0xAA
-        uint8_t payload[1500];
+        uint8_t payload[PACKET_MAX_PAYLOAD];
       };
     } extended_control;
   };
@@ -35,7 +36,7 @@ typedef PACKED1 struct PACKED2 {
 typedef struct { // Ethernet frame
   uint16_t size;
   union {
-    uint8_t raw[PACKET_SIZE];
+    uint8_t raw[PACKET_SIZE_WITH_CHECKSUM];
     PACKED1 struct PACKED2 {
       uint8_t dest[6]; // MAC destination
       uint8_t src[6]; // MAC source

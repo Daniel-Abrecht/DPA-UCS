@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <adelay.h>
-#include <protocol/tcp.h>
+#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/protocol/tcp.h>
 
 #ifndef TCP_RETRANSMISSION_CACHE_SIZE
 #define TCP_RETRANSMISSION_CACHE_SIZE 1024 * 4 // 2K

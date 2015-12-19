@@ -2,8 +2,8 @@
 #define IPv6_H
 
 #include <stdint.h>
-#include <packet.h>
-#include <helper_macros.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/helper_macros.h>
 
 typedef PACKED1 struct PACKED2 {
   uint8_t version_tafficClass1;

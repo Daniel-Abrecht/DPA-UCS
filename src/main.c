@@ -1,8 +1,8 @@
-#include <server.h>
-#include <protocol/address.h>
-#include <protocol/ip.h>
-#include <services/http.h>
-#include <helper_macros.h>
+#include <DPA/UCS/server.h>
+#include <DPA/UCS/protocol/address.h>
+#include <DPA/UCS/protocol/ip.h>
+#include <DPA/UCS/services/http.h>
+#include <DPA/UCS/helper_macros.h>
 
 #define MAC(X) X( 5c,f9,dd,55,96,c2 )
 

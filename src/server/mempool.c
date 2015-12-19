@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <string.h>
-#include <mempool.h>
+#include <DPA/UCS/mempool.h>
 
 static inline void* getEntryEnd(DPAUCS_mempoolEntry_t* entry){
   return ((uint8_t*)entry) + DPAUCS_MEMPOOL_ENTRY_SIZE + entry->size;

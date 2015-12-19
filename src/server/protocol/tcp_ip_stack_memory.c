@@ -1,7 +1,7 @@
 #include <stdint.h>
-#include <protocol/tcp_ip_stack_memory.h>
-#include <protocol/ip_stack.h>
-#include <protocol/tcp_stack.h>
+#include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
+#include <DPA/UCS/protocol/ip_stack.h>
+#include <DPA/UCS/protocol/tcp_stack.h>
 
 
 extern const DPAUCS_fragment_info_t DPAUCS_ip_fragment_info;

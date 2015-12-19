@@ -1,4 +1,4 @@
-#include <adelay.h>
+#include <DPA/UCS/adelay.h>
 #include <time.h>
 
 DPAUCS_MODUL( adelay_driver ){}

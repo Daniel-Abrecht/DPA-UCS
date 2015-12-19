@@ -1,6 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <adelay.h>
+#include <DPA/UCS/adelay.h>
 
 #define PRESCALER        1024
 #define PRESCALER_BITS   (1<<CS00)|(1<<CS02)

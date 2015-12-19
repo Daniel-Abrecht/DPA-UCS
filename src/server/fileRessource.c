@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
-#include <files.h>
+#include <DPA/UCS/files.h>
 #include <files.g1.h>
-#include <ressource.h>
-#include <fileRessource.h>
+#include <DPA/UCS/ressource.h>
+#include <DPA/UCS/fileRessource.h>
 
 #define N files_size
 #define F files

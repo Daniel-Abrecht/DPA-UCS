@@ -1,5 +1,5 @@
-#include <protocol/tcp.h>
-#include <protocol/tcp_stack.h>
+#include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/protocol/tcp_stack.h>
 
 bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, transmissionControlBlock_t* tcb ){
   if(! DPAUCS_takeover( fragment, DPAUCS_FRAGMENT_TYPE_TCP ) )

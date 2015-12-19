@@ -2,8 +2,8 @@
 #define RESOURCE_H
 
 #include <stdbool.h>
-#include <helper_macros.h>
-#include <stream.h>
+#include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/stream.h>
 
 
 DPAUCS_MODUL( ressource );

@@ -1,7 +1,7 @@
-#include <checksum.h>
-#include <protocol/icmp.h>
+#include <DPA/UCS/checksum.h>
+#include <DPA/UCS/protocol/icmp.h>
 #include <stdbool.h>
-#include <protocol/layer3.h>
+#include <DPA/UCS/protocol/layer3.h>
 
 DPAUCS_MODUL( icmp ){}
 

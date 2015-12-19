@@ -1,7 +1,7 @@
 #ifndef ADDRESS_TYPES_H
 #define ADDRESS_TYPES_H
 
-#include <helper_macros.h>
+#include <DPA/UCS/helper_macros.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>

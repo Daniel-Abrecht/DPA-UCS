@@ -1,5 +1,5 @@
 #include <string.h>
-#include <protocol/ip_stack.h>
+#include <DPA/UCS/protocol/ip_stack.h>
 
 // Should be initialized with zeros
 static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS];

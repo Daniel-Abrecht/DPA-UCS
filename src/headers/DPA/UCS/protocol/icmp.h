@@ -3,7 +3,7 @@
 
 #define PROTOCOL_ICMP 1
 
-#include <helper_macros.h>
+#include <DPA/UCS/helper_macros.h>
 
 DPAUCS_MODUL( icmp );
 

@@ -10,9 +10,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <logger.h>
-#include <packet.h>
-#include <server.h>
+#include <DPA/UCS/logger.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/server.h>
 
 static int ethernet_frame_min_size = 0;
 static int sock = -1;

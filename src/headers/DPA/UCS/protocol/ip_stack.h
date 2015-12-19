@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <protocol/tcp_ip_stack_memory.h>
-#include <protocol/address.h>
-#include <protocol/IPv4.h>
+#include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
+#include <DPA/UCS/protocol/address.h>
+#include <DPA/UCS/protocol/IPv4.h>
 
 #define DEFAULT_TTL 64
 #define DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS 32

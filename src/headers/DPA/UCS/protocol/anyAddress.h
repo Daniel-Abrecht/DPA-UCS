@@ -1,8 +1,8 @@
 #ifndef ANY_ADDRESS_H
 #define ANY_ADDRESS_H
 
-#include <protocol/address.h>
-#include <protocol/IPv4.h>
+#include <DPA/UCS/protocol/address.h>
+#include <DPA/UCS/protocol/IPv4.h>
 
 typedef union {
   DPAUCS_logicAddress_t address;

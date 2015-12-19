@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include <helper_macros.h>
+#include <DPA/UCS/helper_macros.h>
 
 typedef struct {
   uint8_t tos;

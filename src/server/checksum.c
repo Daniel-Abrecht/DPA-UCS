@@ -1,7 +1,7 @@
-#include <utils.h>
-#include <stream.h>
-#include <checksum.h>
-#include <binaryUtils.h>
+#include <DPA/UCS/utils.h>
+#include <DPA/UCS/stream.h>
+#include <DPA/UCS/checksum.h>
+#include <DPA/UCS/binaryUtils.h>
 
 uint16_t checksum( void* p, size_t l ){
   uint32_t checksum = 0;

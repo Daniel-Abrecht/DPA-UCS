@@ -2,7 +2,7 @@
 #define STREAM_H
 
 #include <stdbool.h>
-#include <buffer.h>
+#include <DPA/UCS/buffer.h>
 
 typedef struct {
   uchar_buffer_t* buffer;

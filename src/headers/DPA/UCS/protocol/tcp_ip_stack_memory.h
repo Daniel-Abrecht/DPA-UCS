@@ -1,7 +1,7 @@
 #ifndef TCP_IP_STACK_MEMORY_H
 #define TCP_IP_STACK_MEMORY_H
 
-#include <mempool.h>
+#include <DPA/UCS/mempool.h>
 
 #define STACK_BUFFER_SIZE 1024u * 5u // 50 KB
 #define DPAUCS_MAX_FRAGMANTS 256

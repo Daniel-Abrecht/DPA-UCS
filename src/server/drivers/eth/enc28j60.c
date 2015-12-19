@@ -1,5 +1,5 @@
-#include <eth.h>
-#include <drivers/enc28j60.h>
+#include <DPA/UCS/eth.h>
+#include <DPA/UCS/drivers/enc28j60.h>
 
 void DPAUCS_ethInit( uint8_t* macaddr ){
   enc28j60Init( macaddr );

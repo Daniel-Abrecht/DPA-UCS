@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <helper_macros.h>
+#include <DPA/UCS/helper_macros.h>
 
 #define PACKET_SIZE 1518
 #define PACKET_SIZE_WITH_CHECKSUM PACKET_SIZE + 4

@@ -2,9 +2,9 @@
 #define SERVER_H
 
 #include <stdint.h>
-#include <service.h>
-#include <packet.h>
-#include <protocol/address.h>
+#include <DPA/UCS/service.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/protocol/address.h>
 
 #ifndef MAX_LOGIC_ADDRESSES
 #define MAX_LOGIC_ADDRESSES 8

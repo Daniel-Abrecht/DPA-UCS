@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <helper_macros.h>
+#include <DPA/UCS/helper_macros.h>
 
 DPAUCS_MODUL( adelay_driver );
 

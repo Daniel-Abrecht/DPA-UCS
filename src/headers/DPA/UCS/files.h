@@ -2,7 +2,7 @@
 #define FILES_H
 
 #include <stddef.h>
-#include <ressource.h>
+#include <DPA/UCS/ressource.h>
 
 typedef struct {
   DPAUCS_ressource_entry_t entry;

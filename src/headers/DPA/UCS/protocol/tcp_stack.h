@@ -1,7 +1,7 @@
 #ifndef TCP_STACK_H
 #define TCP_STACK_H
 
-#include <protocol/tcp_ip_stack_memory.h>
+#include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 
 typedef struct transmissionControlBlock transmissionControlBlock_t;
 typedef struct DPAUCS_tcp_fragment DPAUCS_tcp_fragment_t;

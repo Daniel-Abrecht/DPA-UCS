@@ -1,12 +1,12 @@
 #if !defined( IPv4_H ) && defined( USE_IPv4 )
 #define IPv4_H
 
-#include <packet.h>
-#include <stream.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/stream.h>
 #include <string.h>
-#include <checksum.h>
-#include <binaryUtils.h>
-#include <protocol/address.h>
+#include <DPA/UCS/checksum.h>
+#include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/protocol/address.h>
 
 enum DPAUCS_IPv4_flags {
   IPv4_FLAG_MORE_FRAGMENTS = 1<<0,

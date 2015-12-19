@@ -1,8 +1,8 @@
 #ifndef IP_H
 #define IP_H
 
-#include <protocol/IPv4.h>
-#include <protocol/IPv6.h>
+#include <DPA/UCS/protocol/IPv4.h>
+#include <DPA/UCS/protocol/IPv6.h>
 
 #define MAX_IP_PROTO_HANDLERS 3
 

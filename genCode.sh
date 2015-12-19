@@ -72,7 +72,7 @@ function createFileIncludeHeader {
 #ifndef ${filename}_G1_H
 #define ${filename}_G1_H
 
-#include <files.h>
+#include <DPA/UCS/files.h>
 
 extern const size_t ${varname}_size;
 extern const DP_FLASH DPAUCS_ressource_file_t $varname[];

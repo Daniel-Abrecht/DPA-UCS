@@ -2,11 +2,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <files.h>
-#include <utils.h>
-#include <ressource.h>
-#include <protocol/tcp.h>
-#include <services/http.h>
+#include <DPA/UCS/files.h>
+#include <DPA/UCS/utils.h>
+#include <DPA/UCS/ressource.h>
+#include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/services/http.h>
 
 #if DPAUCS_MAX_HTTP_CONNECTIONS > TRANSMISSION_CONTROL_BLOCK_COUNT
 #undef DPAUCS_MAX_HTTP_CONNECTIONS 

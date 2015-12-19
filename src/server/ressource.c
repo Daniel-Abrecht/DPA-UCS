@@ -1,4 +1,4 @@
-#include <ressource.h>
+#include <DPA/UCS/ressource.h>
 
 DPAUCS_MODUL( ressource ){}
 

@@ -1,10 +1,10 @@
 #include <stdbool.h>
 #include <string.h>
-#include <server.h>
-#include <binaryUtils.h>
-#include <protocol/ethtypes.h>
-#include <protocol/anyAddress.h>
-#include <protocol/arp.h>
+#include <DPA/UCS/server.h>
+#include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/protocol/ethtypes.h>
+#include <DPA/UCS/protocol/anyAddress.h>
+#include <DPA/UCS/protocol/arp.h>
 
 typedef struct {
   uint8_t referenceCount;

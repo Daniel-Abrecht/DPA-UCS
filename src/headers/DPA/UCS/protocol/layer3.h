@@ -1,8 +1,8 @@
 #ifndef LAYER3_H
 #define LAYER3_H
 
-#include <stream.h>
-#include <protocol/address.h>
+#include <DPA/UCS/stream.h>
+#include <DPA/UCS/protocol/address.h>
 
 #define MAX_LAYER3_PROTO_HANDLERS 3
 

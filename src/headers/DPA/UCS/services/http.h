@@ -1,7 +1,7 @@
 #ifndef SERVICE_HTTP
 #define SERVICE_HTTP
 
-#include <service.h>
+#include <DPA/UCS/service.h>
 
 DPAUCS_MODUL( http );
 

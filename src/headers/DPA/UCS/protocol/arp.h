@@ -1,9 +1,9 @@
 #ifndef ARP_H
 #define ARP_H
 
-#include <packet.h>
-#include <helper_macros.h>
-#include <protocol/address.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/protocol/address.h>
 
 #define ARP_REQUEST 1
 #define ARP_RESPONSE 2

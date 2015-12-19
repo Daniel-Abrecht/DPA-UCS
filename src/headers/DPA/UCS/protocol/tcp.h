@@ -4,9 +4,9 @@
 #define PROTOCOL_TCP 6
 
 #include <stdbool.h>
-#include <helper_macros.h>
-#include <protocol/layer3.h>
-#include <service.h>
+#include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/protocol/layer3.h>
+#include <DPA/UCS/service.h>
 
 DPAUCS_MODUL( tcp );
 

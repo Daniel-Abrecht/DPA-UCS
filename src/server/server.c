@@ -1,20 +1,20 @@
 #include <setjmp.h>
 #include <string.h>
 #include <stdbool.h>
-#include <eth.h>
-#include <adelay.h>
-#include <server.h>
-#include <service.h>
-#include <packet.h>
-#include <binaryUtils.h>
-#include <helper_macros.h>
-#include <logger.h>
-#include <protocol/ethtypes.h>
-#include <protocol/address.h>
-#include <protocol/icmp.h>
-#include <protocol/arp.h>
-#include <protocol/tcp.h>
-#include <protocol/ip.h>
+#include <DPA/UCS/eth.h>
+#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/server.h>
+#include <DPA/UCS/service.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/logger.h>
+#include <DPA/UCS/protocol/ethtypes.h>
+#include <DPA/UCS/protocol/address.h>
+#include <DPA/UCS/protocol/icmp.h>
+#include <DPA/UCS/protocol/arp.h>
+#include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/protocol/ip.h>
 
 static void DPAUCS_init( void );
 static void DPAUCS_shutdown( void );

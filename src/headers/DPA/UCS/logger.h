@@ -1,7 +1,7 @@
 #ifndef DPAUCS_LOGGER
 #define DPAUCS_LOGGER
 
-#include <helper_macros.h>
+#include <DPA/UCS/helper_macros.h>
 
 #ifndef DPAUCS_STRINGIFY
 #define DPAUCS_STRINGIFY(x) #x

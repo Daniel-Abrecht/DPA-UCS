@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <mempool.h>
-#include <protocol/tcp_retransmission_cache.h>
+#include <DPA/UCS/mempool.h>
+#include <DPA/UCS/protocol/tcp_retransmission_cache.h>
 
 static char buffer[TCP_RETRANSMISSION_CACHE_SIZE] = {0};
 static DPAUCS_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));

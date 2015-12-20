@@ -51,6 +51,17 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
 
 }
 
+bool DPAUCS_layer3_getPacketSizeLimit( DPAUCS_address_types_t type, size_t* limit ){
+  switch( type ){
+
+#ifdef USE_IPv4
+    case AT_IPv4: *limit = (uint16_t)~0; return true;
+#endif
+
+  }
+  return false;
+}
+
 void DPAUCS_layer3_destroyTransmissionStream( DPAUCS_stream_t* stream ){
   DPAUCS_stream_reset( stream );
 }

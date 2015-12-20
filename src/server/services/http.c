@@ -4,12 +4,13 @@
 #include <string.h>
 #include <DPA/UCS/files.h>
 #include <DPA/UCS/utils.h>
+#include <DPA/UCS/logger.h>
 #include <DPA/UCS/ressource.h>
 #include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/services/http.h>
 
 #if DPAUCS_MAX_HTTP_CONNECTIONS > TRANSMISSION_CONTROL_BLOCK_COUNT
-#undef DPAUCS_MAX_HTTP_CONNECTIONS 
+#undef DPAUCS_MAX_HTTP_CONNECTIONS
 #endif
 
 #ifndef DPAUCS_MAX_HTTP_CONNECTIONS
@@ -262,7 +263,7 @@ static HTTP_Connections_t* getConnection( void* cid ){
 }
 
 static bool onopen( void* cid ){
-  printf("http_service->onopen\n");
+  DPAUCS_LOG("http_service->onopen\n");
   HTTP_Connections_t *it, *end;
   for( it = connections, end = it + DPAUCS_MAX_HTTP_CONNECTIONS; it < end; it++ )
     if(!it->cid) goto add_connection;
@@ -270,7 +271,7 @@ static bool onopen( void* cid ){
  add_connection:
   it->cid = cid;
   it->parseState = HTTP_PARSE_START;
-  printf("New connection added\n");
+  DPAUCS_LOG("New connection added\n");
   return true;
 }
 
@@ -278,7 +279,7 @@ static bool onopen( void* cid ){
 #define MEMEQ( STR, MEM, N ) ( N == sizeof(STR)-1 && !memcmp( (MEM), (STR), sizeof(STR)-1 ) )
 #define S(STR) STR, sizeof(STR)-1
 static void onreceive( void* cid, void* data, size_t size ){
-  printf("http_service->onrecive: \n");
+  DPAUCS_LOG("http_service->onrecive: \n");
 
   HTTP_Connections_t* c = getConnection(cid);
   if(!c){
@@ -464,7 +465,7 @@ static void onreceive( void* cid, void* data, size_t size ){
         }
 
 
-        printf("Header field: key=\"%.*s\" value=\"%.*s\"\n",
+        DPAUCS_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
           (int)key_length,key,
           (int)value_length,value
         );
@@ -505,16 +506,16 @@ static void onreceive( void* cid, void* data, size_t size ){
 #undef MEMEQ
 
 static void oneof( void* cid ){
-  printf("http_service->oneof\n");
+  DPAUCS_LOG("http_service->oneof\n");
   DPAUCS_tcp_close( cid );
 }
 
 static void onclose( void* cid ){
-  printf("http_service->onclose\n");
+  DPAUCS_LOG("http_service->onclose\n");
   HTTP_Connections_t* c = getConnection(cid);
   if(!c) return;
   c->cid = 0;
-  printf("Connection closed\n");
+  DPAUCS_LOG("Connection closed\n");
 }
 
 DPAUCS_service_t http_service = {

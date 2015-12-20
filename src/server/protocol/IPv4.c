@@ -1,5 +1,6 @@
 #include <DPA/UCS/utils.h>
 #include <DPA/UCS/server.h>
+#include <DPA/UCS/logger.h>
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/ethtypes.h>
@@ -146,11 +147,19 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
 
 }
 
-void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_address_t* src, const DPAUCS_IPv4_address_t* dst, uint8_t type, size_t max_size ){
+void DPAUCS_IPv4_transmit(
+  DPAUCS_stream_t* inputStream,
+  const DPAUCS_IPv4_address_t* src,
+  const DPAUCS_IPv4_address_t* dst,
+  uint8_t type,
+  size_t max_size_arg
+){
   const uint16_t hl = 5;
   static uint16_t id = 0;
 
-  uint8_t offset = 0;
+  uint16_t max_size = DPAUCS_MIN(max_size_arg,(uint16_t)~0);
+
+  size_t offset = 0;
 
   while( !DPAUCS_stream_eof(inputStream) && offset < max_size ){
 
@@ -173,16 +182,16 @@ void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_addre
 
     // create content
     size_t msize = (
-        max_size > (size_t)~7
+        max_size > (uint16_t)~7
       ? PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t)
-      : DPAUCS_MIN( max_size - offset + 7, PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) )
+      : DPAUCS_MIN( (uint16_t)max_size - offset + 7u, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) )
     ) & ~7u;
     size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
 
     // complete ip header
     uint8_t flags = 0;
 
-    if( !DPAUCS_stream_eof(inputStream) && (offset+s) < max_size )
+    if( !DPAUCS_stream_eof(inputStream) && (uint32_t)(offset+s) < max_size )
       flags |= IPv4_FLAG_MORE_FRAGMENTS;
 
     ip->length = htob16( p.size + hl * 4 + s );
@@ -194,9 +203,16 @@ void DPAUCS_IPv4_transmit( DPAUCS_stream_t* inputStream, const DPAUCS_IPv4_addre
 
     // send packet
     DPAUCS_sendPacket( &p, hl * 4 + s );
+    DPAUCS_LOG(
+      "IPv4: Sent fragment offset %lu, payload size %lu\n",
+      offset, s
+    );
 
-    // store ip packet data offset
+    uint16_t offset_old = offset;
+    // increment ip packet data offset
     offset += s;
+    if( offset < offset_old )
+      break;
 
   }
 

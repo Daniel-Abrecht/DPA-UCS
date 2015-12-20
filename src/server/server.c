@@ -245,7 +245,7 @@ void DPAUCS_preparePacket( DPAUCS_packet_info* info ){
   DPAUCS_packet_t* packet = &nextPacketToSend;
 
   memcpy(info->source_mac,mac,6);
-  
+
   memcpy(packet->data.dest,info->destination_mac,6);
   memcpy(packet->data.src,info->source_mac,6);
 

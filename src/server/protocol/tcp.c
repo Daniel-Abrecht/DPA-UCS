@@ -2,6 +2,7 @@
 #include <string.h>
 #include <DPA/UCS/utils.h>
 #include <DPA/UCS/server.h>
+#include <DPA/UCS/logger.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/service.h>
 #include <DPA/UCS/checksum.h>
@@ -13,14 +14,6 @@
 #include <DPA/UCS/protocol/tcp_stack.h>
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 #include <DPA/UCS/protocol/tcp_retransmission_cache.h>
-
-#ifdef DEBUG
-#include <stdio.h>
-#define DEBUG_PRINTF(...) printf(__VA_ARGS__)
-#else
-#define DEBUG_PRINTF(...)
-#endif
-
 
 DPAUCS_MODUL( tcp ){
   DPAUCS_DEPENDENCY( adelay_driver );
@@ -77,7 +70,7 @@ static void removeTCB( transmissionControlBlock_t* tcb ){
     (*tcb->service->onclose)(tcb);
   tcp_setState(tcb,TCP_CLOSED_STATE);
   tcb->currentId = 0;
-  DEBUG_PRINTF("Connection removed.\n");
+  DPAUCS_LOG("Connection removed.\n");
 }
 
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
@@ -102,7 +95,7 @@ static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* 
 #ifdef DEBUG
 static void printFrame( DPAUCS_tcp_t* tcp ){
   uint16_t flags = btoh16( tcp->flags );
-  printf(
+  DPAUCS_LOG(
     "source: " "%u" "\n"
     "destination: " "%u" "\n"
     "sequence: " "%u" "\n"
@@ -201,14 +194,11 @@ static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp ){
 
 }
 
-#define DPAUCS_STRINGIFY(X) #X
 static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state ){
   if( tcb->state == state )
     return false;
-#ifdef DEBUG
   static const char* stateNames[] = {TCP_STATES(DPAUCS_STRINGIFY)};
-  printf("%s => %s\n",stateNames[tcb->state],stateNames[state]);
-#endif
+  DPAUCS_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
   tcb->state = state;
   return true;
 }
@@ -239,7 +229,7 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
   if( datalen ){
     cleanupCache(); // TODO: add some checks if it's necessary
     if(!addToCache( transmission, count, tcb, SEG )){
-      DEBUG_PRINTF("TCP Retransmission cache full.\n");
+      DPAUCS_LOG("TCP Retransmission cache full.\n");
       return false;
     }
   }
@@ -247,7 +237,17 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, transmission->stream );
 
+  DPAUCS_LOG("tcp_end: send to %u endpoints\n");
+
   for(unsigned i=0;i<count;i++){
+
+    size_t l3_max = ~0;
+    DPAUCS_layer3_getPacketSizeLimit( tcb[i]->fromTo.destination->type, &l3_max );
+
+    DPAUCS_LOG(
+      "tcp_end: send tcb %u, SND.WND: %lu, SND.NXT: %lu, l3_max: %lu\n",
+      i, (unsigned long)tcb[i]->SND.WND, (unsigned long)tcb[i]->SND.NXT, (unsigned long)l3_max
+    );
 
     size_t remaining = SEG[i].LEN - tcp_flaglength( SEG[i].flags );
     uint32_t flags = SEG[i].flags;
@@ -257,6 +257,8 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
     uint32_t alreadySent = DPAUCS_MIN( tcb[i]->SND.UNA - SEG[i].SEQ, tcb[i]->SND.NXT - SEG[i].SEQ );
 
     size_t segmentLength = remaining + tcp_flaglength( flags );
+    if( segmentLength > l3_max - headersize )
+      segmentLength = l3_max - headersize;
     if( segmentLength < alreadySent )
       continue;
     segmentLength -= alreadySent - (bool)( SEG[i].flags & TCP_FLAG_SYN ); // syn ocuppies first ocktet of the sequence space, fin the last.
@@ -274,12 +276,12 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
     streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
     tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
-    printf( "%u bytes sent\n", (unsigned)packet_length );
+    DPAUCS_LOG( "tcp_end: %u bytes sent\n", (unsigned)packet_length );
     DPAUCS_layer3_transmit( transmission->stream, &tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
     if( remaining < data_length ){
-      DEBUG_PRINTF("Error: too much datas sent at \"" __FILE__ "\" \"%d\"\n",__LINE__);
+      DPAUCS_LOG("error: too much datas sent");
       break;
     }
 
@@ -425,6 +427,11 @@ static bool tcp_processPacket(
       return false;
   }
 
+  if( tcb->state == TCP_TIME_WAIT_STATE ){
+    DPAUCS_LOG("Ignored possible retransmission in TCP_TIME_WAIT_STATE\n");
+    return false;
+  }
+
   uint16_t n = tcb->next_length - headerLength;
   void* payload = (char*)tcp + headerLength;
 
@@ -453,7 +460,7 @@ static bool tcp_processPacket(
   if( SEG.flags & TCP_FLAG_ACK ){
     uint32_t ackrel = ACK - tcb->SND.UNA;
     uint32_t ackwnd = tcb->SND.NXT - tcb->SND.UNA;
-    DEBUG_PRINTF( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
+    DPAUCS_LOG( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
     if( ackrel > ackwnd )
       return false;
   }
@@ -463,15 +470,21 @@ static bool tcp_processPacket(
   tcb->SND.WND = btoh32( tcp->windowSize );
   tcb->flags.ackAlreadySent = false;
 
-  DEBUG_PRINTF("n: %lu\n",(unsigned long)n);
-  DEBUG_PRINTF("tcb->RCV.NXT: %lu => ",(unsigned long)tcb->RCV.NXT);
-  tcb->RCV.NXT = SEG.SEQ + SEG.LEN;
-  DEBUG_PRINTF("%lu\n",(unsigned long)tcb->RCV.NXT);
+  {
+    unsigned long RCV_NXT_old = tcb->RCV.NXT;
+    tcb->RCV.NXT = SEG.SEQ + SEG.LEN;
+    DPAUCS_LOG(
+      "n: %lu, tcb->RCV.NXT: %lu => %lu\n",
+      (unsigned long)n,
+      (unsigned long)RCV_NXT_old,
+      (unsigned long)tcb->RCV.NXT
+    );
+  }
 
   if( SEG.flags & TCP_FLAG_ACK ){
     tcb->SND.UNA = btoh32(tcp->acknowledgment);
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
-      DEBUG_PRINTF("TCP Keep-Alive\n");
+      DPAUCS_LOG("TCP Keep-Alive\n");
       tcp_segment_t segment = {
         .flags = TCP_FLAG_ACK,
         .SEQ = tcb->SND.NXT
@@ -607,7 +620,7 @@ static bool tcp_processHeader(
 
   if( SEG.flags & TCP_FLAG_SYN ){
     if( stcb ){
-      DEBUG_PRINTF( "Dublicate SYN or already opened connection detected.\n" );
+      DPAUCS_LOG( "Dublicate SYN or already opened connection detected.\n" );
       return false;
     }
     tcb.state = TCP_SYN_RCVD_STATE;
@@ -619,7 +632,7 @@ static bool tcp_processHeader(
     tcb.RCV.NXT = SEG.SEQ + 1;
     stcb = addTemporaryTCB( &tcb );
     if(!stcb){
-      DEBUG_PRINTF("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
+      DPAUCS_LOG("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
       return false;
     }
     if(stcb->service->onopen){
@@ -631,7 +644,7 @@ static bool tcp_processHeader(
         stcb->SND.UNA = ISS;
         stcb->SND.NXT = ISS;
         tcp_sendNoData( 1, &stcb, &segment );
-        DEBUG_PRINTF( "tcb->service->onopen: connection rejected\n" );
+        DPAUCS_LOG( "tcb->service->onopen: connection rejected\n" );
         removeTCB(stcb);
         return false;
       }
@@ -647,7 +660,7 @@ static bool tcp_processHeader(
     tcp_sendNoData( 1, &stcb, &segment );
     return last;
   }else if( !stcb ){
-    DEBUG_PRINTF( "Connection unavaiable.\n" );
+    DPAUCS_LOG( "Connection unavaiable.\n" );
     tcp_segment_t segment = {
       .flags = TCP_FLAG_RST,
       .SEQ = ACK
@@ -710,9 +723,9 @@ static bool tcp_receiveHandler(
     tmp_ch += (uint16_t)~tcp_pseudoHeaderChecksum( tcb_ptr, tcp, tcb_ptr->next_length + length );
     uint16_t ch = (uint16_t)~( (uint16_t)tmp_ch + (uint16_t)( tmp_ch >> 16 ) );
     if(!ch){
-      DEBUG_PRINTF("\nchecksum OK\n\n");
+      DPAUCS_LOG("checksum OK\n");
     }else{
-      DEBUG_PRINTF("\nbad checksum (%.4x)\n\n",(int)ch);
+      DPAUCS_LOG("bad checksum (%.4x)\n",(int)ch);
       return false;
     }
   }
@@ -793,7 +806,7 @@ void DPAUCS_tcp_close( void* cid ){
 
 static void tcp_receiveFailtureHandler( void* id ){
   (void)id;
-  DEBUG_PRINTF("-- tcp_reciveFailtureHandler | id: %p --\n",id);
+  DPAUCS_LOG("-- tcp_reciveFailtureHandler | id: %p --\n",id);
 }
 
 static DPAUCS_layer3_protocolHandler_t tcp_handler = {

@@ -144,11 +144,16 @@ void DPAUCS_ethSend( uint8_t* packet, uint16_t len ){
   if( len < ethernet_frame_min_size )
     len = ethernet_frame_min_size;
 
+ send:;
   long ret = write(sock, packet, len);
-  if( ret >= len ){
+  if( ret < 0 ){
+    if( errno == EAGAIN ){ // busy
+      goto send; // retry
+    }else{
+      DPAUCS_LOG( "send: error: %d %s\n", errno, strerror(errno) );
+    }
+  }else if( ret >= len ){
     DPAUCS_LOG( "send: %lu OK\n", len );
-  }else if( ret < 0 ){
-    DPAUCS_LOG( "send: error: %d %s\n", errno, strerror(errno) );
   }else{
     DPAUCS_LOG( "send: error: only %lu of %lu bytes sent\n", ret, len );
   }

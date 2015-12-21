@@ -1,0 +1,5 @@
+Echotapdevice, sendet alles was Ankomt wieder zurück.
+Kompilieren: gcc -std=c99 echotap.c -o echotap
+Ausführen: ./echotap
+Konfigurieren: ifconfig echotap 192.168.x.y/24
+Mit DPAUCS Verwenden: DPAUCS_INTERFACE=echotap ../bin/linux

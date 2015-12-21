@@ -20,7 +20,7 @@ static char ifname[IFNAMSIZ];
 
 uint8_t mac[] = {0,0,0,0,0,0};
 
-static int setIfaceNameMac(){
+static int setIfaceNameMac( const char* ifName ){
   char buf[8192] = {0};
   int sck = sock;
 
@@ -39,7 +39,7 @@ static int setIfaceNameMac(){
 
   for(int i = 0; i < nInterfaces; i++){
     struct ifreq* item = &ifr[i];
-
+ 
     /* Get the MAC address */
     if(ioctl(sck, SIOCGIFHWADDR, item) < 0) {
       DPAUCS_LOG( "error: ioctl: %d %s\n", errno, strerror(errno) );
@@ -54,6 +54,9 @@ static int setIfaceNameMac(){
      && !item->ifr_hwaddr.sa_data[4]
      && !item->ifr_hwaddr.sa_data[5]
     ) continue;
+    
+    if( ifName && strcmp(ifName,item->ifr_name) )
+      continue;
 
     strcpy(ifname,item->ifr_name);
     memcpy(mac,item->ifr_hwaddr.sa_data,6);
@@ -101,7 +104,7 @@ void DPAUCS_ethInit( uint8_t* macaddr ){
   }
 
   {
-    ifi = setIfaceNameMac();
+    ifi = setIfaceNameMac(getenv("DPAUCS_INTERFACE"));
     if( ifi < 0 )
       goto fatal_error;
 

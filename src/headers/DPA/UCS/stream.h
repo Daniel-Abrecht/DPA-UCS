@@ -12,6 +12,7 @@ typedef struct {
 typedef struct {
   size_t bufferOffset;
   size_t bufferBufferOffset;
+  size_t bufferBufferInfoOffset;
 } DPAUCS_stream_offsetStorage_t;
 
 typedef bufferInfo_t streamEntry_t;

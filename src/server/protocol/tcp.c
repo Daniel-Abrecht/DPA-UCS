@@ -237,7 +237,7 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, transmission->stream );
 
-  DPAUCS_LOG("tcp_end: send to %u endpoints\n");
+  DPAUCS_LOG("tcp_end: send to %u endpoints\n",count);
 
   for(unsigned i=0;i<count;i++){
 
@@ -276,8 +276,8 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
     streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
     tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
-    DPAUCS_LOG( "tcp_end: %u bytes sent\n", (unsigned)packet_length );
     DPAUCS_layer3_transmit( transmission->stream, &tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
+    DPAUCS_LOG( "tcp_end: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)transmission->tcp->checksum );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
     if( remaining < data_length ){

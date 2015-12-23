@@ -11,13 +11,16 @@ void DPAUCS_stream_reset( DPAUCS_stream_t*const stream ){
 }
 
 void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, DPAUCS_stream_t* stream ){
+  sros->bufferBufferInfoOffset = BUFFER_BEGIN(stream->buffer_buffer)->offset;
   sros->bufferOffset = stream->buffer->read_offset;
   sros->bufferBufferOffset = stream->buffer_buffer->read_offset;
 }
 
 void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, DPAUCS_stream_offsetStorage_t* sros ){
+  BUFFER_BEGIN(stream->buffer_buffer)->offset = 0;
   stream->buffer->read_offset = sros->bufferOffset;
   stream->buffer_buffer->read_offset = sros->bufferBufferOffset;
+  BUFFER_BEGIN(stream->buffer_buffer)->offset = sros->bufferBufferInfoOffset;
 }
 
 void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, DPAUCS_stream_t* stream ){

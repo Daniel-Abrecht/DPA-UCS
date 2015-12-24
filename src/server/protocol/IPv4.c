@@ -181,11 +181,7 @@ void DPAUCS_IPv4_transmit(
     ip->destination = htob32( dst->ip );
 
     // create content
-    size_t msize = (
-        max_size > (uint16_t)~7
-      ? PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t)
-      : DPAUCS_MIN( (uint16_t)max_size - offset + 7u, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) )
-    ) & ~7u;
+    size_t msize = DPAUCS_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
     size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
 
     // complete ip header

@@ -95,7 +95,7 @@ bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t*const stream, bufferInfo_t* bm
 bool DPAUCS_stream_copyWrite( DPAUCS_stream_t*const stream, const void* p, size_t size ){
   if( BUFFER_FULL(stream->buffer_buffer) )
     return false;
-  if( stream->buffer->size < size )
+  if( stream->buffer->size - BUFFER_SIZE(stream->buffer) < size )
     return false;
   const unsigned char* buff = p;
   bufferInfo_t entry = {0};

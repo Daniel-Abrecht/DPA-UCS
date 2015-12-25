@@ -276,48 +276,65 @@ static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned coun
     uint32_t next = SEG[i].SEQ;
     tcb[i]->flags.ackAlreadySent = tcb[i]->flags.ackAlreadySent || flags & TCP_FLAG_ACK;
 
-    uint32_t alreadySent = tcb[i]->SND.NXT - SEG[i].SEQ;
-    // If SND.UNA is bigger than SEG.SEQ, some datas may already be acknowledged
-    // Since those values are in range 0 <= x <= 2^32 and all results are x mod 2^32,
-    // I can't tell if SND.UNA is bigger than SEG.SEQ directly. Since I can't have more datas
-    // acknowledged than I sent, the amount of acknowledged datas, which is SND.UNA - SEG.SEQ mod 2^32,
-    // must be smaller or equal to those datas already sent. Otherwise, datas from a previous segment
-    // havn't yet been acknowledged, and none of the datas of the current segment are acknowledged.
-    DPAUCS_LOG("SND.UNA: %lx, SEG[%u].SEQ: %lx\n",tcb[i]->SND.UNA,i,SEG[i].SEQ);
-    uint32_t alreadyAcknowledged = tcb[i]->SND.UNA - SEG[i].SEQ;
-    if( alreadyAcknowledged > alreadySent )
-      alreadyAcknowledged = 0;
+    uint32_t offset = 0;
+    size_t segmentLength;
 
-    size_t segmentLength = SEG[i].LEN;
-    if( segmentLength > l3_max - headersize )
-      segmentLength = l3_max - headersize;
-    if( segmentLength < alreadyAcknowledged )
-      continue;
-    segmentLength -= alreadyAcknowledged;
-    if( segmentLength > tcb[i]->SND.WND )
-      segmentLength = tcb[i]->SND.WND;
+    do {
 
-    size_t data_length = segmentLength - tcp_flaglength( flags );
-    size_t packet_length = data_length + headersize;
+      segmentLength = SEG[i].LEN;
 
-    tcp_from_tcb( transmission->tcp, tcb[i], SEG+i );
-    DPAUCS_stream_seek( transmission->stream, alreadyAcknowledged );
-    DPAUCS_stream_reverseSkipEntry( transmission->stream );
-    streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
-    DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
-    tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
-    DPAUCS_layer3_transmit( transmission->stream, &tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
-    DPAUCS_LOG( "tcp_end: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)transmission->tcp->checksum );
-    DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
+      uint32_t alreadySent = tcb[i]->SND.NXT - SEG[i].SEQ;
+      // If SND.UNA is bigger than SEG.SEQ, some datas may already be acknowledged
+      // Since those values are in range 0 <= x <= 2^32 and all results are x mod 2^32,
+      // I can't tell if SND.UNA is bigger than SEG.SEQ directly. Since I can't have more datas
+      // acknowledged than I sent, the amount of acknowledged datas, which is SND.UNA - SEG.SEQ mod 2^32,
+      // must be smaller or equal to those datas already sent. Otherwise, datas from a previous segment
+      // havn't yet been acknowledged, and none of the datas of the current segment are acknowledged.
+      DPAUCS_LOG("SND.UNA: %lx, SEG[%u].SEQ: %lx\n",tcb[i]->SND.UNA,i,SEG[i].SEQ);
+      uint32_t alreadyAcknowledged = tcb[i]->SND.UNA - SEG[i].SEQ;
+      if( alreadyAcknowledged > alreadySent )
+        alreadyAcknowledged = 0;
 
-    next += segmentLength;
-    if( tcb[i]->SND.NXT < next )
-      tcb[i]->SND.NXT = next;
+      if( segmentLength < alreadyAcknowledged + offset )
+        goto sendToNextEndpoint;
+      segmentLength -= alreadyAcknowledged + offset;
+      if( segmentLength > l3_max - headersize )
+        segmentLength = l3_max - headersize;
+      if( segmentLength > tcb[i]->SND.WND - offset )
+        segmentLength = tcb[i]->SND.WND - offset;
 
-    flags &= TCP_FLAG_URG;
+      size_t data_length = segmentLength - tcp_flaglength( flags );
+      size_t packet_length = data_length + headersize;
 
+      tcp_segment_t tmp_segment = SEG[i];
+      tmp_segment.LEN  = segmentLength;
+      tmp_segment.SEQ += alreadyAcknowledged + offset;
+      tcp_from_tcb( transmission->tcp, tcb[i], &tmp_segment );
+      if( !offset )
+        DPAUCS_stream_seek( transmission->stream, alreadyAcknowledged );
+      streamEntry_t* dataEntry = DPAUCS_stream_getEntry( transmission->stream );
+      size_t dataEntryOffset = dataEntry->offset;
+      DPAUCS_stream_reverseSkipEntry( transmission->stream );
+      streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
+      DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
+      dataEntry->offset = dataEntryOffset;
+      tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
+      dataEntry->offset = dataEntryOffset;
+      DPAUCS_layer3_transmit( transmission->stream, &tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
+      DPAUCS_LOG( "tcp_end: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)transmission->tcp->checksum );
+      DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
+
+      offset += segmentLength;
+      next += segmentLength;
+      if( tcb[i]->SND.NXT < next )
+        tcb[i]->SND.NXT = next;
+
+      flags &= TCP_FLAG_URG;
+
+    } while( segmentLength >= l3_max - headersize );
+
+   sendToNextEndpoint:
     DPAUCS_stream_restoreReadOffset( transmission->stream, &sros );
-
   }
 
   return true;

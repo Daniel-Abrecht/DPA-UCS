@@ -33,6 +33,9 @@ static transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG );
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
 static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state );
+static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp );
+static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG );
+static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG );
 
 
 static uint32_t ISS = 0;
@@ -92,19 +95,18 @@ static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* 
   return stcb;
 }
 
-#ifdef DEBUG
-static void printFrame( DPAUCS_tcp_t* tcp ){
+void printFrame( DPAUCS_tcp_t* tcp ){
   uint16_t flags = btoh16( tcp->flags );
-  DPAUCS_LOG(
-    "source: " "%u" "\n"
-    "destination: " "%u" "\n"
-    "sequence: " "%u" "\n"
-    "acknowledgment: " "%u" "\n"
-    "dataOffset: " "%u" "\n"
-    "flags: %s %s %s %s %s %s %s %s %s\n"
-    "windowSize: " "%u" "\n"
-    "checksum: " "%u" "\n"
-    "urgentPointer: " "%u" "\n",
+  DPAUCS_LOG( "TCP Packet:\n"
+    "  source: " "%u" "\n"
+    "  destination: " "%u" "\n"
+    "  sequence: " "%u" "\n"
+    "  acknowledgment: " "%u" "\n"
+    "  dataOffset: " "%u" "\n"
+    "  flags: %s %s %s %s %s %s %s %s %s\n"
+    "  windowSize: " "%u" "\n"
+    "  checksum: " "%u" "\n"
+    "  urgentPointer: " "%u" "\n",
     (unsigned)btoh16(tcp->source),
     (unsigned)btoh16(tcp->destination),
     (unsigned)btoh32(tcp->sequence),
@@ -124,9 +126,6 @@ static void printFrame( DPAUCS_tcp_t* tcp ){
     (unsigned)btoh16(tcp->urgentPointer)
   );
 }
-#else
-#define printFrame(...)
-#endif
 
 static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
   memset( tcp, 0, sizeof(*tcp) );
@@ -217,30 +216,54 @@ inline uint8_t tcp_flaglength( uint32_t flags ){
 
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG ){
 
-  streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( transmission->stream );
+  bool result;
+
+  // calculate length of datas without tcp header
   DPAUCS_stream_skipEntry( transmission->stream );
-
-  size_t headersize = tcpHeaderEntry->size;
   size_t datalen = DPAUCS_stream_getLength( transmission->stream );
+  DPAUCS_stream_reverseSkipEntry( transmission->stream );
 
-  for(unsigned i=count;i--;)
+  // store segmenmt length regarding extra sequencenumber for SYN and FIN
+  for( unsigned i=count; i--; )
     SEG[i].LEN = datalen + tcp_flaglength( SEG[i].flags );
 
+  // add datas to retransmissioncache if necessary
   if( datalen ){
     cleanupCache(); // TODO: add some checks if it's necessary
     if(!addToCache( transmission, count, tcb, SEG )){
       DPAUCS_LOG("TCP Retransmission cache full.\n");
-      return false;
+      // since I must be able to retransmit those datas if I send them, I mustn't transmit them
+      result = false;
+      goto cleanup;
     }
   }
 
+  // transmit datas
+  result = tcp_transmit( transmission, count, tcb, SEG );
+
+ cleanup:
+  DPAUCS_layer3_destroyTransmissionStream( transmission->stream );
+  return result;
+}
+
+static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG ){
+
+  // get pointer to entry in stream which represents tcp header
+  streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( transmission->stream );
+  DPAUCS_stream_skipEntry( transmission->stream ); // Skip tcp header
+
+  size_t headersize = tcpHeaderEntry->size; // get size of TCP Header
+
+  // save start of datas of stream
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, transmission->stream );
 
   DPAUCS_LOG("tcp_end: send to %u endpoints\n",count);
 
-  for(unsigned i=0;i<count;i++){
+  // For each endpoint/TCB/client
+  for( unsigned i=0; i<count; i++ ){
 
+    // Get maximum size of payload the underlaying protocol can handle
     size_t l3_max = ~0;
     DPAUCS_layer3_getPacketSizeLimit( tcb[i]->fromTo.destination->type, &l3_max );
 
@@ -249,29 +272,36 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
       i, (unsigned long)tcb[i]->SND.WND, (unsigned long)tcb[i]->SND.NXT, (unsigned long)l3_max
     );
 
-    size_t remaining = SEG[i].LEN - tcp_flaglength( SEG[i].flags );
     uint32_t flags = SEG[i].flags;
     uint32_t next = SEG[i].SEQ;
     tcb[i]->flags.ackAlreadySent = tcb[i]->flags.ackAlreadySent || flags & TCP_FLAG_ACK;
 
-    uint32_t alreadySent = DPAUCS_MIN( tcb[i]->SND.UNA - SEG[i].SEQ, tcb[i]->SND.NXT - SEG[i].SEQ );
+    uint32_t alreadySent = tcb[i]->SND.NXT - SEG[i].SEQ;
+    // If SND.UNA is bigger than SEG.SEQ, some datas may already be acknowledged
+    // Since those values are in range 0 <= x <= 2^32 and all results are x mod 2^32,
+    // I can't tell if SND.UNA is bigger than SEG.SEQ directly. Since I can't have more datas
+    // acknowledged than I sent, the amount of acknowledged datas, which is SND.UNA - SEG.SEQ mod 2^32,
+    // must be smaller or equal to those datas already sent. Otherwise, datas from a previous segment
+    // havn't yet been acknowledged, and none of the datas of the current segment are acknowledged.
+    DPAUCS_LOG("SND.UNA: %lx, SEG[%u].SEQ: %lx\n",tcb[i]->SND.UNA,i,SEG[i].SEQ);
+    uint32_t alreadyAcknowledged = tcb[i]->SND.UNA - SEG[i].SEQ;
+    if( alreadyAcknowledged > alreadySent )
+      alreadyAcknowledged = 0;
 
-    size_t segmentLength = remaining + tcp_flaglength( flags );
+    size_t segmentLength = SEG[i].LEN;
     if( segmentLength > l3_max - headersize )
       segmentLength = l3_max - headersize;
-    if( segmentLength < alreadySent )
+    if( segmentLength < alreadyAcknowledged )
       continue;
-    segmentLength -= alreadySent - (bool)( SEG[i].flags & TCP_FLAG_SYN ); // syn ocuppies first ocktet of the sequence space, fin the last.
+    segmentLength -= alreadyAcknowledged;
     if( segmentLength > tcb[i]->SND.WND )
       segmentLength = tcb[i]->SND.WND;
 
     size_t data_length = segmentLength - tcp_flaglength( flags );
-    if( segmentLength < data_length )
-      continue;
     size_t packet_length = data_length + headersize;
 
     tcp_from_tcb( transmission->tcp, tcb[i], SEG+i );
-    DPAUCS_stream_seek( transmission->stream, alreadySent );
+    DPAUCS_stream_seek( transmission->stream, alreadyAcknowledged );
     DPAUCS_stream_reverseSkipEntry( transmission->stream );
     streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
@@ -279,13 +309,6 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
     DPAUCS_layer3_transmit( transmission->stream, &tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
     DPAUCS_LOG( "tcp_end: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)transmission->tcp->checksum );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
-
-    if( remaining < data_length ){
-      DPAUCS_LOG("error: too much datas sent");
-      break;
-    }
-
-    remaining -= data_length;
 
     next += segmentLength;
     if( tcb[i]->SND.NXT < next )
@@ -296,8 +319,6 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
     DPAUCS_stream_restoreReadOffset( transmission->stream, &sros );
 
   }
-
-  DPAUCS_layer3_destroyTransmissionStream(transmission->stream);
 
   return true;
 }
@@ -603,8 +624,6 @@ static bool tcp_processHeader(
     return false;
   }
 
-  printFrame( tcp );
-
   transmissionControlBlock_t* stcb = searchTCB( &tcb );
   if( stcb ){
     if( stcb->currentId && stcb->currentId != tcb.currentId )
@@ -649,8 +668,8 @@ static bool tcp_processHeader(
         return false;
       }
     }
-    stcb->SND.UNA = ISS + 1;
-    stcb->SND.NXT = ISS + 1;
+    stcb->SND.UNA = ISS;
+    stcb->SND.NXT = ISS;
     stcb->SND.WND = btoh32( tcp->windowSize );
     stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
     tcp_segment_t segment = {
@@ -687,6 +706,8 @@ static bool tcp_receiveHandler(
 
   (void)offset; // unused
 
+  transmissionControlBlock_t tcb_tmp;
+
   bool ret = true;
 
   uint32_t tmp_ch = (uint16_t)~checksum( payload, length );
@@ -714,7 +735,6 @@ static bool tcp_receiveHandler(
     }
     transmissionControlBlock_t* tcb_ptr;
     if(!tcb){
-      transmissionControlBlock_t tcb_tmp;
       tcb_from_tcp( &tcb_tmp, tcp, id, from, to );
       tcb_ptr = &tcb_tmp;
     }else{

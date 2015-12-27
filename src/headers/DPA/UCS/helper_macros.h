@@ -1,7 +1,6 @@
 #ifndef HELPER_MACROS_H
 #define HELPER_MACROS_H
 
-
 #if __STDC_VERSION__ < 201112L
 #pragma anon_unions
 #ifndef noreturn
@@ -9,6 +8,14 @@
 #endif
 #else
 #include <stdnoreturn.h>
+#endif
+
+#if __alignof_is_defined
+#include <stdalign.h>
+#define DPAUCS_ALIGNOF(T) alignof(T)
+#else
+#include <stddef.h>
+#define DPAUCS_ALIGNOF(T) offsetof(struct{char x;T y;},y)
 #endif
 
 #define PACKED1
@@ -34,5 +41,7 @@
 #define DP_FLASH
 #endif
 
+#define DPAUCS_CALC_ALIGN_OFFSET( x, T ) \
+  ( (size_t)( (size_t)(x) + DPAUCS_ALIGNOF(T) - 1 ) & (size_t)~( DPAUCS_ALIGNOF(T) - 1 ) )
 
 #endif

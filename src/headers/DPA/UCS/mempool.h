@@ -6,10 +6,6 @@
 #include <stdbool.h>
 #include <DPA/UCS/helper_macros.h>
 
-#if __STDC_VERSION__ >= 201112L // c11
-#include <stdalign.h>
-#endif
-
 #ifndef UINTPTR_MAX
 #define UINTPTR_MAX (~(size_t)0)
 typedef size_t uintptr_t;
@@ -17,7 +13,7 @@ typedef size_t uintptr_t;
 
 #ifdef __alignof_is_defined
 #define MAX_ALIGN alignof(max_align_t)
-#elif defined(KEIL)
+#else
 struct maxAlignHelperStruct {
     long double a;
     void* g;
@@ -27,9 +23,7 @@ struct maxAlignHelperStruct {
     int e;
     short f;
 };
-#define MAX_ALIGN __alignof__(struct maxAlignHelperStruct)
-#else
-#error "Can't calculate MAX_ALIGN: alignof isn't defined"
+#define MAX_ALIGN DPAUCS_ALIGNOF(struct maxAlignHelperStruct)
 #endif
 
 #define DPAUCS_CALC_PADDING(S) ( ( S & (MAX_ALIGN-1) ) ? MAX_ALIGN - ( S & (MAX_ALIGN-1) ) : 0 )

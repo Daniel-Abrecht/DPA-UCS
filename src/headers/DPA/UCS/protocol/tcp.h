@@ -95,6 +95,10 @@ typedef struct transmissionControlBlock {
   struct {
     DPAUCS_tcp_fragment_t **first, **last;
   } fragments;
+  struct {
+    struct tcp_cacheEntry **first, **last;
+    uint32_t first_SEQ;
+  } cache;
   void* currentId;
   uint16_t next_length, checksum;
 

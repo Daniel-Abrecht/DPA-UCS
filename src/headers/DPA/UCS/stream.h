@@ -25,7 +25,7 @@ void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DP
 void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros );
 void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream );
 void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros );
-size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream );
+size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream, size_t max_ret, bool* has_more ); // inefficient
 bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, bufferInfo_t* bmem, size_t bmsize, unsigned char* cmem, size_t cmsize );
 void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size );
 

@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/protocol/tcp.h>
 
@@ -14,21 +15,22 @@
 #define TCP_RETRANSMISSION_CACHE_MAX_ENTRIES 128
 #endif
 
-typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t* t, transmissionControlBlock_t** tcb, uint16_t flags);
+typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t*, transmissionControlBlock_t**, uint16_t);
 
-typedef struct {
-  unsigned count;
-  size_t tcbBufferSize;
-  size_t segmentBufferSize;
+typedef struct tcp_cacheEntry {
   size_t charBufferSize;
   size_t streamBufferSize;
+  size_t streamRealLength;
+  struct tcp_cacheEntry** next;
+  unsigned count;
   adelay_t adelay;
-} cacheEntry_t;
+  bool streamIsLonger; // if streamRealLength can't represent the full length
+} tcp_cacheEntry_t;
 
 
-cacheEntry_t** addToCache( DPAUCS_tcp_transmission_t*, unsigned, transmissionControlBlock_t**, tcp_segment_t* );
-void removeFromCache( cacheEntry_t** );
-void cleanupCache();
+bool tcp_addToCache( DPAUCS_tcp_transmission_t*, unsigned, transmissionControlBlock_t**, uint16_t* );
+void tcp_removeFromCache( tcp_cacheEntry_t** );
+void tcp_cleanupCache();
 void tcp_retransmission_cache_do_retransmissions( void );
 
 #endif

@@ -30,12 +30,12 @@ static void removeTCB( transmissionControlBlock_t* tcb );
 static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
 static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
 static transmissionControlBlock_t* getTcbByCurrentId( const void*const );
-static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG );
+static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, uint16_t flags );
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
 static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state );
 static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp );
-static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG );
-static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG );
+bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags, size_t* size, uint32_t* SEQs );
+static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags );
 
 
 static uint32_t ISS = 0;
@@ -214,39 +214,27 @@ inline uint8_t tcp_flaglength( uint32_t flags ){
   return (bool)( flags & ( TCP_FLAG_SYN | TCP_FLAG_FIN ) );
 }
 
-static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG ){
+static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags ){
 
   bool result;
-
-  // calculate length of datas without tcp header
-  DPAUCS_stream_skipEntry( transmission->stream );
-  size_t datalen = DPAUCS_stream_getLength( transmission->stream );
-  DPAUCS_stream_reverseSkipEntry( transmission->stream );
-
-  // store segmenmt length regarding extra sequencenumber for SYN and FIN
-  for( unsigned i=count; i--; )
-    SEG[i].LEN = datalen + tcp_flaglength( SEG[i].flags );
-
-  // add datas to retransmissioncache if necessary
-  if( datalen ){
-    cleanupCache(); // TODO: add some checks if it's necessary
-    if(!addToCache( transmission, count, tcb, SEG )){
-      DPAUCS_LOG("TCP Retransmission cache full.\n");
-      // since I must be able to retransmit those datas if I send them, I mustn't transmit them
-      result = false;
-      goto cleanup;
-    }
+  if( tcp_addToCache( transmission, count, tcb, flags ) ){
+    DPAUCS_LOG("TCP Retransmission cache full.\n");
+    // since I must be able to retransmit those datas if I send them, I mustn't transmit them
+    result = false;
   }
 
-  // transmit datas
-  result = tcp_transmit( transmission, count, tcb, SEG );
-
- cleanup:
   DPAUCS_layer3_destroyTransmissionStream( transmission->stream );
   return result;
 }
 
-static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG ){
+bool tcp_transmit(
+  DPAUCS_tcp_transmission_t* transmission,
+  unsigned count,
+  transmissionControlBlock_t** tcb,
+  uint16_t* pflags,
+  size_t* send_amount,
+  uint32_t* SEQs
+){
 
   // get pointer to entry in stream which represents tcp header
   streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( transmission->stream );
@@ -263,6 +251,8 @@ static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned coun
   // For each endpoint/TCB/client
   for( unsigned i=0; i<count; i++ ){
 
+    uint32_t SEQ = SEQs ? SEQs[i] : tcb[i]->SND.NXT;
+
     // Get maximum size of payload the underlaying protocol can handle
     size_t l3_max = ~0;
     DPAUCS_layer3_getPacketSizeLimit( tcb[i]->fromTo.destination->type, &l3_max );
@@ -272,8 +262,8 @@ static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned coun
       i, (unsigned long)tcb[i]->SND.WND, (unsigned long)tcb[i]->SND.NXT, (unsigned long)l3_max
     );
 
-    uint32_t flags = SEG[i].flags;
-    uint32_t next = SEG[i].SEQ;
+    uint32_t flags = pflags[i];
+    uint32_t next = SEQ;
     tcb[i]->flags.ackAlreadySent = tcb[i]->flags.ackAlreadySent || flags & TCP_FLAG_ACK;
 
     uint32_t offset = 0;
@@ -281,17 +271,17 @@ static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned coun
 
     do {
 
-      segmentLength = SEG[i].LEN;
+      segmentLength = send_amount[i];
 
-      uint32_t alreadySent = tcb[i]->SND.NXT - SEG[i].SEQ;
+      uint32_t alreadySent = tcb[i]->SND.NXT - SEQ;
       // If SND.UNA is bigger than SEG.SEQ, some datas may already be acknowledged
       // Since those values are in range 0 <= x <= 2^32 and all results are x mod 2^32,
       // I can't tell if SND.UNA is bigger than SEG.SEQ directly. Since I can't have more datas
       // acknowledged than I sent, the amount of acknowledged datas, which is SND.UNA - SEG.SEQ mod 2^32,
       // must be smaller or equal to those datas already sent. Otherwise, datas from a previous segment
       // havn't yet been acknowledged, and none of the datas of the current segment are acknowledged.
-      DPAUCS_LOG("SND.UNA: %lx, SEG[%u].SEQ: %lx\n",tcb[i]->SND.UNA,i,SEG[i].SEQ);
-      uint32_t alreadyAcknowledged = tcb[i]->SND.UNA - SEG[i].SEQ;
+      DPAUCS_LOG("SND.UNA: %lx, SEG[%u].SEQ: %lx\n",tcb[i]->SND.UNA,i,SEQ);
+      uint32_t alreadyAcknowledged = tcb[i]->SND.UNA - SEQ;
       if( alreadyAcknowledged > alreadySent )
         alreadyAcknowledged = 0;
 
@@ -306,9 +296,11 @@ static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned coun
       size_t data_length = segmentLength - tcp_flaglength( flags );
       size_t packet_length = data_length + headersize;
 
-      tcp_segment_t tmp_segment = SEG[i];
-      tmp_segment.LEN  = segmentLength;
-      tmp_segment.SEQ += alreadyAcknowledged + offset;
+      tcp_segment_t tmp_segment = {
+        .LEN = segmentLength,
+        .SEQ = SEQ + alreadyAcknowledged + offset,
+        .flags = flags
+      };
       tcp_from_tcb( transmission->tcp, tcb[i], &tmp_segment );
       if( !offset )
         DPAUCS_stream_seek( transmission->stream, alreadyAcknowledged );
@@ -340,11 +332,11 @@ static bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned coun
   return true;
 }
 
-static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, tcp_segment_t* SEG ){
+static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, uint16_t flags ){
 
   DPAUCS_tcp_t tcp;
   DPAUCS_tcp_transmission_t t = tcp_begin( &tcp );
-  return tcp_end( &t, count, tcb, SEG );
+  return tcp_end( &t, count, tcb, &flags );
 
 }
 
@@ -384,6 +376,8 @@ void tcb_from_tcp(
   tcb->fragments.first = 0;
   tcb->fragments.last  = 0;
   tcb->SND.WND = 0;
+  tcb->SND.UNA = ISS;
+  tcb->SND.NXT = ISS;
 
   tcb->fromTo.source      = to;
   tcb->fromTo.destination = from;
@@ -476,11 +470,7 @@ static bool tcp_processPacket(
   SEG.LEN = n + tcp_flaglength( SEG.flags );
 
   if( !tcp_is_tcb_valid( tcb ) ){
-    tcp_segment_t segment = {
-      .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
-      .SEQ = ISS
-    };
-    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){tcb}, &segment );
+    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){tcb}, TCP_FLAG_ACK | TCP_FLAG_RST );
     return false;
   }
 
@@ -523,11 +513,7 @@ static bool tcp_processPacket(
     tcb->SND.UNA = btoh32(tcp->acknowledgment);
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
       DPAUCS_LOG("TCP Keep-Alive\n");
-      tcp_segment_t segment = {
-        .flags = TCP_FLAG_ACK,
-        .SEQ = tcb->SND.NXT
-      };
-      tcp_sendNoData( 1, &tcb, &segment );
+      tcp_sendNoData( 1, &tcb, TCP_FLAG_ACK );
     }else switch( tcb->state ){
       case TCP_SYN_RCVD_STATE  : tcp_setState( tcb, TCP_ESTAB_STATE      ); break;
       case TCP_CLOSING_STATE   : tcp_setState( tcb, TCP_TIME_WAIT_STATE  ); break;
@@ -591,13 +577,8 @@ static bool tcp_processPacket(
   }
 
   // ack received datas if necessary //
-  if( SEG.LEN && !tcb->flags.ackAlreadySent ){
-    tcp_segment_t segment = {
-      .flags = TCP_FLAG_ACK,
-      .SEQ = tcb->SND.NXT
-    };
-    tcp_sendNoData( 1, &tcb, &segment );
-  }
+  if( SEG.LEN && !tcb->flags.ackAlreadySent )
+    tcp_sendNoData( 1, &tcb, TCP_FLAG_ACK );
 
   return true;
 }
@@ -631,13 +612,7 @@ static bool tcp_processHeader(
 
   if( !tcp_is_tcb_valid( &tcb ) ){
     tcb.RCV.NXT = SEG.SEQ + 1;
-    tcp_segment_t segment = {
-      .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
-      .SEQ = ISS
-    };
-    tcb.SND.NXT = ISS;
-    tcb.SND.UNA = ISS;
-    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, &segment );
+    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, TCP_FLAG_ACK | TCP_FLAG_RST );
     return false;
   }
 
@@ -673,37 +648,21 @@ static bool tcp_processHeader(
     }
     if(stcb->service->onopen){
       if(!(*stcb->service->onopen)(stcb)){
-        tcp_segment_t segment = {
-          .flags = TCP_FLAG_ACK | TCP_FLAG_RST,
-          .SEQ = ISS
-        };
-        stcb->SND.UNA = ISS;
-        stcb->SND.NXT = ISS;
-        tcp_sendNoData( 1, &stcb, &segment );
+        tcp_sendNoData( 1, &stcb, TCP_FLAG_ACK | TCP_FLAG_RST );
         DPAUCS_LOG( "tcb->service->onopen: connection rejected\n" );
         removeTCB(stcb);
         return false;
       }
     }
-    stcb->SND.UNA = ISS;
-    stcb->SND.NXT = ISS;
     stcb->SND.WND = btoh32( tcp->windowSize );
     stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
-    tcp_segment_t segment = {
-      .flags = TCP_FLAG_ACK | TCP_FLAG_SYN,
-      .SEQ = ISS
-    };
-    tcp_sendNoData( 1, &stcb, &segment );
+    tcp_sendNoData( 1, &stcb, TCP_FLAG_ACK | TCP_FLAG_SYN );
     return last;
   }else if( !stcb ){
     DPAUCS_LOG( "Connection unavaiable.\n" );
-    tcp_segment_t segment = {
-      .flags = TCP_FLAG_RST,
-      .SEQ = ACK
-    };
     tcb.SND.NXT = ACK;
     tcb.SND.UNA = ACK;
-    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, &segment );
+    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, TCP_FLAG_RST );
     return false;
   }
 
@@ -795,36 +754,29 @@ static bool tcp_receiveHandler(
 bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t*, void* ), void** cids, size_t count, void* ptr ){
   if( count > TRANSMISSION_CONTROL_BLOCK_COUNT )
     return false;
+  {
+    DPAUCS_tcp_t tcp;
+    DPAUCS_tcp_transmission_t t = tcp_begin( &tcp );
 
-  DPAUCS_tcp_t tcp;
-  DPAUCS_tcp_transmission_t t = tcp_begin( &tcp );
+    uint16_t flags[count];
+    for(size_t i=0;i<count;i++)
+      flags[i] = TCP_FLAG_ACK;
 
-  tcp_segment_t SEGs[count];
-
-  for(size_t i=0;i<count;i++)
-    SEGs[i] = (tcp_segment_t){
-      .flags = TCP_FLAG_ACK,
-      .SEQ = ((struct transmissionControlBlock*)cids[i])->SND.NXT
+    if(!(*func)(t.stream,ptr)){
+      DPAUCS_layer3_destroyTransmissionStream( t.stream );
+      return false;
     };
 
-  if(!(*func)(t.stream,ptr)){
-    DPAUCS_layer3_destroyTransmissionStream( t.stream );
-    return false;
-  };
-
-  return tcp_end( &t, count, (transmissionControlBlock_t**)cids, SEGs );
+    return tcp_end( &t, count, (transmissionControlBlock_t**)cids, flags );
+  }
 }
 
 void DPAUCS_tcp_abord( void* cid ){
   transmissionControlBlock_t* tcb = cid;
   if( tcb->state == TCP_CLOSED_STATE )
     return;
-  tcp_segment_t segment = {
-    .flags = TCP_FLAG_RST | TCP_FLAG_ACK,
-    .SEQ = tcb->SND.NXT
-  };
   tcp_setState( tcb, TCP_CLOSED_STATE );
-  tcp_sendNoData( 1, &tcb, &segment );
+  tcp_sendNoData( 1, &tcb, TCP_FLAG_RST | TCP_FLAG_ACK );
 }
 
 void DPAUCS_tcp_close( void* cid ){
@@ -834,11 +786,7 @@ void DPAUCS_tcp_close( void* cid ){
   }else if( tcb->state == TCP_CLOSE_WAIT_STATE ){
     tcp_setState( tcb, TCP_LAST_ACK_STATE );
   }else return;
-  tcp_segment_t segment = {
-    .flags = TCP_FLAG_FIN | TCP_FLAG_ACK,
-    .SEQ = tcb->SND.NXT
-  };
-  tcp_sendNoData( 1, &tcb, &segment );
+  tcp_sendNoData( 1, &tcb, TCP_FLAG_FIN | TCP_FLAG_ACK );
 }
 
 static void tcp_receiveFailtureHandler( void* id ){

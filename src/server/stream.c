@@ -85,12 +85,34 @@ bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, bufferInfo_t* bmem, s
       *c++ = BUFFER_GET( cb );
   }
 
-  while(!BUFFER_EOF( bb ))
-    buffer_buffer_to_raw( cb->buffer, cmem, bmem++, BUFFER_GET( bb ) );
+  {
+    bufferInfo_t* b = bmem;
+    while(!BUFFER_EOF( bb )){
+      *b = BUFFER_GET( bb );
+      switch( b->type ){
+        case BUFFER_BUFFER: {
+          if( b->ptr == cb )
+            b->ptr = 0;
+        } break;
+        default: break;
+      }
+      b++;
+    }
+  }
 
   DPAUCS_stream_restoreReadOffset( stream, &sros );
 
   return true;
+}
+
+void DPAUCS_stream_prepare_temporary_from_buffer( bufferInfo_t* bmem, size_t bmsize, unsigned char* cmem, size_t cmsize, void(*func)( DPAUCS_stream_t* stream ) ){
+
+  (void)bmem;
+  (void)bmsize;
+  (void)cmem;
+  (void)cmsize;
+  (void)func;
+
 }
 
 bool DPAUCS_stream_copyWrite( DPAUCS_stream_t* stream, const void* p, size_t size ){
@@ -182,10 +204,23 @@ void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size ){
   }
 }
 
-size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream ){
+/*********************************************************************************************
+* A stream can contain more than SIZE_MAX bytes of datas which would leave to an overflow if *
+* not preventet. I solved this problem by Specifying an upper limit for the return value and *
+* an returning an information if there would have been more datas.                           *
+**********************************************************************************************/
+size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream, size_t max_ret, bool* has_more ){
   size_t i = BUFFER_SIZE( stream->buffer_buffer );
   size_t n = 0;
-  while( i-- )
-    n += BUFFER_AT( stream->buffer_buffer, i ).size;
+  while( i-- ){
+    size_t s = BUFFER_AT( stream->buffer_buffer, i ).size;
+    if( n < s + n || s + n > max_ret ){
+      if(has_more)
+        *has_more = true;
+      return max_ret;
+    }
+    n += s;
+  }
+  *has_more = false;
   return n;
 }

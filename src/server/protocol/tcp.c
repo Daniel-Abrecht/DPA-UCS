@@ -40,6 +40,10 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
 
 static uint32_t ISS = 0;
 
+static inline void tcp_una_change_handler( transmissionControlBlock_t* tcb, uint32_t new_una ){
+  tcb->SND.UNA = new_una;
+  tcp_cacheCleanupTCB( tcb );
+}
 
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
   transmissionControlBlock_t* start = transmissionControlBlocks;
@@ -367,15 +371,14 @@ void tcb_from_tcp(
   DPAUCS_address_t* from,
   DPAUCS_address_t* to
 ){
+  memset(tcb,0,sizeof(*tcb));
+
   tcb->srcPort     = btoh16( tcp->destination );
   tcb->destPort    = btoh16( tcp->source );
   tcb->service     = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ), PROTOCOL_TCP );
   tcb->currentId   = id;
   tcb->next_length = 0;
 
-  tcb->fragments.first = 0;
-  tcb->fragments.last  = 0;
-  tcb->SND.WND = 0;
   tcb->SND.UNA = ISS;
   tcb->SND.NXT = ISS;
 
@@ -510,7 +513,7 @@ static bool tcp_processPacket(
   }
 
   if( SEG.flags & TCP_FLAG_ACK ){
-    tcb->SND.UNA = btoh32(tcp->acknowledgment);
+    tcp_una_change_handler( tcb, btoh32( tcp->acknowledgment ) );
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
       DPAUCS_LOG("TCP Keep-Alive\n");
       tcp_sendNoData( 1, &tcb, TCP_FLAG_ACK );

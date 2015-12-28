@@ -19,7 +19,7 @@ typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t*, transmissionControl
 
 typedef struct tcp_cacheEntry {
   size_t charBufferSize;
-  size_t streamBufferSize;
+  size_t bufferBufferSize;
   size_t streamRealLength;
   struct tcp_cacheEntry** next;
   unsigned count;
@@ -30,7 +30,8 @@ typedef struct tcp_cacheEntry {
 
 bool tcp_addToCache( DPAUCS_tcp_transmission_t*, unsigned, transmissionControlBlock_t**, uint16_t* );
 void tcp_removeFromCache( tcp_cacheEntry_t** );
-void tcp_cleanupCache();
+void tcp_cleanupCache( void );
+void tcp_cacheCleanupTCB( transmissionControlBlock_t* );
 void tcp_retransmission_cache_do_retransmissions( void );
 
 #endif

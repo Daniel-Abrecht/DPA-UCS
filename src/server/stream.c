@@ -1,6 +1,6 @@
-#include <DPA/UCS/stream.h>
 #include <string.h>
 #include <stdint.h>
+#include <DPA/UCS/stream.h>
 
 void DPAUCS_stream_reset( DPAUCS_stream_t* stream ){
   DPAUCS_stream_offsetStorage_t sros;
@@ -210,6 +210,22 @@ size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream, size_t max_ret, b
   size_t n = 0;
   while( i-- ){
     size_t s = BUFFER_AT( stream->buffer_buffer, i ).size;
+    if( n < s + n || s + n > max_ret ){
+      if(has_more)
+        *has_more = true;
+      return max_ret;
+    }
+    n += s;
+  }
+  *has_more = false;
+  return n;
+}
+
+size_t DPAUCS_stream_raw_getLength( const DPAUCS_stream_raw_t* stream, size_t max_ret, bool* has_more ){
+  size_t i = stream->bufferBufferSize;
+  size_t n = 0;
+  while( i-- ){
+    size_t s = stream->bufferBuffer[i].size;
     if( n < s + n || s + n > max_ret ){
       if(has_more)
         *has_more = true;

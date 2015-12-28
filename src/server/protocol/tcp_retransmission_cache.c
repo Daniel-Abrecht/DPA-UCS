@@ -13,7 +13,7 @@ typedef struct {
   transmissionControlBlock_t** TCBs;
   uint16_t* flags;
   unsigned char* charBuffer;
-  bufferInfo_t* streamBuffer;
+  bufferInfo_t* bufferBuffer;
 } tcp_cache_entryInfo_t;
 
 static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, tcp_cacheEntry_t* entry ){
@@ -24,8 +24,8 @@ static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, tc
   offset = DPAUCS_CALC_ALIGN_OFFSET( offset + count * sizeof( transmissionControlBlock_t* ), uint16_t );
   res->flags = (void*)( emem + offset );
   offset = DPAUCS_CALC_ALIGN_OFFSET( offset + count * sizeof( uint16_t ), bufferInfo_t );
-  res->streamBuffer = (void*)( emem + offset );
-  offset += entry->streamBufferSize * sizeof( bufferInfo_t );
+  res->bufferBuffer = (void*)( emem + offset );
+  offset += entry->bufferBufferSize * sizeof( bufferInfo_t );
   res->charBuffer = (void*)( emem + offset );
 }
 
@@ -36,7 +36,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
     .next = 0,
     .adelay = 0,
     .charBufferSize   = BUFFER_SIZE( t->stream->buffer        ),
-    .streamBufferSize = BUFFER_SIZE( t->stream->buffer_buffer )
+    .bufferBufferSize = BUFFER_SIZE( t->stream->buffer_buffer ),
   };
   e.streamRealLength = DPAUCS_stream_getLength( t->stream, ~0, &e.streamIsLonger );
 
@@ -45,9 +45,11 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
                                      fullSize += count * sizeof( transmissionControlBlock_t* );
   const size_t flags_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, uint16_t );
                                      fullSize += count * sizeof( uint16_t );
-  const size_t streamBuffer_offset = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, bufferInfo_t );
-  const size_t charBuffer_offset   = fullSize += e.streamBufferSize * sizeof( bufferInfo_t );
+  const size_t bufferBuffer_offset = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, bufferInfo_t );
+  const size_t charBuffer_offset   = fullSize += e.bufferBufferSize * sizeof( bufferInfo_t );
                                      fullSize += e.charBufferSize;
+
+  DPAUCS_LOG("tcp_addToCache: count %u, %llu\n",count,(unsigned long long)e.streamRealLength);
 
   tcp_cacheEntry_t** entry = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
   while( --entry >= cacheEntries && *entry );
@@ -63,12 +65,12 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
   memcpy( emem + flags_offset, flags, count * sizeof(*flags) );
 
   DPAUCS_stream_raw_t raw_stream = {
-    .bufferBufferSize = e.streamBufferSize,
+    .bufferBufferSize = e.bufferBufferSize,
     .charBufferSize   = e.charBufferSize,
-    .bufferBuffer     = (void*)( emem + streamBuffer_offset ),
+    .bufferBuffer     = (void*)( emem + bufferBuffer_offset ),
     .charBuffer       = (void*)( emem +   charBuffer_offset )
   };
-  
+
   DPAUCS_stream_to_raw_buffer( t->stream, &raw_stream );
 
   for( transmissionControlBlock_t *it=*tcb, *end=it+count; it<end; it++ ){
@@ -94,42 +96,57 @@ void removeFromCache( tcp_cacheEntry_t** entry ){
   DPAUCS_mempool_free( &mempool, (void**)entry );
 }
 
-bool tcp_cleanupCacheEntryCheckTCB( tcp_cacheEntry_t** entry, tcp_cache_entryInfo_t* info, unsigned tcb_index ){
-  tcp_cacheEntry_t* e = *entry;
-  tcp_cache_entryInfo_t info_tmp;
-  if( !info ){
-    info = &info_tmp;
-    getEntryInfo( info, e );
-  }
-  transmissionControlBlock_t* tcb = info->TCBs[tcb_index];
-  if( !tcb ) return true;
-  if( tcb->cache.first != entry )
+bool tcp_cleanupCacheEntryCheckTCB( transmissionControlBlock_t* tcb ){
+  if( !tcb || !tcb->cache.first || !*tcb->cache.first )
+    return false;
+  tcp_cacheEntry_t**const entry = tcb->cache.first;
+  tcp_cacheEntry_t*const e = *entry;
+  tcp_cache_entryInfo_t info;
+  getEntryInfo( &info, e );
+  unsigned tcb_index = e->count;
+  while( tcb_index-- )
+    if( info.TCBs[tcb_index] == tcb )
+      break;
+  if( !~tcb_index )
     return false;
   uint32_t acknowledged_octets = tcb->SND.UNA - tcb->cache.first_SEQ;
+  bool ret = false;
   // check if all octets may have been acknowledged
   if( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ){
     // update streamlength info if necessary
-    //if( e->streamIsLonger )
-      //e->streamRealLength = DPAUCS_stream_getLength( t->stream, ~0, &e->streamIsLonger );
+    if( e->streamIsLonger ){
+      DPAUCS_stream_raw_t raw_stream = {
+        .bufferBufferSize = e->bufferBufferSize,
+        .charBufferSize   = e->charBufferSize,
+        .bufferBuffer     = info.bufferBuffer,
+        .charBuffer       = info.charBuffer
+      };
+      e->streamRealLength = DPAUCS_stream_raw_getLength( &raw_stream, ~0, &e->streamIsLonger );
+    }
     // check if really all octets have been acknowledged
     if( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ){
       // remove tcb from entry and entry from tcb
-      info->TCBs[tcb_index] = 0;
+      ret = true;
+      info.TCBs[tcb_index] = 0;
       tcb->cache.first = e->next;
-      if( tcb->cache.last == entry )
-        tcb->cache.last = tcb->cache.first;
+      if( !tcb->cache.first )
+        tcb->cache.last = 0;
       for( size_t i=tcb_index+1, n=e->count; i < n; i++ ){
-        if( !info->TCBs[i] ) break;
-        info->TCBs[i-1] = info->TCBs[i];
-        info->flags[i-1] = info->flags[i];
+        if( !info.TCBs[i] ) break;
+        info.TCBs[i-1] = info.TCBs[i];
+        info.flags[i-1] = info.flags[i];
       }
     }
   }
-  if(!*info->TCBs){ // no tcb's left, remove entry
+  if(!*info.TCBs){ // no tcb's left, remove entry
     removeFromCache( entry );
     return true;
   }
-  return false;
+  return ret;
+}
+
+void tcp_cacheCleanupTCB( transmissionControlBlock_t* tcb ){
+  while( tcp_cleanupCacheEntryCheckTCB( tcb ) );
 }
 
 void tcp_cleanupCache(){
@@ -151,7 +168,6 @@ static bool do_retransmissions( void** entry, void* unused ){
   (void)unused;
   tcp_cacheEntry_t* e = *entry;
   tcp_cache_entryInfo_t info;
-  
   getEntryInfo( &info, e );
   if(!adelay_done( &e->adelay, RETRANSMISSION_INTERVAL ))
     return true;

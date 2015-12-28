@@ -62,13 +62,14 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
   memcpy( emem + tcb_offset  , tcb  , count * sizeof(*tcb)   );
   memcpy( emem + flags_offset, flags, count * sizeof(*flags) );
 
-  DPAUCS_stream_to_raw_buffer(
-    t->stream,
-    (void*)( emem + streamBuffer_offset ),
-    e.streamBufferSize,
-    (void*)( emem +   charBuffer_offset ),
-    e.charBufferSize
-  );
+  DPAUCS_stream_raw_t raw_stream = {
+    .bufferBufferSize = e.streamBufferSize,
+    .charBufferSize   = e.charBufferSize,
+    .bufferBuffer     = (void*)( emem + streamBuffer_offset ),
+    .charBuffer       = (void*)( emem +   charBuffer_offset )
+  };
+  
+  DPAUCS_stream_to_raw_buffer( t->stream, &raw_stream );
 
   for( transmissionControlBlock_t *it=*tcb, *end=it+count; it<end; it++ ){
     if( (!it->cache.first) != (it->SND.NXT==it->SND.UNA) ){

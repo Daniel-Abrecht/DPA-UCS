@@ -10,16 +10,24 @@ void DPAUCS_stream_reset( DPAUCS_stream_t* stream ){
 }
 
 void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
-  sros->bufferOffset = stream->buffer->read_offset;
+  bufferInfo_t* binf = BUFFER_BEGIN(stream->buffer_buffer);
+  switch( binf->type ){
+    case BUFFER_BUFFER: sros->bufferOffset = ((uchar_buffer_t*)binf->ptr)->read_offset; break;
+    default: break;
+  }
   sros->bufferBufferOffset = stream->buffer_buffer->read_offset;
-  sros->bufferBufferInfoOffset = BUFFER_BEGIN(stream->buffer_buffer)->offset;
+  sros->bufferBufferInfoOffset = binf->offset;
 }
 
 void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros ){
   BUFFER_BEGIN(stream->buffer_buffer)->offset = 0;
-  stream->buffer->read_offset = sros->bufferOffset;
   stream->buffer_buffer->read_offset = sros->bufferBufferOffset;
-  BUFFER_BEGIN(stream->buffer_buffer)->offset = sros->bufferBufferInfoOffset;
+  bufferInfo_t* binf = BUFFER_BEGIN(stream->buffer_buffer);
+  switch( binf->type ){
+    case BUFFER_BUFFER: ((uchar_buffer_t*)binf->ptr)->read_offset = sros->bufferOffset; break;
+    default: break;
+  }
+  binf->offset = sros->bufferBufferInfoOffset;
 }
 
 void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
@@ -53,22 +61,12 @@ bool DPAUCS_stream_skipEntry( DPAUCS_stream_t* stream ){
 }
 
 bool DPAUCS_stream_reverseSkipEntry( DPAUCS_stream_t* stream ){
-  BUFFER_SKIP( stream->buffer_buffer, -1 );
   BUFFER_BEGIN( stream->buffer_buffer )->offset = 0;
+  BUFFER_SKIP( stream->buffer_buffer, -1 );
   return true;
 }
 
-static inline void buffer_buffer_to_raw( void* src_cbuf, void* dst_cbuf, bufferInfo_t* dst, bufferInfo_t src ){
-  *dst = src;
-  switch( src.type ){
-    case BUFFER_BUFFER: {
-      dst->ptr = (char*)src.ptr - (uintptr_t)src_cbuf + (uintptr_t)dst_cbuf;
-    } break;
-    default: break;
-  }
-}
-
-bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, bufferInfo_t* bmem, size_t bmsize, unsigned char* cmem, size_t cmsize ){
+bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw ){
 
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, stream );
@@ -76,17 +74,17 @@ bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, bufferInfo_t* bmem, s
   uchar_buffer_t* cb = stream->buffer;
   buffer_buffer_t* bb = stream->buffer_buffer;
 
-  if( BUFFER_SIZE(cb) > cmsize || BUFFER_SIZE(bb) > bmsize )
+  if( BUFFER_SIZE(cb) > raw->charBufferSize || BUFFER_SIZE(bb) > raw->bufferBufferSize )
     return false;
 
   {
-    unsigned char* c = cmem;
+    unsigned char* c = raw->charBuffer;
     while(!BUFFER_EOF( cb ))
       *c++ = BUFFER_GET( cb );
   }
 
   {
-    bufferInfo_t* b = bmem;
+    bufferInfo_t* b = raw->bufferBuffer;
     while(!BUFFER_EOF( bb )){
       *b = BUFFER_GET( bb );
       switch( b->type ){
@@ -105,12 +103,10 @@ bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, bufferInfo_t* bmem, s
   return true;
 }
 
-void DPAUCS_stream_prepare_temporary_from_buffer( bufferInfo_t* bmem, size_t bmsize, unsigned char* cmem, size_t cmsize, void(*func)( DPAUCS_stream_t* stream ) ){
+void DPAUCS_stream_prepare_from_buffer( DPAUCS_stream_raw_t* raw, size_t count, void(*func)( DPAUCS_stream_t* stream ) ){
 
-  (void)bmem;
-  (void)bmsize;
-  (void)cmem;
-  (void)cmsize;
+  (void)raw;
+  (void)count;
   (void)func;
 
 }

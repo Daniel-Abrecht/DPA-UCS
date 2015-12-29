@@ -11,8 +11,12 @@ void DPAUCS_stream_reset( DPAUCS_stream_t* stream ){
 
 void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
   bufferInfo_t* binf = BUFFER_BEGIN(stream->buffer_buffer);
+  sros->bufferOffset = 0;
   switch( binf->type ){
-    case BUFFER_BUFFER: sros->bufferOffset = ((uchar_buffer_t*)binf->ptr)->read_offset; break;
+    case BUFFER_BUFFER: {
+      if( BUFFER_SIZE(stream->buffer_buffer) )
+        sros->bufferOffset = ((uchar_buffer_t*)binf->ptr)->read_offset;
+    } break;
     default: break;
   }
   sros->bufferBufferOffset = stream->buffer_buffer->read_offset;
@@ -24,7 +28,10 @@ void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, const DPAUCS_stre
   stream->buffer_buffer->read_offset = sros->bufferBufferOffset;
   bufferInfo_t* binf = BUFFER_BEGIN(stream->buffer_buffer);
   switch( binf->type ){
-    case BUFFER_BUFFER: ((uchar_buffer_t*)binf->ptr)->read_offset = sros->bufferOffset; break;
+    case BUFFER_BUFFER: {
+      if( BUFFER_SIZE(stream->buffer_buffer) )
+        ((uchar_buffer_t*)binf->ptr)->read_offset = sros->bufferOffset;
+    } break;
     default: break;
   }
   binf->offset = sros->bufferBufferInfoOffset;
@@ -210,7 +217,7 @@ size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream, size_t max_ret, b
   size_t n = 0;
   while( i-- ){
     size_t s = BUFFER_AT( stream->buffer_buffer, i ).size;
-    if( n < s + n || s + n > max_ret ){
+    if( s + n < n || s + n > max_ret ){
       if(has_more)
         *has_more = true;
       return max_ret;
@@ -226,7 +233,7 @@ size_t DPAUCS_stream_raw_getLength( const DPAUCS_stream_raw_t* stream, size_t ma
   size_t n = 0;
   while( i-- ){
     size_t s = stream->bufferBuffer[i].size;
-    if( n < s + n || s + n > max_ret ){
+    if( s + n < n || s + n > max_ret ){
       if(has_more)
         *has_more = true;
       return max_ret;

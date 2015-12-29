@@ -49,7 +49,10 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
   const size_t charBuffer_offset   = fullSize += e.bufferBufferSize * sizeof( bufferInfo_t );
                                      fullSize += e.charBufferSize;
 
-  DPAUCS_LOG("tcp_addToCache: count %u, %llu\n",count,(unsigned long long)e.streamRealLength);
+  DPAUCS_LOG(
+    "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
+    (unsigned long long)fullSize, (unsigned long long)e.streamRealLength
+  );
 
   tcp_cacheEntry_t** entry = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
   while( --entry >= cacheEntries && *entry );

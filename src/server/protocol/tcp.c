@@ -27,13 +27,13 @@ static void tcp_receiveFailtureHandler( void* );
 static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
 static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
 static void removeTCB( transmissionControlBlock_t* tcb );
-static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
-static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
+void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
+void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
 static transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, uint16_t flags );
 static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
 static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state );
-static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp );
+static DPAUCS_tcp_transmission_t tcp_begin( void );
 bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags, size_t* size, uint32_t* SEQs );
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags );
 
@@ -131,7 +131,7 @@ void printFrame( DPAUCS_tcp_t* tcp ){
   );
 }
 
-static void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
+void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
   memset( tcp, 0, sizeof(*tcp) );
   tcp->destination = htob16( tcb->destPort );
   tcp->source = htob16( tcb->srcPort );
@@ -170,7 +170,7 @@ static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUC
   return 0;
 }
 
-static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
+void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, stream );
 
@@ -185,16 +185,10 @@ static void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   DPAUCS_stream_restoreReadOffset( stream, &sros );
 }
 
-static DPAUCS_tcp_transmission_t tcp_begin( DPAUCS_tcp_t* tcp ){
-
-  DPAUCS_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
-  DPAUCS_stream_referenceWrite( stream, tcp, sizeof(*tcp) );
-
+static DPAUCS_tcp_transmission_t tcp_begin( void ){
   return (DPAUCS_tcp_transmission_t){
-    .tcp = tcp,
-    .stream = stream
+    .stream = DPAUCS_layer3_createTransmissionStream()
   };
-
 }
 
 static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state ){
@@ -220,15 +214,14 @@ inline uint8_t tcp_flaglength( uint32_t flags ){
 
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags ){
 
-  bool result;
-  if( tcp_addToCache( transmission, count, tcb, flags ) ){
+  bool result = tcp_addToCache( transmission, count, tcb, flags );
+
+  if( !result )
     DPAUCS_LOG("TCP Retransmission cache full.\n");
-    // since I must be able to retransmit those datas if I send them, I mustn't transmit them
-    result = false;
-  }
 
   DPAUCS_layer3_destroyTransmissionStream( transmission->stream );
   return result;
+
 }
 
 bool tcp_transmit(
@@ -300,12 +293,12 @@ bool tcp_transmit(
       size_t data_length = segmentLength - tcp_flaglength( flags );
       size_t packet_length = data_length + headersize;
 
-      tcp_segment_t tmp_segment = {
+/*      tcp_segment_t tmp_segment = {
         .LEN = segmentLength,
         .SEQ = SEQ + alreadyAcknowledged + offset,
         .flags = flags
-      };
-      tcp_from_tcb( transmission->tcp, tcb[i], &tmp_segment );
+      };*/
+//      tcp_from_tcb( transmission->tcp, tcb[i], &tmp_segment );
       if( !offset )
         DPAUCS_stream_seek( transmission->stream, alreadyAcknowledged );
       streamEntry_t* dataEntry = DPAUCS_stream_getEntry( transmission->stream );
@@ -314,10 +307,10 @@ bool tcp_transmit(
       streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
       DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
       dataEntry->offset = dataEntryOffset;
-      tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
+//      tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
       dataEntry->offset = dataEntryOffset;
       DPAUCS_layer3_transmit( transmission->stream, &tcb[i]->fromTo, PROTOCOL_TCP, packet_length );
-      DPAUCS_LOG( "tcp_end: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)transmission->tcp->checksum );
+//      DPAUCS_LOG( "tcp_end: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)transmission->tcp->checksum );
       DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
       offset += segmentLength;
@@ -338,8 +331,7 @@ bool tcp_transmit(
 
 static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, uint16_t flags ){
 
-  DPAUCS_tcp_t tcp;
-  DPAUCS_tcp_transmission_t t = tcp_begin( &tcp );
+  DPAUCS_tcp_transmission_t t = tcp_begin();
   return tcp_end( &t, count, tcb, &flags );
 
 }
@@ -758,8 +750,7 @@ bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t*, void* ), void** cids, size_
   if( count > TRANSMISSION_CONTROL_BLOCK_COUNT )
     return false;
   {
-    DPAUCS_tcp_t tcp;
-    DPAUCS_tcp_transmission_t t = tcp_begin( &tcp );
+    DPAUCS_tcp_transmission_t t = tcp_begin();
 
     uint16_t flags[count];
     for(size_t i=0;i<count;i++)

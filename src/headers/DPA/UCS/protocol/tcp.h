@@ -119,7 +119,6 @@ typedef struct {
 } tcp_segment_t;
 
 typedef struct {
-  DPAUCS_tcp_t* tcp;
   DPAUCS_stream_t* stream;
 } DPAUCS_tcp_transmission_t;
 

@@ -53,7 +53,6 @@ static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
       it->state != TCP_CLOSED_STATE &&
       it->srcPort == tcb->srcPort &&
       it->destPort == tcb->destPort &&
-      it->service == tcb->service &&
       DPAUCS_compare_logicAddress( &it->fromTo.source->logicAddress , &tcb->fromTo.source->logicAddress ) &&
       DPAUCS_compare_logicAddress( &it->fromTo.destination->logicAddress, &tcb->fromTo.destination->logicAddress )
     ) return it;
@@ -261,7 +260,6 @@ bool tcp_transmit(
 
     uint32_t flags = pflags[i];
     uint32_t next = SEQ;
-    tcb[i]->flags.ackAlreadySent = tcb[i]->flags.ackAlreadySent || flags & TCP_FLAG_ACK;
 
     uint32_t offset = 0;
     size_t segmentLength;
@@ -491,7 +489,6 @@ static bool tcp_processPacket(
   // Statechanges //
 
   tcb->SND.WND = btoh32( tcp->windowSize );
-  tcb->flags.ackAlreadySent = false;
 
   {
     unsigned long RCV_NXT_old = tcb->RCV.NXT;
@@ -572,7 +569,7 @@ static bool tcp_processPacket(
   }
 
   // ack received datas if necessary //
-  if( SEG.LEN && !tcb->flags.ackAlreadySent )
+  if( SEG.LEN )
     tcp_sendNoData( 1, &tcb, TCP_FLAG_ACK );
 
   return true;

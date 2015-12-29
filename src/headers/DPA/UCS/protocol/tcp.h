@@ -4,9 +4,10 @@
 #define PROTOCOL_TCP 6
 
 #include <stdbool.h>
+#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/service.h>
 #include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/layer3.h>
-#include <DPA/UCS/service.h>
 
 DPAUCS_MODUL( tcp );
 
@@ -91,20 +92,25 @@ typedef struct transmissionControlBlock {
   uint16_t srcPort, destPort;
 
   // internal stuff //
+
+  void* currentId;
   DPAUCS_service_t* service;
+
   struct {
     DPAUCS_tcp_fragment_t **first, **last;
   } fragments;
-  struct {
-    struct tcp_cacheEntry **first, **last;
-    uint32_t first_SEQ;
-  } cache;
-  void* currentId;
-  uint16_t next_length, checksum;
 
   struct {
-    bool ackAlreadySent : 1;
-  } flags;
+    struct tcp_cacheEntry **first, **last;
+    uint32_t first_SEQ; // Sequence number of next segment to be sent
+    adelay_t last_transmission; // If there was no previous transmission, this must be zero. Otherwise, it mustn't be zero.
+    struct { // RST must be handled specially, PUSH and URG are related to the segment in the retransmission cache.
+      bool SYN : 1; // SYN not yet acknowledged
+      bool FIN : 1; // FIN not yet acknowledged
+    } flags;
+  } cache;
+
+  uint16_t next_length, checksum;
 
   ////////////////////
 

@@ -34,62 +34,66 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
   tcp_cacheEntry_t e = {
     .count = count,
     .next = 0,
-    .adelay = 0,
     .charBufferSize   = BUFFER_SIZE( t->stream->buffer        ),
     .bufferBufferSize = BUFFER_SIZE( t->stream->buffer_buffer ),
   };
   e.streamRealLength = DPAUCS_stream_getLength( t->stream, ~0, &e.streamIsLonger );
 
-  size_t                             fullSize  = sizeof( e );
-  const size_t tcb_offset          = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, transmissionControlBlock_t* );
-                                     fullSize += count * sizeof( transmissionControlBlock_t* );
-  const size_t flags_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, uint16_t );
-                                     fullSize += count * sizeof( uint16_t );
-  const size_t bufferBuffer_offset = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, bufferInfo_t );
-  const size_t charBuffer_offset   = fullSize += e.bufferBufferSize * sizeof( bufferInfo_t );
+  tcp_cacheEntry_t** entry;
+
+  if( e.streamRealLength ){
+
+    size_t                             fullSize  = sizeof( e );
+    const size_t tcb_offset          = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, transmissionControlBlock_t* );
+                                       fullSize += count * sizeof( transmissionControlBlock_t* );
+    const size_t flags_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, uint16_t );
+                                       fullSize += count * sizeof( uint16_t );
+    const size_t bufferBuffer_offset = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, bufferInfo_t );
+    const size_t charBuffer_offset   = fullSize += e.bufferBufferSize * sizeof( bufferInfo_t );
                                      fullSize += e.charBufferSize;
+    DPAUCS_LOG(
+      "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
+      (unsigned long long)fullSize, (unsigned long long)e.streamRealLength
+    );
 
-  DPAUCS_LOG(
-    "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
-    (unsigned long long)fullSize, (unsigned long long)e.streamRealLength
-  );
+    entry = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
+    while( --entry >= cacheEntries && *entry );
+    if(entry < cacheEntries)
+      return false;
 
-  tcp_cacheEntry_t** entry = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
-  while( --entry >= cacheEntries && *entry );
-  if(entry < cacheEntries)
-    return false;
+    DPAUCS_mempool_alloc( &mempool, (void**)entry, fullSize );
+    if( !*entry ) return false;
 
-  DPAUCS_mempool_alloc( &mempool, (void**)entry, fullSize );
-  if( !*entry ) return false;
+    char* emem = (char*)*entry;
+    memcpy( emem               , &e   , sizeof(e)              );
+    memcpy( emem + tcb_offset  , tcb  , count * sizeof(*tcb)   );
+    memcpy( emem + flags_offset, flags, count * sizeof(*flags) );
 
-  char* emem = (char*)*entry;
-  memcpy( emem               , &e   , sizeof(e)              );
-  memcpy( emem + tcb_offset  , tcb  , count * sizeof(*tcb)   );
-  memcpy( emem + flags_offset, flags, count * sizeof(*flags) );
+    DPAUCS_stream_raw_t raw_stream = {
+      .bufferBufferSize = e.bufferBufferSize,
+      .charBufferSize   = e.charBufferSize,
+      .bufferBuffer     = (void*)( emem + bufferBuffer_offset ),
+      .charBuffer       = (void*)( emem +   charBuffer_offset )
+    };
 
-  DPAUCS_stream_raw_t raw_stream = {
-    .bufferBufferSize = e.bufferBufferSize,
-    .charBufferSize   = e.charBufferSize,
-    .bufferBuffer     = (void*)( emem + bufferBuffer_offset ),
-    .charBuffer       = (void*)( emem +   charBuffer_offset )
-  };
+    DPAUCS_stream_to_raw_buffer( t->stream, &raw_stream );
 
-  DPAUCS_stream_to_raw_buffer( t->stream, &raw_stream );
-
-  for( transmissionControlBlock_t *it=*tcb, *end=it+count; it<end; it++ ){
-    if( (!it->cache.first) != (it->SND.NXT==it->SND.UNA) ){
-      // This should never happen
-      DPAUCS_LOG( "\x1b[31mCritical BUG: %s\x1b[39m\n",
-        it->cache.first ? "A cache entry exists, but any octet is already acknowledged!"
-                        : "Some octets aren't yet acknowledged, but they aren't cached!"
-      );
+    for( transmissionControlBlock_t *it=*tcb, *end=it+count; it<end; it++ ){
+      if( (!it->cache.first) != (it->SND.NXT==it->SND.UNA) ){
+        // This should never happen
+        DPAUCS_LOG( "\x1b[31mCritical BUG: %s\x1b[39m\n",
+          it->cache.first ? "A cache entry exists, but any octet is already acknowledged!"
+                          : "Some octets aren't yet acknowledged, but they aren't cached!"
+        );
+      }
+      if( !it->cache.first ){
+        it->cache.last = it->cache.first = (tcp_cacheEntry_t**)entry;
+        it->cache.first_SEQ = it->SND.NXT;
+      }else{
+        it->cache.last = (*it->cache.last)->next = (tcp_cacheEntry_t**)entry;
+      }
     }
-    if( !it->cache.first ){
-      it->cache.last = it->cache.first = (tcp_cacheEntry_t**)entry;
-      it->cache.first_SEQ = it->SND.NXT;
-    }else{
-      it->cache.last = (*it->cache.last)->next = (tcp_cacheEntry_t**)entry;
-    }
+
   }
 
   return true;
@@ -136,7 +140,7 @@ bool tcp_cleanupCacheEntryCheckTCB( transmissionControlBlock_t* tcb ){
         tcb->cache.last = 0;
       for( size_t i=tcb_index+1, n=e->count; i < n; i++ ){
         if( !info.TCBs[i] ) break;
-        info.TCBs[i-1] = info.TCBs[i];
+        info.TCBs [i-1] = info.TCBs [i];
         info.flags[i-1] = info.flags[i];
       }
     }
@@ -172,8 +176,8 @@ static bool do_retransmissions( void** entry, void* unused ){
   tcp_cacheEntry_t* e = *entry;
   tcp_cache_entryInfo_t info;
   getEntryInfo( &info, e );
-  if(!adelay_done( &e->adelay, RETRANSMISSION_INTERVAL ))
-    return true;
+//  if(!adelay_done( &e->adelay, RETRANSMISSION_INTERVAL ))
+  //  return true;
   retransmit( &info );
   return true;
 }

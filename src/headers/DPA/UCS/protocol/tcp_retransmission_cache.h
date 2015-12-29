@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <DPA/UCS/adelay.h>
 #include <DPA/UCS/protocol/tcp.h>
 
 #ifndef TCP_RETRANSMISSION_CACHE_SIZE
@@ -23,7 +22,6 @@ typedef struct tcp_cacheEntry {
   size_t streamRealLength;
   struct tcp_cacheEntry** next;
   unsigned count;
-  adelay_t adelay;
   bool streamIsLonger; // if streamRealLength can't represent the full length
 } tcp_cacheEntry_t;
 

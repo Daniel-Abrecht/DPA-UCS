@@ -19,36 +19,35 @@ DPAUCS_MODUL( tcp ){
   DPAUCS_DEPENDENCY( adelay_driver );
 }
 
-transmissionControlBlock_t transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
-
+DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
 static bool tcp_receiveHandler( void*, DPAUCS_address_t*, DPAUCS_address_t*, uint16_t, uint16_t, DPAUCS_fragment_t**, void*, bool );
 static void tcp_receiveFailtureHandler( void* );
-static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* );
-static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* );
-static void removeTCB( transmissionControlBlock_t* tcb );
-void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
-void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
-static transmissionControlBlock_t* getTcbByCurrentId( const void*const );
-static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, uint16_t flags );
-static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb );
-static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state );
+static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlBlock_t* );
+static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* );
+static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb );
+void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
+void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
+static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const );
+static bool tcp_sendNoData( unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
+static bool tcp_connectionUnstable( DPAUCS_transmissionControlBlock_t* stcb );
+static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, TCP_state_t state );
 static DPAUCS_tcp_transmission_t tcp_begin( void );
-bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags, size_t* size, uint32_t* SEQs );
-static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags );
+bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags, size_t* size, uint32_t* SEQs );
+static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
 
 
 static uint32_t ISS = 0;
 
-static inline void tcp_una_change_handler( transmissionControlBlock_t* tcb, uint32_t new_una ){
+static inline void tcp_una_change_handler( DPAUCS_transmissionControlBlock_t* tcb, uint32_t new_una ){
   tcb->SND.UNA = new_una;
   tcp_cacheCleanupTCB( tcb );
 }
 
-static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
-  transmissionControlBlock_t* start = transmissionControlBlocks;
-  transmissionControlBlock_t* end = transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
-  for( transmissionControlBlock_t* it=start; it<end ;it++ )
+static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlBlock_t* tcb ){
+  DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
+  DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
+  for( DPAUCS_transmissionControlBlock_t* it=start; it<end ;it++ )
     if(
       it->state != TCP_CLOSED_STATE &&
       it->srcPort == tcb->srcPort &&
@@ -59,16 +58,16 @@ static transmissionControlBlock_t* searchTCB( transmissionControlBlock_t* tcb ){
   return 0;
 }
 
-static transmissionControlBlock_t* getTcbByCurrentId( const void*const id ){
-  transmissionControlBlock_t* start = transmissionControlBlocks;
-  transmissionControlBlock_t* end = transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
-  for( transmissionControlBlock_t* it=start; it<end; it++ )
+static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const id ){
+  DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
+  DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
+  for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ )
     if( it->state != TCP_CLOSED_STATE && it->currentId == id )
       return it;
   return 0;
 }
 
-static void removeTCB( transmissionControlBlock_t* tcb ){
+static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   if( tcb->state == TCP_CLOSED_STATE )
     return;
   DPAUCS_arpCache_deregister( tcb->fromTo.destination );
@@ -79,18 +78,18 @@ static void removeTCB( transmissionControlBlock_t* tcb ){
   DPAUCS_LOG("Connection removed.\n");
 }
 
-static transmissionControlBlock_t* addTemporaryTCB( transmissionControlBlock_t* tcb ){
+static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   static unsigned i = 0;
   unsigned j = i;
   DPAUCS_address_t* addr = DPAUCS_arpCache_register( tcb->fromTo.destination );
   if( !addr )
     return 0;
   tcb->fromTo.destination = addr;
-  transmissionControlBlock_t* stcb;
+  DPAUCS_transmissionControlBlock_t* stcb;
   do {
     if( j >= i+TRANSMISSION_CONTROL_BLOCK_COUNT )
       return 0;
-    stcb = transmissionControlBlocks + ( j++ % TRANSMISSION_CONTROL_BLOCK_COUNT );
+    stcb = DPAUCS_transmissionControlBlocks + ( j++ % TRANSMISSION_CONTROL_BLOCK_COUNT );
   } while( stcb->state != TCP_CLOSED_STATE && !tcp_connectionUnstable( stcb ) );
   i = j;
   removeTCB( stcb );
@@ -130,7 +129,7 @@ void printFrame( DPAUCS_tcp_t* tcp ){
   );
 }
 
-void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
+void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
   memset( tcp, 0, sizeof(*tcp) );
   tcp->destination = htob16( tcb->destPort );
   tcp->source = htob16( tcb->srcPort );
@@ -141,7 +140,7 @@ void tcp_from_tcb( DPAUCS_tcp_t* tcp, transmissionControlBlock_t* tcb, tcp_segme
 }
 
 #ifdef USE_IPv4
-static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
+static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
   PACKED1 struct PACKED2 pseudoHeader {
     uint32_t src, dst;
     uint8_t padding, protocol;
@@ -159,7 +158,7 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, 
 }
 #endif
 
-static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
+static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
 
   switch( tcb->fromTo.source->type ){
 #ifdef USE_IPv4
@@ -169,7 +168,7 @@ static uint16_t tcp_pseudoHeaderChecksum( transmissionControlBlock_t* tcb, DPAUC
   return 0;
 }
 
-void tcp_calculateChecksum( transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
+void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
   DPAUCS_stream_offsetStorage_t sros;
   DPAUCS_stream_saveReadOffset( &sros, stream );
 
@@ -190,7 +189,7 @@ static DPAUCS_tcp_transmission_t tcp_begin( void ){
   };
 }
 
-static inline bool tcp_setState( transmissionControlBlock_t* tcb, TCP_state_t state ){
+static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, TCP_state_t state ){
   if( tcb->state == state )
     return false;
   static const char* stateNames[] = {TCP_STATES(DPAUCS_STRINGIFY)};
@@ -211,7 +210,7 @@ inline uint8_t tcp_flaglength( uint32_t flags ){
   return (bool)( flags & ( TCP_FLAG_SYN | TCP_FLAG_FIN ) );
 }
 
-static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags ){
+static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags ){
 
   bool result = tcp_addToCache( transmission, count, tcb, flags );
 
@@ -226,7 +225,7 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, tr
 bool tcp_transmit(
   DPAUCS_tcp_transmission_t* transmission,
   unsigned count,
-  transmissionControlBlock_t** tcb,
+  DPAUCS_transmissionControlBlock_t** tcb,
   uint16_t* pflags,
   size_t* send_amount,
   uint32_t* SEQs
@@ -327,15 +326,15 @@ bool tcp_transmit(
   return true;
 }
 
-static bool tcp_sendNoData( unsigned count, transmissionControlBlock_t** tcb, uint16_t flags ){
+static bool tcp_sendNoData( unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags ){
 
   DPAUCS_tcp_transmission_t t = tcp_begin();
-  return tcp_end( &t, count, tcb, &flags );
+  return tcp_end( &t, count, tcb, flags );
 
 }
 
 static void tcp_processDatas(
-  transmissionControlBlock_t* tcb,
+  DPAUCS_transmissionControlBlock_t* tcb,
   void* payload,
   size_t length
 ){
@@ -345,7 +344,7 @@ static void tcp_processDatas(
 
 }
 
-static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
+static bool tcp_connectionUnstable( DPAUCS_transmissionControlBlock_t* stcb ){
   return ( stcb->state == TCP_SYN_RCVD_STATE   )
       || ( stcb->state == TCP_SYN_SENT_STATE   )
       || ( stcb->state == TCP_TIME_WAIT_STATE  )
@@ -355,7 +354,7 @@ static bool tcp_connectionUnstable( transmissionControlBlock_t* stcb ){
 }
 
 void tcb_from_tcp(
-  transmissionControlBlock_t* tcb,
+  DPAUCS_transmissionControlBlock_t* tcb,
   DPAUCS_tcp_t* tcp,
   void* id,
   DPAUCS_address_t* from,
@@ -382,7 +381,7 @@ static inline void tcp_init_variables(
   DPAUCS_address_t* from,
   DPAUCS_address_t* to,
   tcp_segment_t* SEG,
-  transmissionControlBlock_t* tcb,
+  DPAUCS_transmissionControlBlock_t* tcb,
   uint32_t* ACK
 ){
 
@@ -395,20 +394,20 @@ static inline void tcp_init_variables(
 
 }
 
-static inline bool tcp_is_tcb_valid( transmissionControlBlock_t* tcb ){
+static inline bool tcp_is_tcb_valid( DPAUCS_transmissionControlBlock_t* tcb ){
   return tcb->service
       && tcb->destPort
       && DPAUCS_isValidHostAddress( &tcb->fromTo.destination->logicAddress );
 }
 
-static inline bool tcp_get_recivewindow_data_offset( transmissionControlBlock_t* tcb, tcp_segment_t* SEG, uint16_t* offset ){
+static inline bool tcp_get_recivewindow_data_offset( DPAUCS_transmissionControlBlock_t* tcb, tcp_segment_t* SEG, uint16_t* offset ){
   uint32_t off = tcb->RCV.NXT - SEG->SEQ;
   *offset = off;
   return off + 1 <= tcb->RCV.WND;
 }
 
 static bool tcp_processPacket(
-  transmissionControlBlock_t* tcb,
+  DPAUCS_transmissionControlBlock_t* tcb,
   void* id,
   DPAUCS_address_t* from,
   DPAUCS_address_t* to,
@@ -419,7 +418,7 @@ static bool tcp_processPacket(
   // Initialisation and checks //
 
   tcp_segment_t SEG;
-  transmissionControlBlock_t tmp_tcb;
+  DPAUCS_transmissionControlBlock_t tmp_tcb;
 
   DPAUCS_tcp_t* tcp = last_payload;
   uint16_t chunck_len = last_length;
@@ -463,7 +462,7 @@ static bool tcp_processPacket(
   SEG.LEN = n + tcp_flaglength( SEG.flags );
 
   if( !tcp_is_tcb_valid( tcb ) ){
-    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){tcb}, TCP_FLAG_ACK | TCP_FLAG_RST );
+    tcp_sendNoData( 1, (DPAUCS_transmissionControlBlock_t*[]){tcb}, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_RST });
     return false;
   }
 
@@ -505,7 +504,7 @@ static bool tcp_processPacket(
     tcp_una_change_handler( tcb, btoh32( tcp->acknowledgment ) );
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
       DPAUCS_LOG("TCP Keep-Alive\n");
-      tcp_sendNoData( 1, &tcb, TCP_FLAG_ACK );
+      tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_ACK });
     }else switch( tcb->state ){
       case TCP_SYN_RCVD_STATE  : tcp_setState( tcb, TCP_ESTAB_STATE      ); break;
       case TCP_CLOSING_STATE   : tcp_setState( tcb, TCP_TIME_WAIT_STATE  ); break;
@@ -570,7 +569,7 @@ static bool tcp_processPacket(
 
   // ack received datas if necessary //
   if( SEG.LEN )
-    tcp_sendNoData( 1, &tcb, TCP_FLAG_ACK );
+    tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_ACK });
 
   return true;
 }
@@ -597,18 +596,18 @@ static bool tcp_processHeader(
   length -= headerLength;
 
   tcp_segment_t SEG;
-  transmissionControlBlock_t tcb;
+  DPAUCS_transmissionControlBlock_t tcb;
   uint32_t ACK;
 
   tcp_init_variables( tcp, id, from, to, &SEG, &tcb, &ACK );
 
   if( !tcp_is_tcb_valid( &tcb ) ){
     tcb.RCV.NXT = SEG.SEQ + 1;
-    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, TCP_FLAG_ACK | TCP_FLAG_RST );
+    tcp_sendNoData( 1, (DPAUCS_transmissionControlBlock_t*[]){&tcb}, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_RST });
     return false;
   }
 
-  transmissionControlBlock_t* stcb = searchTCB( &tcb );
+  DPAUCS_transmissionControlBlock_t* stcb = searchTCB( &tcb );
   if( stcb ){
     if( stcb->currentId && stcb->currentId != tcb.currentId )
       return false;
@@ -640,7 +639,7 @@ static bool tcp_processHeader(
     }
     if(stcb->service->onopen){
       if(!(*stcb->service->onopen)(stcb)){
-        tcp_sendNoData( 1, &stcb, TCP_FLAG_ACK | TCP_FLAG_RST );
+        tcp_sendNoData( 1, &stcb, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_RST });
         DPAUCS_LOG( "tcb->service->onopen: connection rejected\n" );
         removeTCB(stcb);
         return false;
@@ -648,13 +647,13 @@ static bool tcp_processHeader(
     }
     stcb->SND.WND = btoh32( tcp->windowSize );
     stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
-    tcp_sendNoData( 1, &stcb, TCP_FLAG_ACK | TCP_FLAG_SYN );
+    tcp_sendNoData( 1, &stcb, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_SYN });
     return last;
   }else if( !stcb ){
     DPAUCS_LOG( "Connection unavaiable.\n" );
     tcb.SND.NXT = ACK;
     tcb.SND.UNA = ACK;
-    tcp_sendNoData( 1, (transmissionControlBlock_t*[]){&tcb}, TCP_FLAG_RST );
+    tcp_sendNoData( 1, (DPAUCS_transmissionControlBlock_t*[]){&tcb}, (uint16_t[]){ TCP_FLAG_RST });
     return false;
   }
 
@@ -674,13 +673,13 @@ static bool tcp_receiveHandler(
 
   (void)offset; // unused
 
-  transmissionControlBlock_t tcb_tmp;
+  DPAUCS_transmissionControlBlock_t tcb_tmp;
 
   bool ret = true;
 
   uint32_t tmp_ch = (uint16_t)~checksum( payload, length );
 
-  transmissionControlBlock_t* tcb = getTcbByCurrentId(id);
+  DPAUCS_transmissionControlBlock_t* tcb = getTcbByCurrentId(id);
   if(tcb){
     if( tcb->next_length & 1 )
       tmp_ch = (uint16_t)( (uint16_t)( tmp_ch >> 8 ) & 0xFF ) | (uint16_t)( (uint16_t)( tmp_ch & 0xFF ) << 8 );
@@ -701,7 +700,7 @@ static bool tcp_receiveHandler(
         return false;
       tcp = payload;
     }
-    transmissionControlBlock_t* tcb_ptr;
+    DPAUCS_transmissionControlBlock_t* tcb_ptr;
     if(!tcb){
       tcb_from_tcp( &tcb_tmp, tcp, id, from, to );
       tcb_ptr = &tcb_tmp;
@@ -758,26 +757,26 @@ bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t*, void* ), void** cids, size_
       return false;
     };
 
-    return tcp_end( &t, count, (transmissionControlBlock_t**)cids, flags );
+    return tcp_end( &t, count, (DPAUCS_transmissionControlBlock_t**)cids, flags );
   }
 }
 
 void DPAUCS_tcp_abord( void* cid ){
-  transmissionControlBlock_t* tcb = cid;
+  DPAUCS_transmissionControlBlock_t* tcb = cid;
   if( tcb->state == TCP_CLOSED_STATE )
     return;
   tcp_setState( tcb, TCP_CLOSED_STATE );
-  tcp_sendNoData( 1, &tcb, TCP_FLAG_RST | TCP_FLAG_ACK );
+  tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_RST | TCP_FLAG_ACK });
 }
 
 void DPAUCS_tcp_close( void* cid ){
-  transmissionControlBlock_t* tcb = cid;
+  DPAUCS_transmissionControlBlock_t* tcb = cid;
   if( tcb->state == TCP_ESTAB_STATE ){
     tcp_setState( tcb, TCP_FIN_WAIT_1_STATE );
   }else if( tcb->state == TCP_CLOSE_WAIT_STATE ){
     tcp_setState( tcb, TCP_LAST_ACK_STATE );
   }else return;
-  tcp_sendNoData( 1, &tcb, TCP_FLAG_FIN | TCP_FLAG_ACK );
+  tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_FIN | TCP_FLAG_ACK });
 }
 
 static void tcp_receiveFailtureHandler( void* id ){

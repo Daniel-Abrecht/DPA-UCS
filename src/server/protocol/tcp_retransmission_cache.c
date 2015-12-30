@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 #include <DPA/UCS/logger.h>
 #include <DPA/UCS/mempool.h>
 #include <DPA/UCS/protocol/tcp_retransmission_cache.h>
@@ -10,7 +11,7 @@ static DPAUCS_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
 static tcp_cacheEntry_t* cacheEntries[TCP_RETRANSMISSION_CACHE_MAX_ENTRIES];
 
 typedef struct {
-  transmissionControlBlock_t** TCBs;
+  DPAUCS_transmissionControlBlock_t** TCBs;
   uint16_t* flags;
   unsigned char* charBuffer;
   bufferInfo_t* bufferBuffer;
@@ -19,9 +20,9 @@ typedef struct {
 static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, tcp_cacheEntry_t* entry ){
   char* emem = (char*)entry;
   size_t count = entry->count;
-  size_t offset = DPAUCS_CALC_ALIGN_OFFSET( sizeof(tcp_cacheEntry_t), transmissionControlBlock_t* );
+  size_t offset = DPAUCS_CALC_ALIGN_OFFSET( sizeof(tcp_cacheEntry_t), DPAUCS_transmissionControlBlock_t* );
   res->TCBs = (void*)( emem + offset );
-  offset = DPAUCS_CALC_ALIGN_OFFSET( offset + count * sizeof( transmissionControlBlock_t* ), uint16_t );
+  offset = DPAUCS_CALC_ALIGN_OFFSET( offset + count * sizeof( DPAUCS_transmissionControlBlock_t* ), uint16_t );
   res->flags = (void*)( emem + offset );
   offset = DPAUCS_CALC_ALIGN_OFFSET( offset + count * sizeof( uint16_t ), bufferInfo_t );
   res->bufferBuffer = (void*)( emem + offset );
@@ -29,7 +30,7 @@ static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, tc
   res->charBuffer = (void*)( emem + offset );
 }
 
-bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionControlBlock_t** tcb, uint16_t* flags ){
+bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags ){
 
   tcp_cacheEntry_t e = {
     .count = count,
@@ -44,8 +45,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
   if( e.streamRealLength ){
 
     size_t                             fullSize  = sizeof( e );
-    const size_t tcb_offset          = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, transmissionControlBlock_t* );
-                                       fullSize += count * sizeof( transmissionControlBlock_t* );
+    const size_t tcb_offset          = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, DPAUCS_transmissionControlBlock_t* );
+                                       fullSize += count * sizeof( DPAUCS_transmissionControlBlock_t* );
     const size_t flags_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, uint16_t );
                                        fullSize += count * sizeof( uint16_t );
     const size_t bufferBuffer_offset = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, bufferInfo_t );
@@ -78,7 +79,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
 
     DPAUCS_stream_to_raw_buffer( t->stream, &raw_stream );
 
-    for( transmissionControlBlock_t *it=*tcb, *end=it+count; it<end; it++ ){
+    for( unsigned i=count; i--; ){
+      DPAUCS_transmissionControlBlock_t* it = tcb[i];
       if( (!it->cache.first) != (it->SND.NXT==it->SND.UNA) ){
         // This should never happen
         DPAUCS_LOG( "\x1b[31mCritical BUG: %s\x1b[39m\n",
@@ -87,6 +89,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
         );
       }
       if( !it->cache.first ){
+        it->cache.last_transmission = 0;
         it->cache.last = it->cache.first = (tcp_cacheEntry_t**)entry;
         it->cache.first_SEQ = it->SND.NXT;
       }else{
@@ -96,6 +99,13 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, transmissionC
 
   }
 
+  for( unsigned i=count; i--; ){
+    if( flags[i] & TCP_FLAG_SYN )
+      tcb[i]->cache.flags.SYN = true;
+    if( flags[i] & TCP_FLAG_FIN )
+      tcb[i]->cache.flags.FIN = true;
+  }
+
   return true;
 }
 
@@ -103,7 +113,7 @@ void removeFromCache( tcp_cacheEntry_t** entry ){
   DPAUCS_mempool_free( &mempool, (void**)entry );
 }
 
-bool tcp_cleanupCacheEntryCheckTCB( transmissionControlBlock_t* tcb ){
+bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   if( !tcb || !tcb->cache.first || !*tcb->cache.first )
     return false;
   tcp_cacheEntry_t**const entry = tcb->cache.first;
@@ -152,20 +162,25 @@ bool tcp_cleanupCacheEntryCheckTCB( transmissionControlBlock_t* tcb ){
   return ret;
 }
 
-void tcp_cacheCleanupTCB( transmissionControlBlock_t* tcb ){
+void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   while( tcp_cleanupCacheEntryCheckTCB( tcb ) );
 }
 
-void tcp_cleanupCache(){
-/*  tcp_cacheEntry_t** it = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
-  while( --it >= cacheEntries )
-    if( it )
-      tcp_cleanupCacheEntry( it );*/
+void tcp_cleanupCache( void ){
+  DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
+  DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
+  for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ ){
+    if( it->state == TCP_CLOSED_STATE
+     || it->state == TCP_SYN_RCVD_STATE
+     || it->state == TCP_TIME_WAIT_STATE
+    ) continue;
+    
+  }
 }
 
 static void retransmit( tcp_cache_entryInfo_t* ei ){
   (void)ei;
-  printf("retransmit\n");
+  DPAUCS_LOG("retransmit\n");
 }
 
 // TODO: Make this dynamic, it's required by RFC 793 Page 41

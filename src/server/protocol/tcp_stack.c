@@ -1,7 +1,7 @@
 #include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/protocol/tcp_stack.h>
 
-bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, transmissionControlBlock_t* tcb ){
+bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, DPAUCS_transmissionControlBlock_t* tcb ){
   if(! DPAUCS_takeover( fragment, DPAUCS_FRAGMENT_TYPE_TCP ) )
     return false;
   (void)tcb;
@@ -15,7 +15,7 @@ bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, transmissionControlBloc
   return true;
 }
 
-void DPAUCS_tcp_cache_remove( transmissionControlBlock_t* tcb ){
+void DPAUCS_tcp_cache_remove( DPAUCS_transmissionControlBlock_t* tcb ){
   for(DPAUCS_tcp_fragment_t** it=tcb->fragments.first;it;it=(*it)->next)
     DPAUCS_removeFragment( (DPAUCS_fragment_t**)it );
   tcb->fragments.first = 0;

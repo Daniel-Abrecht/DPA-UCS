@@ -14,7 +14,7 @@
 #define TCP_RETRANSMISSION_CACHE_MAX_ENTRIES 128
 #endif
 
-typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t*, transmissionControlBlock_t**, uint16_t);
+typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t*, DPAUCS_transmissionControlBlock_t**, uint16_t);
 
 typedef struct tcp_cacheEntry {
   size_t charBufferSize;
@@ -26,10 +26,10 @@ typedef struct tcp_cacheEntry {
 } tcp_cacheEntry_t;
 
 
-bool tcp_addToCache( DPAUCS_tcp_transmission_t*, unsigned, transmissionControlBlock_t**, uint16_t* );
+bool tcp_addToCache( DPAUCS_tcp_transmission_t*, unsigned, DPAUCS_transmissionControlBlock_t**, uint16_t* );
 void tcp_removeFromCache( tcp_cacheEntry_t** );
 void tcp_cleanupCache( void );
-void tcp_cacheCleanupTCB( transmissionControlBlock_t* );
+void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* );
 void tcp_retransmission_cache_do_retransmissions( void );
 
 #endif

@@ -114,7 +114,7 @@ typedef struct transmissionControlBlock {
 
   ////////////////////
 
-} transmissionControlBlock_t;
+} DPAUCS_transmissionControlBlock_t;
 
 typedef struct {
   uint32_t
@@ -127,6 +127,10 @@ typedef struct {
 typedef struct {
   DPAUCS_stream_t* stream;
 } DPAUCS_tcp_transmission_t;
+
+
+extern DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
+
 
 void WEAK DPAUCS_tcpInit();
 void WEAK DPAUCS_tcpShutdown();

@@ -109,11 +109,11 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
   return true;
 }
 
-void removeFromCache( tcp_cacheEntry_t** entry ){
+static void removeFromCache( tcp_cacheEntry_t** entry ){
   DPAUCS_mempool_free( &mempool, (void**)entry );
 }
 
-bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tcb ){
+static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   if( !tcb || !tcb->cache.first || !*tcb->cache.first )
     return false;
   tcp_cacheEntry_t**const entry = tcb->cache.first;
@@ -146,6 +146,7 @@ bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tcb ){
       ret = true;
       info.TCBs[tcb_index] = 0;
       tcb->cache.first = e->next;
+      tcb->cache.first_SEQ = e->streamRealLength;
       if( !tcb->cache.first )
         tcb->cache.last = 0;
       for( size_t i=tcb_index+1, n=e->count; i < n; i++ ){
@@ -166,6 +167,35 @@ void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   while( tcp_cleanupCacheEntryCheckTCB( tcb ) );
 }
 
+static void tcp_cacheDiscardEntryOctets( tcp_cacheEntry_t**const entry, uint32_t size ){
+  (void)entry;
+  (void)size;
+}
+
+static void tcp_cleanupEntry( tcp_cacheEntry_t**const entry ){
+
+  tcp_cacheEntry_t*const e = *entry;
+  tcp_cache_entryInfo_t info;
+  getEntryInfo( &info, e );
+
+  uint32_t acknowledged_octets_min = ~0;
+  unsigned i = e->count;
+  while( i-- ){
+    DPAUCS_transmissionControlBlock_t* tcb = info.TCBs[i];
+    uint32_t acknowledged_octets = tcb->SND.UNA - tcb->cache.first_SEQ;
+    if( acknowledged_octets_min > acknowledged_octets )
+      acknowledged_octets_min = acknowledged_octets;
+  }
+
+  if( acknowledged_octets_min )
+  while( i-- ){
+    DPAUCS_transmissionControlBlock_t* tcb = info.TCBs[i];
+    tcb->cache.first_SEQ += acknowledged_octets_min;
+  }
+  tcp_cacheDiscardEntryOctets( entry, acknowledged_octets_min );
+
+}
+
 void tcp_cleanupCache( void ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
@@ -173,8 +203,9 @@ void tcp_cleanupCache( void ){
     if( it->state == TCP_CLOSED_STATE
      || it->state == TCP_SYN_RCVD_STATE
      || it->state == TCP_TIME_WAIT_STATE
+     || !it->cache.first
     ) continue;
-    
+    tcp_cleanupEntry( it->cache.first );
   }
 }
 

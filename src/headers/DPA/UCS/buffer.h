@@ -1,42 +1,51 @@
 #include <stddef.h>
+#include <stdbool.h>
 
-#define BUFFER_TEMPLATE(T) \
+#define DPAUCS_BUFFER_TEMPLATE(T) \
   typedef struct { \
+    DPAUCS_ringbuffer_state_t state; \
     T*const buffer; \
-    const size_t size; \
-    size_t read_offset; \
-    size_t write_offset; \
   }
 
-#define DEFINE_BUFFER(B,T,name,size) \
-  static B name ## _buffer[size]; \
-  T name = { name ## _buffer, size, 0, 0 }
+#define DPAUCS_DEFINE_BUFFER(B,T,name,size,inverse) \
+  static B name ## _buffer[size+1] = {0}; \
+  T name = { \
+    { \
+      size, { \
+        inverse ? size - 1 : 0, \
+        inverse ? size - 1 : 0 \
+      }, \
+      true, \
+      inverse \
+    }, \
+    name ## _buffer \
+  }
 
-#define BUFFER_SIZE(buf) ( (buf)->write_offset - (buf)->read_offset )
-#define BUFFER_EOF(buf) ( !BUFFER_SIZE(buf) )
-#define BUFFER_BEGIN(buf) ( &(buf)->buffer[ (buf)->read_offset % (buf)->size ] )
-#define BUFFER_END(buf) \
-  ( &(buf)->buffer[ \
-    ( (buf)->read_offset % (buf)->size ) > ( (buf)->write_offset % (buf)->size ) \
-      ? (buf)->write_offset % (buf)->size \
-      : (buf)->size \
-  ] )
-#define BUFFER_SKIP(buf,x) do { (buf)->read_offset += x; } while(0)
-#define BUFFER_GET(buf) (buf)->buffer[ (buf)->read_offset++ % (buf)->size ]
-#define BUFFER_AT(buf,offset) (buf)->buffer[ ( (buf)->read_offset + (offset) ) % (buf)->size ]
-#define BUFFER_FULL(buf) ( BUFFER_SIZE(buf) >= (buf)->size )
-#define BUFFER_PUT(buf,x) \
-  do { \
-    (buf)->buffer[ (buf)->write_offset % (buf)->size ] = x; \
-    (buf)->write_offset++; \
-  } while(0)
+#define DPAUCS_BUFFER_BEGIN(buf) \
+  ( &(buf)->buffer[ (buf)->state.inverse ? (buf)->state.offset.end : (buf)->state.offset.start ] )
+#define DPAUCS_BUFFER_SIZE(buf) DPAUCS_buffer_size(&(buf)->state)
+#define DPAUCS_BUFFER_EOF(buf) ( (buf)->state.empty && (buf)->state.offset.start == (buf)->state.offset.end )
+#define DPAUCS_BUFFER_SKIP(buf,len,reverse) DPAUCS_buffer_skip( &(buf)->state, len, reverse )
+#define DPAUCS_BUFFER_REVERSE(buf) do { (buf)->state.inverse = !(buf)->state.inverse; } while(0)
+#define DPAUCS_BUFFER_GET(buf) (buf)->buffer[ DPAUCS_buffer_increment(&(buf)->state,true) ]
+#define DPAUCS_BUFFER_AT(buf,off) (buf)->buffer[ \
+    ( ( (buf)->state.inverse ? (buf)->state.offset.end : (buf)->state.offset.start ) + (off) ) % (buf)->state.size \
+  ]
+#define DPAUCS_BUFFER_FULL(buf) ( !(buf)->state.empty && (buf)->state.offset.start == (buf)->state.offset.end )
+#define DPAUCS_BUFFER_PUT(buf,x) ( ( DPAUCS_BUFFER_FULL(buf) ) \
+    ? false : ( ( (buf)->buffer[ DPAUCS_buffer_increment(&(buf)->state,false) ] = (x) ), true ) \
+  )
+#define DPAUCS_BUFFER_GET_OFFSET(buf,readOrWrite) DPAUCS_buffer_get_offset( &(buf)->state, (readOrWrite) )
+#define DPAUCS_BUFFER_SET_OFFSET(buf,readOrWrite,offset) DPAUCS_buffer_set_offset( &(buf)->state, (readOrWrite), (offset) )
+#define DPAUCS_BUFFER_SIZE(buf) DPAUCS_buffer_size(&(buf)->state)
+#define DPAUCS_BUFFER_INCREMENT(buf) DPAUCS_buffer_increment( &(buf)->state, true )
 
-#define BUFF_MAX ( 1<<(sizeof(size_t)-1) )
+#define DPAUCS_BUFFER_MAX_SIZE ((size_t)~1)
 
-#define BUFFER_BUFFER_USERDEFINED(buf) ( BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
-#define BUFFER_BUFFER_TYPE(buf) ( BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )
-#define BUFFER_BUFFER_SIZE(buf) ( BUFFER_GET(buf).size )
-#define BUFFER_BUFFER_PTR(buf) ( BUFFER_GET(buf).ptr )
+#define DPAUCS_BUFFER_BUFFER_USERDEFINED(buf) ( DPAUCS_BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
+#define DPAUCS_BUFFER_BUFFER_TYPE(buf) ( DPAUCS_BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )
+#define DPAUCS_BUFFER_BUFFER_SIZE(buf) ( DPAUCS_BUFFER_GET(buf).size )
+#define DPAUCS_BUFFER_BUFFER_PTR(buf) ( DPAUCS_BUFFER_GET(buf).ptr )
 
 typedef enum {
   BUFFER_BUFFER,
@@ -51,7 +60,23 @@ typedef struct {
   const void* ptr;
 } bufferInfo_t;
 
-BUFFER_TEMPLATE(char) char_buffer_t;
-BUFFER_TEMPLATE(unsigned char) uchar_buffer_t;
-BUFFER_TEMPLATE(bufferInfo_t) buffer_buffer_t;
+typedef struct DPAUCS_ringbuffer_state {
+  const size_t size;
+  struct {
+    size_t start;
+    size_t end;
+  } offset;
+  bool empty;
+  bool inverse;
+} DPAUCS_ringbuffer_state_t;
+
+size_t DPAUCS_buffer_get_offset( DPAUCS_ringbuffer_state_t* state, bool readOrWrite );
+size_t DPAUCS_buffer_increment( DPAUCS_ringbuffer_state_t* state, bool readOrWrite );
+size_t DPAUCS_buffer_size( const DPAUCS_ringbuffer_state_t* state );
+void DPAUCS_buffer_set_offset( DPAUCS_ringbuffer_state_t* state, bool readOrWrite, size_t offset );
+void DPAUCS_buffer_skip( DPAUCS_ringbuffer_state_t* state, size_t s, bool reverse );
+
+DPAUCS_BUFFER_TEMPLATE(char) char_buffer_t;
+DPAUCS_BUFFER_TEMPLATE(unsigned char) uchar_buffer_t;
+DPAUCS_BUFFER_TEMPLATE(bufferInfo_t) buffer_buffer_t;
 

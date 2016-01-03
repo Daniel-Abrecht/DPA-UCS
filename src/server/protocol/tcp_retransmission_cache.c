@@ -35,8 +35,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
   tcp_cacheEntry_t e = {
     .count = count,
     .next = 0,
-    .charBufferSize   = BUFFER_SIZE( t->stream->buffer        ),
-    .bufferBufferSize = BUFFER_SIZE( t->stream->buffer_buffer ),
+    .charBufferSize   = DPAUCS_BUFFER_SIZE( t->stream->buffer        ),
+    .bufferBufferSize = DPAUCS_BUFFER_SIZE( t->stream->buffer_buffer ),
   };
   e.streamRealLength = DPAUCS_stream_getLength( t->stream, ~0, &e.streamIsLonger );
 
@@ -168,6 +168,7 @@ void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
 }
 
 static void tcp_cacheDiscardEntryOctets( tcp_cacheEntry_t**const entry, uint32_t size ){
+//  DPAUCS_mempool_realloc( mempool, (void**)entry,  );
   (void)entry;
   (void)size;
 }

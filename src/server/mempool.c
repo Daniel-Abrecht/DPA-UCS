@@ -42,12 +42,11 @@ bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size
     if(!freeSpaceEnd)
       freeSpaceEnd = (uint8_t*)mempool->firstEntry + mempool->size;
     size_t freeSpaceSize = (uintptr_t)freeSpaceEnd - (uintptr_t)freeSpaceBegin;
-    if(
-        freeSpaceBegin != mempool->largestContiguousFreeMemoryBegin
+    if( freeSpaceBegin != mempool->largestContiguousFreeMemoryBegin
      && secondLargestContiguousFreeMemorySize < freeSpaceSize
     ){
       secondLargestContiguousFreeMemoryBegin = freeSpaceBegin;
-      secondLargestContiguousFreeMemorySize = freeSpaceSize;
+      secondLargestContiguousFreeMemorySize  = freeSpaceSize;
     }
     if( 
         freeSpaceSize < entrySize

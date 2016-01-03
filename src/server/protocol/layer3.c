@@ -3,8 +3,8 @@
 #include <DPA/UCS/protocol/ip.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE);
-DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE);
+DPAUCS_DEFINE_BUFFER(unsigned char,uchar_buffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,true);
+DPAUCS_DEFINE_BUFFER(bufferInfo_t,buffer_buffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE,false);
 
 static DPAUCS_stream_t outputStream = {
   &outputStreamBuffer,
@@ -29,7 +29,7 @@ void DPAUCS_layer3_removeProtocolHandler(DPAUCS_layer3_protocolHandler_t* handle
     }
 }
 
-DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream(){
+DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream( void ){
   return &outputStream;
 }
 
@@ -38,7 +38,7 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
   switch( fromTo->source->type ){
 
 #ifdef USE_IPv4
-    case AT_IPv4: DPAUCS_IPv4_transmit( 
+    case AT_IPv4: DPAUCS_IPv4_transmit(
       stream,
       (const DPAUCS_IPv4_address_t*)fromTo->source,
       (const DPAUCS_IPv4_address_t*)fromTo->destination,

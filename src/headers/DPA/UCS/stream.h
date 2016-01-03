@@ -45,6 +45,6 @@ bool DPAUCS_stream_reverseSkipEntry( DPAUCS_stream_t* stream );
 /*-----------------------------------------*/
 
 
-#define DPAUCS_stream_eof(s) BUFFER_EOF((s)->buffer_buffer)
+#define DPAUCS_stream_eof(s) DPAUCS_BUFFER_EOF((s)->buffer_buffer)
 
 #endif

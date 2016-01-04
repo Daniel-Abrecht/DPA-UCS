@@ -36,7 +36,7 @@ size_t DPAUCS_stream_raw_getLength( const DPAUCS_stream_raw_t* stream, size_t ma
 void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size );
 
 /* Be careful with the following functions */
-bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw );
+bool DPAUCS_stream_to_raw_buffer( const DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw );
 void DPAUCS_stream_prepare_from_buffer( DPAUCS_stream_raw_t* raw, size_t count, void(*func)( DPAUCS_stream_t* stream ) );
 void DPAUCS_stream_swapEntries( streamEntry_t* a, streamEntry_t* b  );
 streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream );

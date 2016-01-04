@@ -11,34 +11,18 @@ void DPAUCS_stream_reset( DPAUCS_stream_t* stream ){
 
 void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
   bufferInfo_t* binf = DPAUCS_BUFFER_BEGIN(stream->buffer_buffer);
-  sros->bufferOffset = 0;
-  switch( binf->type ){
-    case BUFFER_BUFFER: {
-      sros->bufferOffset = DPAUCS_BUFFER_GET_OFFSET( (uchar_buffer_t*)binf->ptr, true );
-    } break;
-    default: break;
-  }
   sros->bufferBufferOffset = DPAUCS_BUFFER_GET_OFFSET( stream->buffer_buffer, true );
   sros->bufferBufferInfoOffset = binf->offset;
 }
 
 void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros ){
-  DPAUCS_BUFFER_BEGIN(stream->buffer_buffer)->offset = 0;
   DPAUCS_BUFFER_SET_OFFSET( stream->buffer_buffer, true, sros->bufferBufferOffset );
-  bufferInfo_t* binf = DPAUCS_BUFFER_BEGIN(stream->buffer_buffer);
-  switch( binf->type ){
-    case BUFFER_BUFFER: {
-      DPAUCS_BUFFER_SET_OFFSET( (uchar_buffer_t*)binf->ptr, true, sros->bufferOffset );
-    } break;
-    default: break;
-  }
-  binf->offset = sros->bufferBufferInfoOffset;
+  DPAUCS_BUFFER_BEGIN(stream->buffer_buffer)->offset = sros->bufferBufferInfoOffset;
 }
 
 void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
   sros->bufferOffset = DPAUCS_BUFFER_GET_OFFSET( stream->buffer, false );
   sros->bufferBufferOffset = DPAUCS_BUFFER_GET_OFFSET( stream->buffer_buffer, false );
-  sros->bufferBufferInfoOffset = 0;
 }
 
 void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros ){
@@ -61,40 +45,37 @@ streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream ){
 bool DPAUCS_stream_skipEntry( DPAUCS_stream_t* stream ){
   if(DPAUCS_BUFFER_EOF( stream->buffer_buffer ))
     return false;
-  DPAUCS_BUFFER_GET(stream->buffer_buffer).offset = 0;
+  DPAUCS_BUFFER_INCREMENT(stream->buffer_buffer);
   return true;
 }
 
 bool DPAUCS_stream_reverseSkipEntry( DPAUCS_stream_t* stream ){
-  DPAUCS_BUFFER_BEGIN( stream->buffer_buffer )->offset = 0;
+  //
   DPAUCS_BUFFER_SKIP( stream->buffer_buffer, 1, true );
   return true;
 }
 
-bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw ){
+bool DPAUCS_stream_to_raw_buffer( const DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw ){
 
-  DPAUCS_stream_offsetStorage_t sros;
-  DPAUCS_stream_saveReadOffset( &sros, stream );
+  uchar_buffer_t cb = *stream->buffer;
+  buffer_buffer_t bb = *stream->buffer_buffer;
 
-  uchar_buffer_t* cb = stream->buffer;
-  buffer_buffer_t* bb = stream->buffer_buffer;
-
-  if( DPAUCS_BUFFER_SIZE(cb) > raw->charBufferSize || DPAUCS_BUFFER_SIZE(bb) > raw->bufferBufferSize )
+  if( DPAUCS_BUFFER_SIZE(&cb) > raw->charBufferSize || DPAUCS_BUFFER_SIZE(&bb) > raw->bufferBufferSize )
     return false;
 
   { // Raw char buffer in reverse order, allows to avoid some memory movements elsewere
     unsigned char* c = raw->charBuffer + raw->charBufferSize;
-    while(!DPAUCS_BUFFER_EOF( cb ))
-      *--c = DPAUCS_BUFFER_GET( cb );
+    while(!DPAUCS_BUFFER_EOF( &cb ))
+      *--c = DPAUCS_BUFFER_GET( &cb );
   }
 
   {
     bufferInfo_t* b = raw->bufferBuffer;
-    while(!DPAUCS_BUFFER_EOF( bb )){
-      *b = DPAUCS_BUFFER_GET( bb );
+    while(!DPAUCS_BUFFER_EOF( &bb )){
+      *b = DPAUCS_BUFFER_GET( &bb );
       switch( b->type ){
         case BUFFER_BUFFER: {
-          if( b->ptr == cb )
+          if( b->ptr == stream->buffer )
             b->ptr = 0;
         } break;
         default: break;
@@ -102,8 +83,6 @@ bool DPAUCS_stream_to_raw_buffer( DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* 
       b++;
     }
   }
-
-  DPAUCS_stream_restoreReadOffset( stream, &sros );
 
   return true;
 }
@@ -149,12 +128,9 @@ static inline size_t stream_read_from_buffer( bufferInfo_t* info, void* p, size_
   unsigned char* uch = p;
   size_t size = info->size - info->offset;
   uchar_buffer_t* buffer = (uchar_buffer_t*)info->ptr;
-  size_t i, n;
-  for(
-    i = 0, n = size < max_size ? size : max_size;
-    i < n;
-    i++
-  ) *(uch++) = DPAUCS_BUFFER_AT(buffer,i+info->offset);
+  size_t i;
+  for( i = size < max_size ? size : max_size; i--; )
+    *(uch++) = DPAUCS_BUFFER_GET(buffer);
   info->offset += i;
   return i;
 }
@@ -184,7 +160,6 @@ size_t DPAUCS_stream_read( DPAUCS_stream_t* stream, void* p, size_t max_size ){
     n -= size;
     p = (char*)p+size;
     if( info->offset >= info->size ){
-      info->offset = 0;
       DPAUCS_BUFFER_INCREMENT(stream->buffer_buffer);
     }
   }
@@ -194,19 +169,18 @@ size_t DPAUCS_stream_read( DPAUCS_stream_t* stream, void* p, size_t max_size ){
 void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size ){
   while( !DPAUCS_BUFFER_EOF(stream->buffer_buffer) ){
     bufferInfo_t* info = DPAUCS_BUFFER_BEGIN(stream->buffer_buffer);
-    if( info->size <= size ){
-      info->offset = 0;
-      size -= info->size;
+    if( info->size - info->offset <= size ){
+      size -= info->size - info->offset;
       DPAUCS_BUFFER_INCREMENT( stream->buffer_buffer );
     }else{
-      info->offset = size;
+      info->offset += size;
       break;
     }
   }
 }
 
 /*********************************************************************************************
-* A stream can contain more than SIZE_MAX bytes of datas which would leave to an overflow if *
+* A stream can contain more than SIZE_MAX bytes of datas which would lead to an overflow if  *
 * not preventet. I solved this problem by Specifying an upper limit for the return value and *
 * an returning an information if there would have been more datas.                           *
 **********************************************************************************************/

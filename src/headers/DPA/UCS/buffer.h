@@ -7,18 +7,19 @@
     T*const buffer; \
   }
 
-#define DPAUCS_DEFINE_BUFFER(B,T,name,size,inverse) \
-  static B name ## _buffer[size+1] = {0}; \
+#define DPAUCS_DEFINE_BUFFER(B,T,name,S,I) \
+  static B name ## _buffer[S+1]; \
   T name = { \
-    { \
-      size, { \
-        inverse ? size - 1 : 0, \
-        inverse ? size - 1 : 0 \
+    .state = { \
+      .size = S, \
+      .offset = { \
+        .start = I ? S - 1 : 0, \
+        .end   = I ? S - 1 : 0 \
       }, \
-      true, \
-      inverse \
+      .empty = true, \
+      .inverse = I \
     }, \
-    name ## _buffer \
+    .buffer = name ## _buffer \
   }
 
 #define DPAUCS_BUFFER_BEGIN(buf) \

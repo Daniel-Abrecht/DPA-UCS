@@ -87,11 +87,69 @@ bool DPAUCS_stream_to_raw_buffer( const DPAUCS_stream_t* stream, DPAUCS_stream_r
   return true;
 }
 
-void DPAUCS_stream_prepare_from_buffer( DPAUCS_stream_raw_t* raw, size_t count, void(*func)( DPAUCS_stream_t* stream ) ){
+void DPAUCS_raw_stream_truncate( DPAUCS_stream_raw_t* raw, size_t size ){
+  size_t cbskip = 0;
+  bufferInfo_t *bb, *end;
+  for( bb=raw->bufferBuffer, end=bb+raw->bufferBufferSize; bb<end; bb++ ){
+    if( !size ) break;
+    if( bb->size > size ){
+      switch( bb->type ){
+        case BUFFER_BUFFER: cbskip  += size; break;
+        case BUFFER_ARRAY : *(char**)&bb->ptr += size; break;
+        default: break;
+      }
+      bb->size -= size;
+    }else{
+      if( bb->type == BUFFER_BUFFER )
+        cbskip += bb->size;
+      size -= bb->size;
+    }
+  }
+  raw->bufferBufferSize -= bb - raw->bufferBuffer;
+  raw->bufferBuffer = bb;
+  if( raw->charBufferSize >= cbskip ){
+    raw->charBufferSize -= cbskip;
+  }else{
+    raw->charBufferSize = 0;
+  }
+}
 
-  (void)raw;
+void DPAUCS_raw_stream_from( DPAUCS_stream_raw_t* raw, size_t count, void(*func)(DPAUCS_stream_t*,void*), void* ptr ){
+
   (void)count;
-  (void)func;
+
+  uchar_buffer_t buffer = {
+    .state = {
+      .size = raw->charBufferSize,
+      .offset = {
+        .start = 0,
+        .end   = 0
+      },
+      .empty = !raw->charBufferSize,
+      .inverse = true
+    },
+    .buffer = raw->charBuffer
+  };
+
+  buffer_buffer_t buffer_buffer = {
+    .state = {
+      .size = raw->bufferBufferSize,
+      .offset = {
+        .start = 0,
+        .end   = 0
+      },
+      .empty = !raw->bufferBufferSize,
+      .inverse = true
+    },
+    .buffer = raw->bufferBuffer
+  };
+
+  DPAUCS_stream_t stream = {
+    .buffer = &buffer,
+    .buffer_buffer = &buffer_buffer
+  };
+
+  (*func)( &stream, ptr );
 
 }
 

@@ -168,6 +168,7 @@ void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
 }
 
 static void tcp_cacheDiscardEntryOctets( tcp_cacheEntry_t**const entry, uint32_t size ){
+//  DPAUCS_stream_prepare_from_buffer(  );
 //  DPAUCS_mempool_realloc( mempool, (void**)entry,  );
   (void)entry;
   (void)size;

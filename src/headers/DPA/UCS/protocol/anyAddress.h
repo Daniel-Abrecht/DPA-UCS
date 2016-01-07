@@ -4,7 +4,7 @@
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/IPv4.h>
 
-typedef union {
+typedef union DPAUCS_any_logicAddress {
   DPAUCS_logicAddress_t address;
 #ifdef USE_IPv4
   DPAUCS_logicAddress_IPv4_t IPv4;

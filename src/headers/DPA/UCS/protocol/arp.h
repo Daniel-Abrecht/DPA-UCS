@@ -27,6 +27,6 @@ typedef PACKED1 struct PACKED2 {
 
 DPAUCS_address_t* DPAUCS_arpCache_register( DPAUCS_address_t* );
 bool DPAUCS_arpCache_deregister( DPAUCS_address_t* );
-void DPAUCS_arp_handler( DPAUCS_packet_info* info );
+void DPAUCS_arp_handler( struct DPAUCS_packet_info* info );
 
 #endif

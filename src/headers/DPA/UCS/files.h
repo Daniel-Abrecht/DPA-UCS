@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <DPA/UCS/ressource.h>
 
-typedef struct {
+typedef struct DPAUCS_ressource_file {
   DPAUCS_ressource_entry_t entry;
   const DP_FLASH char* mime;
   size_t size;

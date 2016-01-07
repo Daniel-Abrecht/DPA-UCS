@@ -35,7 +35,7 @@
 #define ANY_ADDRESS 0
 #define AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
 
-typedef enum {
+typedef enum DPAUCS_address_types {
 #ifdef USE_IPv4
   AT_IPv4 = 1<<0,
 #endif
@@ -44,26 +44,26 @@ typedef enum {
 #endif
 } DPAUCS_address_types_t;
 
-typedef struct {
+typedef struct DPAUCS_logicAddress {
   DPAUCS_address_types_t type;
 } DPAUCS_logicAddress_t;
 
-typedef struct {
+typedef struct DPAUCS_address {
   uint8_t mac[6];
   union {
-    DPAUCS_address_types_t type;
+    enum DPAUCS_address_types type;
     DPAUCS_logicAddress_t logicAddress;
   };
 } DPAUCS_address_t;
 
-typedef struct {
-  const DPAUCS_logicAddress_t* source;
-  const DPAUCS_logicAddress_t* destination;
+typedef struct DPAUCS_logicAddress_pair {
+  const struct DPAUCS_logicAddress* source;
+  const struct DPAUCS_logicAddress* destination;
 } DPAUCS_logicAddress_pair_t;
 
-typedef struct {
-  DPAUCS_address_t* source;
-  DPAUCS_address_t* destination;
+typedef struct DPAUCS_address_pair {
+  struct DPAUCS_address* source;
+  struct DPAUCS_address* destination;
 } DPAUCS_address_pair_t;
 
 #define DPAUCS_TYPE_CHECK(T,V) \

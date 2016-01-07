@@ -5,7 +5,7 @@
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/helper_macros.h>
 
-typedef PACKED1 struct PACKED2 {
+typedef PACKED1 struct PACKED2 DPAUCS_IPv6 {
   uint8_t version_tafficClass1;
   uint8_t tafficClass2_flowLabel1;
   uint16_t flowLabel2;

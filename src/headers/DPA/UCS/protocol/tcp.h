@@ -21,7 +21,7 @@ DPAUCS_MODUL( tcp );
 
 #define DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE 1460
 
-typedef PACKED1 struct PACKED2 {
+typedef PACKED1 struct PACKED2 DPAUCS_tcp {
   uint16_t source;
   uint16_t destination;
   uint32_t sequence;
@@ -35,7 +35,7 @@ typedef PACKED1 struct PACKED2 {
   uint16_t urgentPointer;
 } DPAUCS_tcp_t;
 
-enum tcp_flags {
+enum DPAUCS_tcp_flags {
   TCP_FLAG_FIN = 1<<0,
   TCP_FLAG_SYN = 1<<1,
   TCP_FLAG_RST = 1<<2,
@@ -61,17 +61,15 @@ enum tcp_flags {
 
 #define DPAUCS_EVAL(X) X
 
-typedef enum {
+typedef enum DPAUCS_TCP_state {
   TCP_STATES(DPAUCS_EVAL)
-} TCP_state_t;
+} DPAUCS_TCP_state_t;
 
-typedef struct DPAUCS_tcp_fragment DPAUCS_tcp_fragment_t;
-
-typedef struct transmissionControlBlock {
+typedef struct DPAUCS_transmissionControlBlock {
 
   // TCP stuff //
 
-  TCP_state_t state;
+  enum DPAUCS_TCP_state state;
 
   struct {
     uint32_t
@@ -94,14 +92,14 @@ typedef struct transmissionControlBlock {
   // internal stuff //
 
   void* currentId;
-  DPAUCS_service_t* service;
+  struct DPAUCS_service* service;
 
   struct {
-    DPAUCS_tcp_fragment_t **first, **last;
+    struct DPAUCS_tcp_fragment **first, **last;
   } fragments;
 
   struct {
-    struct tcp_cacheEntry **first, **last;
+    struct DPAUCS_tcp_cacheEntry **first, **last;
     uint32_t first_SEQ; // Sequence number of next segment to be sent
     adelay_t last_transmission; // If there was no previous transmission, this must be zero. Otherwise, it mustn't be zero.
     struct { // RST must be handled specially, PUSH and URG are related to the segment in the retransmission cache.
@@ -116,16 +114,16 @@ typedef struct transmissionControlBlock {
 
 } DPAUCS_transmissionControlBlock_t;
 
-typedef struct {
+typedef struct DPAUCS_tcp_segment {
   uint32_t
     SEQ,
     LEN
   ;
   uint16_t flags;
-} tcp_segment_t;
+} DPAUCS_tcp_segment_t;
 
-typedef struct {
-  DPAUCS_stream_t* stream;
+typedef struct DPAUCS_tcp_transmission {
+  struct DPAUCS_stream* stream;
 } DPAUCS_tcp_transmission_t;
 
 

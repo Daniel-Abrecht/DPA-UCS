@@ -70,7 +70,7 @@ bool DPAUCS_arpCache_deregister( DPAUCS_address_t* addr ){
   return true;
 }
 
-void DPAUCS_arp_handler( DPAUCS_packet_info* info ){
+void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
 
   DPAUCS_arp_t* arp = info->payload;
 
@@ -112,7 +112,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info* info ){
       switch( btoh16( arp->oper ) ){
         case ARP_REQUEST: { // request recived, make a response
 
-          DPAUCS_packet_info infReply = *info;
+          DPAUCS_packet_info_t infReply = *info;
           // set destination mac of ethernet frame to source mac of recived frame 
           memcpy(infReply.destination_mac,info->source_mac,6);
 

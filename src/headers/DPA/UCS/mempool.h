@@ -15,13 +15,13 @@ typedef size_t uintptr_t;
 #define MAX_ALIGN alignof(max_align_t)
 #else
 struct maxAlignHelperStruct {
-    long double a;
-    void* g;
-    long d;
-    double b;
-    float c;
-    int e;
-    short f;
+  long double a;
+  void* g;
+  long d;
+  double b;
+  float c;
+  int e;
+  short f;
 };
 #define MAX_ALIGN DPAUCS_ALIGNOF(struct maxAlignHelperStruct)
 #endif
@@ -45,7 +45,6 @@ struct maxAlignHelperStruct {
 #define DPAUCS_MEMPOOL_SIZE( memory ) \
   DPAUCS_GET_MEMPOOL_ENTRY( memory )->size
 
-struct DPAUCS_mempoolEntry;
 typedef struct DPAUCS_mempoolEntry {
   void** reference;
   size_t size;

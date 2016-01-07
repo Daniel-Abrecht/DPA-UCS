@@ -4,22 +4,28 @@
 #include <stdbool.h>
 #include <DPA/UCS/buffer.h>
 
-typedef struct {
-  uchar_buffer_t* buffer;
-  buffer_buffer_t* buffer_buffer;
+typedef struct DPAUCS_stream {
+  struct DPAUCS_uchar_buffer* buffer;
+  struct DPAUCS_buffer_buffer* buffer_buffer;
 } DPAUCS_stream_t;
 
-typedef struct {
+typedef struct DPAUCS_stream_offsetStorage {
   size_t bufferOffset;
   size_t bufferBufferOffset;
   size_t bufferBufferInfoOffset;
 } DPAUCS_stream_offsetStorage_t;
 
-typedef bufferInfo_t streamEntry_t;
+typedef DPAUCS_bufferInfo_t DPAUCS_streamEntry_t;
 
-typedef struct {
+typedef struct DPAUCS_stream_stream_raw_buffer_entry {
+  enum DPAUCS_buffer_type type;
+  size_t size;
+  void* ptr;
+} DPAUCS_stream_stream_raw_buffer_entry_t;
+
+typedef struct DPAUCS_stream_raw {
   size_t bufferBufferSize, charBufferSize;
-  bufferInfo_t* bufferBuffer;
+  struct DPAUCS_stream_stream_raw_buffer_entry* bufferBuffer;
   unsigned char* charBuffer;
 } DPAUCS_stream_raw_t;
 
@@ -38,8 +44,8 @@ void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size );
 /* Be careful with the following functions */
 bool DPAUCS_stream_to_raw_buffer( const DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw );
 void DPAUCS_stream_prepare_from_buffer( DPAUCS_stream_raw_t* raw, size_t count, void(*func)( DPAUCS_stream_t* stream ) );
-void DPAUCS_stream_swapEntries( streamEntry_t* a, streamEntry_t* b  );
-streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream );
+void DPAUCS_stream_swapEntries( DPAUCS_streamEntry_t* a, DPAUCS_streamEntry_t* b  );
+DPAUCS_streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream );
 bool DPAUCS_stream_skipEntry( DPAUCS_stream_t* stream );
 bool DPAUCS_stream_reverseSkipEntry( DPAUCS_stream_t* stream );
 /*-----------------------------------------*/

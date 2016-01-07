@@ -26,12 +26,12 @@ static void tcp_receiveFailtureHandler( void* );
 static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlBlock_t* );
 static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* );
 static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb );
-void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, tcp_segment_t* SEG );
+void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG );
 void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
 static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
 static bool tcp_connectionUnstable( DPAUCS_transmissionControlBlock_t* stcb );
-static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, TCP_state_t state );
+static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_TCP_state_t state );
 static DPAUCS_tcp_transmission_t tcp_begin( void );
 bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags, size_t* size, uint32_t* SEQs );
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
@@ -129,7 +129,7 @@ void printFrame( DPAUCS_tcp_t* tcp ){
   );
 }
 
-void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, tcp_segment_t* SEG ){
+void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG ){
   memset( tcp, 0, sizeof(*tcp) );
   tcp->destination = htob16( tcb->destPort );
   tcp->source = htob16( tcb->srcPort );
@@ -189,7 +189,7 @@ static DPAUCS_tcp_transmission_t tcp_begin( void ){
   };
 }
 
-static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, TCP_state_t state ){
+static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_TCP_state_t state ){
   if( tcb->state == state )
     return false;
   static const char* stateNames[] = {TCP_STATES(DPAUCS_STRINGIFY)};
@@ -232,7 +232,7 @@ bool tcp_transmit(
 ){
 
   // get pointer to entry in stream which represents tcp header
-  streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( transmission->stream );
+  DPAUCS_streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( transmission->stream );
   DPAUCS_stream_skipEntry( transmission->stream ); // Skip tcp header
 
   size_t headersize = tcpHeaderEntry->size; // get size of TCP Header
@@ -290,7 +290,7 @@ bool tcp_transmit(
       size_t data_length = segmentLength - tcp_flaglength( flags );
       size_t packet_length = data_length + headersize;
 
-/*      tcp_segment_t tmp_segment = {
+/*      DPAUCS_tcp_segment_t tmp_segment = {
         .LEN = segmentLength,
         .SEQ = SEQ + alreadyAcknowledged + offset,
         .flags = flags
@@ -298,10 +298,10 @@ bool tcp_transmit(
 //      tcp_from_tcb( transmission->tcp, tcb[i], &tmp_segment );
       if( !offset )
         DPAUCS_stream_seek( transmission->stream, alreadyAcknowledged );
-      streamEntry_t* dataEntry = DPAUCS_stream_getEntry( transmission->stream );
+      DPAUCS_streamEntry_t* dataEntry = DPAUCS_stream_getEntry( transmission->stream );
       size_t dataEntryOffset = dataEntry->offset;
       DPAUCS_stream_reverseSkipEntry( transmission->stream );
-      streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
+      DPAUCS_streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( transmission->stream );
       DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
       dataEntry->offset = dataEntryOffset;
 //      tcp_calculateChecksum( tcb[i], transmission->tcp, transmission->stream, packet_length );
@@ -380,7 +380,7 @@ static inline void tcp_init_variables(
   void* id,
   DPAUCS_address_t* from,
   DPAUCS_address_t* to,
-  tcp_segment_t* SEG,
+  DPAUCS_tcp_segment_t* SEG,
   DPAUCS_transmissionControlBlock_t* tcb,
   uint32_t* ACK
 ){
@@ -400,7 +400,7 @@ static inline bool tcp_is_tcb_valid( DPAUCS_transmissionControlBlock_t* tcb ){
       && DPAUCS_isValidHostAddress( &tcb->fromTo.destination->logicAddress );
 }
 
-static inline bool tcp_get_recivewindow_data_offset( DPAUCS_transmissionControlBlock_t* tcb, tcp_segment_t* SEG, uint16_t* offset ){
+static inline bool tcp_get_recivewindow_data_offset( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG, uint16_t* offset ){
   uint32_t off = tcb->RCV.NXT - SEG->SEQ;
   *offset = off;
   return off + 1 <= tcb->RCV.WND;
@@ -417,7 +417,7 @@ static bool tcp_processPacket(
 
   // Initialisation and checks //
 
-  tcp_segment_t SEG;
+  DPAUCS_tcp_segment_t SEG;
   DPAUCS_transmissionControlBlock_t tmp_tcb;
 
   DPAUCS_tcp_t* tcp = last_payload;
@@ -595,7 +595,7 @@ static bool tcp_processHeader(
     return false;
   length -= headerLength;
 
-  tcp_segment_t SEG;
+  DPAUCS_tcp_segment_t SEG;
   DPAUCS_transmissionControlBlock_t tcb;
   uint32_t ACK;
 

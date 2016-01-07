@@ -162,7 +162,7 @@ DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAdd
     return 0;
 }
 
-void getPacketInfo( DPAUCS_packet_info* info, DPAUCS_packet_t* packet ){
+void getPacketInfo( DPAUCS_packet_info_t* info, DPAUCS_packet_t* packet ){
 
   memset(info,0,sizeof(*info));
 
@@ -216,7 +216,7 @@ void DPAUCS_doNextTask( void ){
       && memcmp(packet->data.dest,mac,6) // not my mac
     ) break; // ignore packet
 
-    DPAUCS_packet_info info;
+    DPAUCS_packet_info_t info;
 
     getPacketInfo(&info,packet);
 
@@ -240,7 +240,7 @@ void DPAUCS_doNextTask( void ){
 
 }
 
-void DPAUCS_preparePacket( DPAUCS_packet_info* info ){
+void DPAUCS_preparePacket( DPAUCS_packet_info_t* info ){
 
   DPAUCS_packet_t* packet = &nextPacketToSend;
 
@@ -264,7 +264,7 @@ void DPAUCS_preparePacket( DPAUCS_packet_info* info ){
 
 }
 
-void DPAUCS_sendPacket( DPAUCS_packet_info* info, uint16_t size ){
+void DPAUCS_sendPacket( DPAUCS_packet_info_t* info, uint16_t size ){
   size += (uint8_t*)info->payload - nextPacketToSend.data.raw; // add ethernetheadersize
   nextPacketToSend.size = size;
   DPAUCS_ethSend( nextPacketToSend.data.raw, size );

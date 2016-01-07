@@ -1,11 +1,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define DPAUCS_BUFFER_TEMPLATE(T) \
-  typedef struct { \
-    DPAUCS_ringbuffer_state_t state; \
+#define DPAUCS_BUFFER_TEMPLATE(T,NAME) \
+  typedef struct NAME { \
+    struct DPAUCS_ringbuffer_state state; \
     T*const buffer; \
-  }
+  } NAME ## _t
 
 #define DPAUCS_DEFINE_BUFFER(B,T,name,S,I) \
   static B name ## _buffer[S+1]; \
@@ -48,18 +48,18 @@
 #define DPAUCS_BUFFER_BUFFER_SIZE(buf) ( DPAUCS_BUFFER_GET(buf).size )
 #define DPAUCS_BUFFER_BUFFER_PTR(buf) ( DPAUCS_BUFFER_GET(buf).ptr )
 
-typedef enum {
+typedef enum DPAUCS_buffer_type {
   BUFFER_BUFFER,
   BUFFER_ARRAY,
   BUFFER_TYPE_SIZE
-} buffer_type;
+} buffer_type_t;
 
-typedef struct {
-  buffer_type type;
+typedef struct DPAUCS_bufferInfo {
+  enum DPAUCS_buffer_type type;
   size_t size;
   size_t offset;
-  const void* ptr;
-} bufferInfo_t;
+  void* ptr;
+} DPAUCS_bufferInfo_t;
 
 typedef struct DPAUCS_ringbuffer_state {
   const size_t size;
@@ -77,7 +77,7 @@ size_t DPAUCS_buffer_size( const DPAUCS_ringbuffer_state_t* state );
 void DPAUCS_buffer_set_offset( DPAUCS_ringbuffer_state_t* state, bool readOrWrite, size_t offset );
 void DPAUCS_buffer_skip( DPAUCS_ringbuffer_state_t* state, size_t s, bool reverse );
 
-DPAUCS_BUFFER_TEMPLATE(char) char_buffer_t;
-DPAUCS_BUFFER_TEMPLATE(unsigned char) uchar_buffer_t;
-DPAUCS_BUFFER_TEMPLATE(bufferInfo_t) buffer_buffer_t;
+DPAUCS_BUFFER_TEMPLATE( char, DPAUCS_char_buffer );
+DPAUCS_BUFFER_TEMPLATE( unsigned char, DPAUCS_uchar_buffer );
+DPAUCS_BUFFER_TEMPLATE( struct DPAUCS_bufferInfo, DPAUCS_buffer_buffer );
 

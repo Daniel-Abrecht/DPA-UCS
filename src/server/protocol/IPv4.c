@@ -5,7 +5,7 @@
 #include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/ethtypes.h>
 
-void DPAUCS_IPv4_handler( DPAUCS_packet_info* info, DPAUCS_IPv4_t* ip ){
+void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
   if( btoh16(ip->length) > info->size )
     return;
 
@@ -164,8 +164,8 @@ void DPAUCS_IPv4_transmit(
   while( !DPAUCS_stream_eof(inputStream) && offset < max_size ){
 
     // prepare next packet
-    DPAUCS_packet_info p;
-    memset( &p, 0, sizeof(DPAUCS_packet_info) );
+    DPAUCS_packet_info_t p;
+    memset( &p, 0, sizeof(DPAUCS_packet_info_t) );
     p.type = ETH_TYPE_IP_V4;
     memcpy( p.destination_mac, dst->address.mac, 6 );
     memcpy( p.source_mac, src->address.mac, 6 );

@@ -32,8 +32,8 @@ void DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint
 void DPAUCS_doNextTask( void );
 
 // Internally used stuff //
-void DPAUCS_preparePacket( DPAUCS_packet_info* info );
-void DPAUCS_sendPacket( DPAUCS_packet_info* info, uint16_t size );
+void DPAUCS_preparePacket( struct DPAUCS_packet_info* info );
+void DPAUCS_sendPacket( struct DPAUCS_packet_info* info, uint16_t size );
 ///////////////////////////
 
 #endif

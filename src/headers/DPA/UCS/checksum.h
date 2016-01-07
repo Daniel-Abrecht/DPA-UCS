@@ -3,9 +3,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <DPA/UCS/stream.h>
+
+struct DPAUCS_stream;
 
 uint16_t checksum( void*, size_t );
-uint16_t checksumOfStream( DPAUCS_stream_t*, size_t );
+uint16_t checksumOfStream( struct DPAUCS_stream*, size_t );
 
 #endif

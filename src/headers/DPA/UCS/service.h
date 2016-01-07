@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <DPA/UCS/helper_macros.h>
 
-typedef struct {
+typedef struct DPAUCS_service {
   uint8_t tos;
   void(*start)();
   bool(*onopen)( void* cid );

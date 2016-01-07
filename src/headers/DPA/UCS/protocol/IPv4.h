@@ -1,19 +1,19 @@
 #if !defined( IPv4_H ) && defined( USE_IPv4 )
 #define IPv4_H
 
+#include <string.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/stream.h>
-#include <string.h>
 #include <DPA/UCS/checksum.h>
 #include <DPA/UCS/binaryUtils.h>
 #include <DPA/UCS/protocol/address.h>
 
-enum DPAUCS_IPv4_flags {
+typedef enum DPAUCS_IPv4_flags {
   IPv4_FLAG_MORE_FRAGMENTS = 1<<0,
   IPv4_FLAG_DONT_FRAGMENT  = 1<<1
-};
+} DPAUCS_IPv4_flags_t;
 
-typedef PACKED1 struct PACKED2 {
+typedef PACKED1 struct PACKED2 DPAUCS_IPv4 {
   uint8_t version_ihl; // 4bit version | 4bit IP Header Length
   uint8_t tos; // Type of Service
   uint16_t length; // Total Length
@@ -28,29 +28,29 @@ typedef PACKED1 struct PACKED2 {
   uint32_t destination; // destination IP address
 } DPAUCS_IPv4_t;
 
-typedef struct {
+typedef struct DPAUCS_IPv4_address {
   DPAUCS_address_t address;
   uint32_t ip;
 } DPAUCS_IPv4_address_t;
 
-typedef struct {
+typedef struct DPAUCS_logicAddress_IPv4 {
   union {
-    DPAUCS_address_types_t type;
+    enum DPAUCS_address_types type;
     DPAUCS_logicAddress_t logicAddress;
   };
   uint32_t address;
 } DPAUCS_logicAddress_IPv4_t;
 
 void DPAUCS_IPv4_transmit(
-  DPAUCS_stream_t* inputStream,
-  const DPAUCS_IPv4_address_t* src,
-  const DPAUCS_IPv4_address_t* dst,
+  struct DPAUCS_stream* inputStream,
+  const struct DPAUCS_IPv4_address* src,
+  const struct DPAUCS_IPv4_address* dst,
   uint8_t type,
   size_t max_size
 );
 
 void DPAUCS_IPv4_handler(
-  DPAUCS_packet_info* info,
+  struct DPAUCS_packet_info* info,
   DPAUCS_IPv4_t* ip
 );
 

@@ -10,7 +10,7 @@
 #define PACKET_MAX_PAYLOAD 1500
 #define IEEE_802_1Q_TPID_CONST 0x8100
 
-typedef PACKED1 struct PACKED2 {
+typedef PACKED1 struct PACKED2 DPAUCS_LLC {
   uint8_t dsap; // ???
   uint8_t ssap; // ???
   PACKED1 union PACKED2 {
@@ -31,9 +31,9 @@ typedef PACKED1 struct PACKED2 {
       };
     } extended_control;
   };
-} DPAUCS_LLC;
+} DPAUCS_LLC_t;
 
-typedef struct { // Ethernet frame
+typedef struct DPAUCS_packet { // Ethernet frame
   uint16_t size;
   union {
     uint8_t raw[PACKET_SIZE_WITH_CHECKSUM];
@@ -53,7 +53,7 @@ typedef struct { // Ethernet frame
           };
           PACKED1 union PACKED2 {
             uint8_t payload[PACKET_MAX_PAYLOAD]; // type was specified before
-            DPAUCS_LLC llc; // length was specified before
+            DPAUCS_LLC_t llc; // length was specified before
           };
         } vlan; // IEEE_802_1Q
         PACKED1 struct PACKED2 {
@@ -64,7 +64,7 @@ typedef struct { // Ethernet frame
           };
           PACKED1 union PACKED2 {
             uint8_t payload[PACKET_MAX_PAYLOAD]; // type was specified before
-            DPAUCS_LLC llc; // length was specified before
+            DPAUCS_LLC_t llc; // length was specified before
           };
         };
       };
@@ -72,7 +72,7 @@ typedef struct { // Ethernet frame
   } data;
 } DPAUCS_packet_t;
 
-typedef struct {
+typedef struct DPAUCS_packet_info {
   uint8_t destination_mac[6];
   uint8_t source_mac[6];
   bool is_vlan;
@@ -80,8 +80,8 @@ typedef struct {
   uint16_t type;
   uint16_t size;
   void* payload;
-  DPAUCS_LLC* llc;
+  struct DPAUCS_LLC* llc;
   bool invalid;
-} DPAUCS_packet_info;
+} DPAUCS_packet_info_t;
 
 #endif

@@ -9,7 +9,7 @@
 DPAUCS_MODUL( ressource );
 
 
-typedef enum {
+typedef enum DPAUCS_ressource_entry_type {
 #ifdef RESSOURCE_GETTER
 #define X( RG ) DPAUCS_RESSOURCE_ ## RG,
   RESSOURCE_GETTER
@@ -18,8 +18,8 @@ typedef enum {
   DPAUCS_RESSOURCE_COUNT
 } DPAUCS_ressource_entry_type;
 
-typedef struct {
-  const DPAUCS_ressource_entry_type type;
+typedef struct DPAUCS_ressource_entry {
+  const enum DPAUCS_ressource_entry_type type;
   const char* path;
   unsigned path_length;
 } DPAUCS_ressource_entry_t;

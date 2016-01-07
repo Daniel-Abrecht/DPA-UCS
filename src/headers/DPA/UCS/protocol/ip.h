@@ -6,7 +6,7 @@
 
 #define MAX_IP_PROTO_HANDLERS 3
 
-typedef PACKED1 union PACKED2 {
+typedef PACKED1 union PACKED2 DPAUCS_ip {
   uint8_t version;
 #ifdef USE_IPv4
   DPAUCS_IPv4_t IPv4;
@@ -16,6 +16,6 @@ typedef PACKED1 union PACKED2 {
 #endif
 } DPAUCS_ip_t;
 
-void DPAUCS_ip_handler( DPAUCS_packet_info* info );
+void DPAUCS_ip_handler( struct DPAUCS_packet_info* info );
 
 #endif

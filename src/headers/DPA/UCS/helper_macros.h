@@ -44,4 +44,7 @@
 #define DPAUCS_CALC_ALIGN_OFFSET( x, T ) \
   ( (size_t)( (size_t)(x) + DPAUCS_ALIGNOF(T) - 1 ) & (size_t)~( DPAUCS_ALIGNOF(T) - 1 ) )
 
+#define DPAUCS_STRINGIFY(x) #x
+#define DPAUCS_TOSTRING(x) DPAUCS_STRINGIFY(x)
+
 #endif

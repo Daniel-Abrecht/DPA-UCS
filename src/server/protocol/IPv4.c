@@ -1,6 +1,10 @@
+#include <string.h>
 #include <DPA/UCS/utils.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/logger.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/checksum.h>
+#include <DPA/UCS/binaryUtils.h>
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/ethtypes.h>
@@ -14,7 +18,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
 
   {
     DPAUCS_logicAddress_IPv4_t addr = {
-      LA_IPv4_INIT,
+      DPAUCS_LA_IPv4_INIT,
       .address = destination
     };
     if( !DPAUCS_isValidHostAddress(&addr.logicAddress)
@@ -46,13 +50,13 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
     },
     .src = {
       .address = {
-        .type = AT_IPv4
+        .type = DPAUCS_AT_IPv4
       },
       .ip = source
     },
     .dest = {
       .address = {
-        .type = AT_IPv4
+        .type = DPAUCS_AT_IPv4
       },
       .ip = destination
     },

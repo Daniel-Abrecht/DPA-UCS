@@ -38,7 +38,7 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
   switch( fromTo->source->type ){
 
 #ifdef USE_IPv4
-    case AT_IPv4: DPAUCS_IPv4_transmit(
+    case DPAUCS_AT_IPv4: DPAUCS_IPv4_transmit(
       stream,
       (const DPAUCS_IPv4_address_t*)fromTo->source,
       (const DPAUCS_IPv4_address_t*)fromTo->destination,
@@ -51,11 +51,11 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
 
 }
 
-bool DPAUCS_layer3_getPacketSizeLimit( DPAUCS_address_types_t type, size_t* limit ){
+bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types type, size_t* limit ){
   switch( type ){
 
 #ifdef USE_IPv4
-    case AT_IPv4: *limit = (uint16_t)~0; return true;
+    case DPAUCS_AT_IPv4: *limit = 0xFFFFu; return true;
 #endif
 
   }

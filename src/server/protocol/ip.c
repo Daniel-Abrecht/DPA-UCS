@@ -1,3 +1,4 @@
+#include <DPA/UCS/packet.h>
 #include <DPA/UCS/protocol/ip.h>
 
 void DPAUCS_ip_handler( DPAUCS_packet_info_t* info ){

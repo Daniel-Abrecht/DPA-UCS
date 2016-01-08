@@ -31,7 +31,7 @@ void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t
 static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
 static bool tcp_connectionUnstable( DPAUCS_transmissionControlBlock_t* stcb );
-static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_TCP_state_t state );
+static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DPAUCS_TCP_state state );
 static DPAUCS_tcp_transmission_t tcp_begin( void );
 bool tcp_transmit( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags, size_t* size, uint32_t* SEQs );
 static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
@@ -162,7 +162,7 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
 
   switch( tcb->fromTo.source->type ){
 #ifdef USE_IPv4
-    case AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,length);
+    case DPAUCS_AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,length);
 #endif
   }
   return 0;
@@ -189,7 +189,7 @@ static DPAUCS_tcp_transmission_t tcp_begin( void ){
   };
 }
 
-static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_TCP_state_t state ){
+static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DPAUCS_TCP_state state ){
   if( tcb->state == state )
     return false;
   static const char* stateNames[] = {TCP_STATES(DPAUCS_STRINGIFY)};

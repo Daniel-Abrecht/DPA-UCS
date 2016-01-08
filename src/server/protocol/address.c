@@ -3,7 +3,7 @@
 bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t* address){
   switch( address->type ){
 #ifdef USE_IPv4
-    case AT_IPv4: {
+    case DPAUCS_AT_IPv4: {
       return !~((const DPAUCS_logicAddress_IPv4_t*)address)->address;
     } break;
 #endif
@@ -16,7 +16,7 @@ bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t* a,const DPAUCS_log
     return false;
   switch(a->type){
 #ifdef USE_IPv4
-    case AT_IPv4: {
+    case DPAUCS_AT_IPv4: {
       return ((const DPAUCS_logicAddress_IPv4_t*)a)->address == ((const DPAUCS_logicAddress_IPv4_t*)b)->address;
     } break;
 #endif
@@ -33,7 +33,7 @@ bool DPAUCS_copy_logicAddress( DPAUCS_logicAddress_t* dst, const DPAUCS_logicAdd
     return false;
   switch(dst->type){
 #ifdef USE_IPv4
-    case AT_IPv4: {
+    case DPAUCS_AT_IPv4: {
       *(DPAUCS_logicAddress_IPv4_t*)dst = *(const DPAUCS_logicAddress_IPv4_t*)src;
       return true;
     } break;

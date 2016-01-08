@@ -2,21 +2,21 @@
 #define RESOURCE_H
 
 #include <stdbool.h>
-#include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/stream.h>
+#include <DPA/UCS/helper_macros.h>
 
 
 DPAUCS_MODUL( ressource );
 
 
-typedef enum DPAUCS_ressource_entry_type {
+enum DPAUCS_ressource_entry_type {
 #ifdef RESSOURCE_GETTER
 #define X( RG ) DPAUCS_RESSOURCE_ ## RG,
   RESSOURCE_GETTER
 #undef X
 #endif
   DPAUCS_RESSOURCE_COUNT
-} DPAUCS_ressource_entry_type;
+};
 
 typedef struct DPAUCS_ressource_entry {
   const enum DPAUCS_ressource_entry_type type;

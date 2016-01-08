@@ -1,17 +1,16 @@
 #if !defined( IPv4_H ) && defined( USE_IPv4 )
 #define IPv4_H
 
-#include <string.h>
-#include <DPA/UCS/packet.h>
-#include <DPA/UCS/stream.h>
-#include <DPA/UCS/checksum.h>
-#include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/address.h>
 
-typedef enum DPAUCS_IPv4_flags {
+struct DPAUCS_packet_info;
+struct DPAUCS_stream;
+
+enum DPAUCS_IPv4_flags {
   IPv4_FLAG_MORE_FRAGMENTS = 1<<0,
   IPv4_FLAG_DONT_FRAGMENT  = 1<<1
-} DPAUCS_IPv4_flags_t;
+};
 
 typedef PACKED1 struct PACKED2 DPAUCS_IPv4 {
   uint8_t version_ihl; // 4bit version | 4bit IP Header Length

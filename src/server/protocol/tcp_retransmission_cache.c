@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <DPA/UCS/logger.h>
 #include <DPA/UCS/mempool.h>
+#include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/protocol/tcp_retransmission_cache.h>
 
 static char buffer[TCP_RETRANSMISSION_CACHE_SIZE] = {0};

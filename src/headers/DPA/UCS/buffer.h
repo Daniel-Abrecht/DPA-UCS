@@ -48,11 +48,11 @@
 #define DPAUCS_BUFFER_BUFFER_SIZE(buf) ( DPAUCS_BUFFER_GET(buf).size )
 #define DPAUCS_BUFFER_BUFFER_PTR(buf) ( DPAUCS_BUFFER_GET(buf).ptr )
 
-typedef enum DPAUCS_buffer_type {
+enum DPAUCS_buffer_type {
   BUFFER_BUFFER,
   BUFFER_ARRAY,
   BUFFER_TYPE_SIZE
-} buffer_type_t;
+};
 
 typedef struct DPAUCS_bufferInfo {
   enum DPAUCS_buffer_type type;

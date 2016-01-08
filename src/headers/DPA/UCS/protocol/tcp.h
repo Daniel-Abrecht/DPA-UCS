@@ -61,9 +61,9 @@ enum DPAUCS_tcp_flags {
 
 #define DPAUCS_EVAL(X) X
 
-typedef enum DPAUCS_TCP_state {
+enum DPAUCS_TCP_state {
   TCP_STATES(DPAUCS_EVAL)
-} DPAUCS_TCP_state_t;
+};
 
 typedef struct DPAUCS_transmissionControlBlock {
 

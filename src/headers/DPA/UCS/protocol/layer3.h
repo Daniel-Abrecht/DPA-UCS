@@ -43,7 +43,7 @@ void DPAUCS_layer3_addProtocolHandler( DPAUCS_layer3_protocolHandler_t* handler 
 void DPAUCS_layer3_removeProtocolHandler( DPAUCS_layer3_protocolHandler_t* handler );
 
 DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream( void );
-bool DPAUCS_layer3_getPacketSizeLimit( DPAUCS_address_types_t, size_t* limit );
+bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types, size_t* limit );
 void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type, size_t );
 void DPAUCS_layer3_destroyTransmissionStream( DPAUCS_stream_t* x );
 

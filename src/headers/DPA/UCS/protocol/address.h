@@ -1,30 +1,22 @@
 #ifndef ADDRESS_TYPES_H
 #define ADDRESS_TYPES_H
 
-#include <DPA/UCS/helper_macros.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <DPA/UCS/helper_macros.h>
 
-#define STRINGIFY(x) #x
+#define DPAUCS_MAC( a,b,c,d,e,f ) {0x##a,0x##b,0x##c,0x##d,0x##e,0x##f}
 
-#define IPSTRING( a,b,c,d ) #a "." #b "." #c "." #d
-#define IPCONST( a,b,c,d ) {a,b,c,d}
-#define IPINT( a,b,c,d ) \
-   ((uint32_t)a<<24) \
- | ((uint32_t)b<<16) \
- | ((uint32_t)c<<8) \
- | ((uint32_t)d)
+#define DPAUCS_LA_IPv4_INIT \
+  .type = DPAUCS_AT_IPv4
 
-#define MACSTRING( a,b,c,d,e,f ) #a ":" #b ":" #c ":" #d ":" #e ":" #f
-#define MACCONST( a,b,c,d,e,f ) {0x##a,0x##b,0x##c,0x##d,0x##e,0x##f}
-
-#define LA_IPv4_INIT \
-  .type = AT_IPv4
-
-#define LA_IPv4( a,b,c,d ) { \
-    LA_IPv4_INIT, \
-    .address = IPINT( a,b,c,d ) \
+#define DPAUCS_LA_IPv4( a,b,c,d ) { \
+    DPAUCS_LA_IPv4_INIT, \
+    .address = ((uint32_t)a<<24) \
+             | ((uint32_t)b<<16) \
+             | ((uint32_t)c<<8) \
+             | ((uint32_t)d) \
   }
 
 #define DPAUCS_LA_SIZE( type ) ( \
@@ -32,20 +24,20 @@
     0 \
   )
 
-#define ANY_ADDRESS 0
-#define AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
+#define DPAUCS_ANY_ADDRESS 0
+#define DPAUCS_AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
 
-typedef enum DPAUCS_address_types {
+enum DPAUCS_address_types {
 #ifdef USE_IPv4
-  AT_IPv4 = 1<<0,
+  DPAUCS_AT_IPv4 = 1<<0,
 #endif
 #ifdef USE_IPv6
-  AT_IPv6 = 1<<1,
+  DPAUCS_AT_IPv6 = 1<<1,
 #endif
-} DPAUCS_address_types_t;
+};
 
 typedef struct DPAUCS_logicAddress {
-  DPAUCS_address_types_t type;
+  enum DPAUCS_address_types type;
 } DPAUCS_logicAddress_t;
 
 typedef struct DPAUCS_address {

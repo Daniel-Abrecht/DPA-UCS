@@ -2,9 +2,7 @@
 #define TCP_RETRANSMISSION_CACHE_H
 
 #include <stddef.h>
-#include <stdint.h>
 #include <stdbool.h>
-#include <DPA/UCS/protocol/tcp.h>
 
 #ifndef TCP_RETRANSMISSION_CACHE_SIZE
 #define TCP_RETRANSMISSION_CACHE_SIZE 1024 * 4 // 2K
@@ -14,7 +12,10 @@
 #define TCP_RETRANSMISSION_CACHE_MAX_ENTRIES 128
 #endif
 
-typedef void(*cacheAccessFunc_t)(DPAUCS_tcp_transmission_t*, DPAUCS_transmissionControlBlock_t**, uint16_t);
+struct DPAUCS_tcp_transmission;
+struct DPAUCS_transmissionControlBlock;
+
+typedef void(*cacheAccessFunc_t)(struct DPAUCS_tcp_transmission*, struct DPAUCS_transmissionControlBlock**, uint16_t);
 
 typedef struct DPAUCS_tcp_cacheEntry {
   size_t charBufferSize;
@@ -26,10 +27,10 @@ typedef struct DPAUCS_tcp_cacheEntry {
 } DPAUCS_tcp_cacheEntry_t;
 
 
-bool tcp_addToCache( DPAUCS_tcp_transmission_t*, unsigned, DPAUCS_transmissionControlBlock_t**, uint16_t* );
+bool tcp_addToCache( struct DPAUCS_tcp_transmission*, unsigned, struct DPAUCS_transmissionControlBlock**, uint16_t* );
 void tcp_removeFromCache( DPAUCS_tcp_cacheEntry_t** );
 void tcp_cleanupCache( void );
-void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* );
+void tcp_cacheCleanupTCB( struct DPAUCS_transmissionControlBlock* );
 void tcp_retransmission_cache_do_retransmissions( void );
 
 #endif

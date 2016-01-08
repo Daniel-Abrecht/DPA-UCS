@@ -2,7 +2,6 @@
 #define IPv6_H
 
 #include <stdint.h>
-#include <DPA/UCS/packet.h>
 #include <DPA/UCS/helper_macros.h>
 
 typedef PACKED1 struct PACKED2 DPAUCS_IPv6 {

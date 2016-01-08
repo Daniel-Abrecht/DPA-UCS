@@ -1,10 +1,11 @@
 #include <stdbool.h>
 #include <string.h>
+#include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/ethtypes.h>
 #include <DPA/UCS/protocol/anyAddress.h>
-#include <DPA/UCS/protocol/arp.h>
 
 typedef struct {
   uint8_t referenceCount;
@@ -101,7 +102,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
 
       if( dest_ip ){
         DPAUCS_logicAddress_IPv4_t addr = {
-          LA_IPv4_INIT,
+          DPAUCS_LA_IPv4_INIT,
           .address = dest_ip
         };
         if( !DPAUCS_isValidHostAddress(&addr.logicAddress)
@@ -123,7 +124,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
           DPAUCS_arp_t* rarp = infReply.payload;
           *rarp = *arp; // preserve htype, ptype, etc.
 
-	  rarp->oper = htob16( ARP_RESPONSE );
+          rarp->oper = htob16( ARP_RESPONSE );
 
           uint8_t 
             *rsha = (uint8_t*)infReply.payload + sizeof(DPAUCS_arp_t), // Sender hardware address

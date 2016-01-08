@@ -104,7 +104,7 @@ void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress 
   }
 }
 
-void DPAUCS_each_logicAddress(DPAUCS_address_types_t type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
+void DPAUCS_each_logicAddress(enum DPAUCS_address_types type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
   for( int i=0; i<MAX_LOGIC_ADDRESSES; i++ )
     if( logicAddresses[i]->type & type )
       if( !(*func)(logicAddresses[i],x) )

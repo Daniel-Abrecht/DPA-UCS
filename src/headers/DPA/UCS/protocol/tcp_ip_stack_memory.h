@@ -1,9 +1,7 @@
 #ifndef TCP_IP_STACK_MEMORY_H
 #define TCP_IP_STACK_MEMORY_H
 
-#include <DPA/UCS/mempool.h>
-
-#define STACK_BUFFER_SIZE 1024u * 5u // 50 KB
+#define STACK_BUFFER_SIZE 1024u * 5u // 5 KB
 #define DPAUCS_MAX_FRAGMANTS 256
 
 // Don't add more than 16 fragment types
@@ -32,7 +30,7 @@ typedef struct DPAUCS_fragment {
   enum DPAUCS_fragmentType type;
 } DPAUCS_fragment_t;
 
-typedef struct {
+typedef struct DPAUCS_fragment_info {
   void(*destructor)(DPAUCS_fragment_t**);
   bool(*beforeTakeover)(DPAUCS_fragment_t***,enum DPAUCS_fragmentType);
   void(*takeoverFailtureHandler)(DPAUCS_fragment_t**);

@@ -99,7 +99,7 @@ typedef struct DPAUCS_transmissionControlBlock {
   } fragments;
 
   struct {
-    struct DPAUCS_tcp_cacheEntry **first, **last;
+    void **first, **last;
     uint32_t first_SEQ; // Sequence number of next segment to be sent
     adelay_t last_transmission; // If there was no previous transmission, this must be zero. Otherwise, it mustn't be zero.
     struct { // RST must be handled specially, PUSH and URG are related to the segment in the retransmission cache.

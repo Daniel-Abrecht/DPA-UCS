@@ -3,7 +3,7 @@
 #include <DPA/UCS/protocol/ip.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-DPAUCS_DEFINE_BUFFER(unsigned char,DPAUCS_uchar_buffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,true);
+DPAUCS_DEFINE_BUFFER(unsigned char,DPAUCS_uchar_buffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
 DPAUCS_DEFINE_BUFFER(DPAUCS_bufferInfo_t,DPAUCS_buffer_buffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE,false);
 
 static DPAUCS_stream_t outputStream = {

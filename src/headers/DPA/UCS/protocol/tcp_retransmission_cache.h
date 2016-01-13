@@ -21,7 +21,7 @@ typedef struct DPAUCS_tcp_cacheEntry {
   size_t charBufferSize;
   size_t bufferBufferSize;
   size_t streamRealLength;
-  struct DPAUCS_tcp_cacheEntry** next;
+  void** next;
   unsigned count;
   bool streamIsLonger; // if streamRealLength can't represent the full length
 } DPAUCS_tcp_cacheEntry_t;

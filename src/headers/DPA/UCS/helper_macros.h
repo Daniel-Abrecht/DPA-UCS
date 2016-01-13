@@ -41,8 +41,11 @@
 #define DP_FLASH
 #endif
 
+#define DPAUCS_CALC_PREV_ALIGN_OFFSET( x, T ) \
+  ( (size_t)( x ) & (size_t)~( DPAUCS_ALIGNOF(T) - 1 ) )
+
 #define DPAUCS_CALC_ALIGN_OFFSET( x, T ) \
-  ( (size_t)( (size_t)(x) + DPAUCS_ALIGNOF(T) - 1 ) & (size_t)~( DPAUCS_ALIGNOF(T) - 1 ) )
+  DPAUCS_CALC_PREV_ALIGN_OFFSET( (size_t)(x) + DPAUCS_ALIGNOF(T) - 1, T )
 
 #define DPAUCS_STRINGIFY(x) #x
 #define DPAUCS_TOSTRING(x) DPAUCS_STRINGIFY(x)

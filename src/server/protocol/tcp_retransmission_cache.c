@@ -13,11 +13,16 @@ static void* cacheEntries[TCP_RETRANSMISSION_CACHE_MAX_ENTRIES];
 
 #define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
 
+typedef struct tcp_cache_entry_tcb_entry {
+  DPAUCS_transmissionControlBlock_t* tcb;
+  void** next;
+  uint16_t flags;
+} tcp_cache_entry_tcb_entry_t;
+
 typedef struct {
-  DPAUCS_transmissionControlBlock_t** TCBs;
-  uint16_t* flags;
   unsigned char* charBuffer;
   DPAUCS_bufferInfo_t* bufferBuffer;
+  tcp_cache_entry_tcb_entry_t* tcb_list;
 } tcp_cache_entryInfo_t;
 
 static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, void* off ){
@@ -26,10 +31,9 @@ static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, vo
   size_t count = entry->count;
   size_t offset = DPAUCS_CALC_PREV_ALIGN_OFFSET( *(size_t*)off - entry->bufferBufferSize * sizeof( DPAUCS_bufferInfo_t ), DPAUCS_bufferInfo_t );
   res->bufferBuffer = (void*)( emem + offset );
-  offset  = DPAUCS_CALC_ALIGN_OFFSET( *(size_t*)off, DPAUCS_transmissionControlBlock_t* );
-  res->TCBs = (void*)( emem + offset );
-  offset = DPAUCS_CALC_ALIGN_OFFSET( offset + count * sizeof( DPAUCS_transmissionControlBlock_t* ), uint16_t );
-  res->flags = (void*)( emem + offset );
+  offset  = DPAUCS_CALC_ALIGN_OFFSET( sizeof(*entry) + *(size_t*)off, tcp_cache_entry_tcb_entry_t );
+  res->tcb_list = (void*)( emem + offset );
+  offset += count * sizeof( tcp_cache_entry_tcb_entry_t );
   res->charBuffer = (void*)( emem + offset );
 }
 
@@ -37,7 +41,6 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
   DPAUCS_tcp_cacheEntry_t e = {
     .count = count,
-    .next = 0,
     .charBufferSize   = DPAUCS_BUFFER_SIZE( t->stream->buffer        ),
     .bufferBufferSize = DPAUCS_BUFFER_SIZE( t->stream->buffer_buffer ),
   };
@@ -52,10 +55,9 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
                                        fullSize += e.bufferBufferSize * sizeof( DPAUCS_bufferInfo_t );
     const size_t entry_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, DPAUCS_tcp_cacheEntry_t );
                                        fullSize += sizeof( DPAUCS_tcp_cacheEntry_t );
-    const size_t tcb_offset          = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, DPAUCS_transmissionControlBlock_t* );
-                                       fullSize += count * sizeof( DPAUCS_transmissionControlBlock_t* );
-    const size_t flags_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, uint16_t );
-    const size_t charBuffer_offset   = fullSize += count * sizeof( uint16_t );
+    const size_t tcb_list_offset     = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, tcp_cache_entry_tcb_entry_t );
+    const size_t charBuffer_offset   = fullSize += count * sizeof( DPAUCS_transmissionControlBlock_t* );
+                                       fullSize += e.charBufferSize;
 
     DPAUCS_LOG(
       "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
@@ -73,12 +75,14 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     char* emem = (char*)*entry;
     *(size_t*)*entry = entry_offset;
     *(DPAUCS_tcp_cacheEntry_t*)( emem + entry_offset ) = e;
-    DPAUCS_transmissionControlBlock_t** tcb_dst = (DPAUCS_transmissionControlBlock_t**)( emem + tcb_offset );
-    uint16_t* flags_dst =  (uint16_t*)( emem + flags_offset );
+    tcp_cache_entry_tcb_entry_t* tcb_list = (tcp_cache_entry_tcb_entry_t*)( emem + tcb_list_offset );
 
     for( unsigned i=count; i--; ){
-        tcb_dst[i] =   tcb[i];
-      flags_dst[i] = flags[i];
+      tcb_list[i] = (tcp_cache_entry_tcb_entry_t){
+        .tcb  = tcb[i],
+        .next = 0,
+        .flags = flags[i]
+      };
     }
 
     DPAUCS_stream_raw_t raw_stream = {
@@ -104,7 +108,16 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
         it->cache.last = it->cache.first = entry;
         it->cache.first_SEQ = it->SND.NXT;
       }else{
-        it->cache.last = DCE(*it->cache.last)->next = entry;
+        tcp_cache_entryInfo_t inf;
+        DPAUCS_tcp_cacheEntry_t*const e = DCE( *it->cache.last );
+        getEntryInfo( &inf, e );
+        tcp_cache_entry_tcb_entry_t* list = inf.tcb_list;
+        for( tcp_cache_entry_tcb_entry_t *it2=list,*end=list+e->count; it2 < end && it2->tcb; it2++ ){
+          if( it2->tcb == it ){
+            it->cache.last = it2->next = entry;
+            break;
+          }
+        }
       }
     }
 
@@ -133,7 +146,7 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
   getEntryInfo( &info, e );
   unsigned tcb_index = e->count;
   while( tcb_index-- )
-    if( info.TCBs[tcb_index] == tcb )
+    if( info.tcb_list[tcb_index].tcb == tcb )
       break;
   if( !~tcb_index )
     return false;
@@ -155,19 +168,18 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
     if( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ){
       // remove tcb from entry and entry from tcb
       ret = true;
-      info.TCBs[tcb_index] = 0;
-      tcb->cache.first = e->next;
+      info.tcb_list[tcb_index].tcb = 0;
+      tcb->cache.first = info.tcb_list[tcb_index].next;
       tcb->cache.first_SEQ = e->streamRealLength;
       if( !tcb->cache.first )
         tcb->cache.last = 0;
       for( size_t i=tcb_index+1, n=e->count; i < n; i++ ){
-        if( !info.TCBs[i] ) break;
-        info.TCBs [i-1] = info.TCBs [i];
-        info.flags[i-1] = info.flags[i];
+        if( !info.tcb_list[i].tcb ) break;
+        info.tcb_list[i-1] = info.tcb_list[i];
       }
     }
   }
-  if(!*info.TCBs){ // no tcb's left, remove entry
+  if(!info.tcb_list->tcb){ // no tcb's left, remove entry
     removeFromCache( entry );
     return true;
   }
@@ -179,7 +191,16 @@ void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
 }
 
 static void tcp_cacheDiscardEntryOctets( void**const entry, uint32_t size ){
-//  DPAUCS_stream_prepare_from_buffer(  );
+  tcp_cache_entryInfo_t info;
+  DPAUCS_tcp_cacheEntry_t*const e = DCE(*entry);
+  getEntryInfo( &info, e );
+  DPAUCS_stream_raw_t raw_stream = {
+    .bufferBufferSize = e->bufferBufferSize,
+    .charBufferSize   = e->charBufferSize,
+//        .bufferBuffer     = info.bufferBuffer,
+    .charBuffer       = info.charBuffer
+  };
+  DPAUCS_raw_stream_truncate( &raw_stream, size );
 //  DPAUCS_mempool_realloc( mempool, (void**)entry,  );
   (void)entry;
   (void)size;
@@ -194,7 +215,7 @@ static void tcp_cleanupEntry( void**const entry ){
   uint32_t acknowledged_octets_min = ~0;
   unsigned i = e->count;
   while( i-- ){
-    DPAUCS_transmissionControlBlock_t* tcb = info.TCBs[i];
+    DPAUCS_transmissionControlBlock_t* tcb = info.tcb_list[i].tcb;
     uint32_t acknowledged_octets = tcb->SND.UNA - tcb->cache.first_SEQ;
     if( acknowledged_octets_min > acknowledged_octets )
       acknowledged_octets_min = acknowledged_octets;
@@ -202,7 +223,7 @@ static void tcp_cleanupEntry( void**const entry ){
 
   if( acknowledged_octets_min )
   while( i-- ){
-    DPAUCS_transmissionControlBlock_t* tcb = info.TCBs[i];
+    DPAUCS_transmissionControlBlock_t* tcb = info.tcb_list[i].tcb;
     tcb->cache.first_SEQ += acknowledged_octets_min;
   }
   tcp_cacheDiscardEntryOctets( entry, acknowledged_octets_min );
@@ -222,25 +243,33 @@ void tcp_cleanupCache( void ){
   }
 }
 
-static void retransmit( tcp_cache_entryInfo_t* ei ){
+/*static void retransmit( tcp_cache_entryInfo_t* ei ){
   (void)ei;
   DPAUCS_LOG("retransmit\n");
 }
 
 // TODO: Make this dynamic, it's required by RFC 793 Page 41
-#define RETRANSMISSION_INTERVAL 500
 
 static bool do_retransmissions( void** entry, void* unused ){
   (void)unused;
   DPAUCS_tcp_cacheEntry_t* e = *entry;
   tcp_cache_entryInfo_t info;
   getEntryInfo( &info, e );
-//  if(!adelay_done( &e->adelay, RETRANSMISSION_INTERVAL ))
-  //  return true;
   retransmit( &info );
   return true;
-}
+}*/
+
+#define RETRANSMISSION_INTERVAL 1000
 
 void tcp_retransmission_cache_do_retransmissions( void ){
-  DPAUCS_mempool_each( &mempool, do_retransmissions, 0 );
+  DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
+  DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
+  for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ ){
+    if( it->state == TCP_CLOSED_STATE
+     || it->state == TCP_TIME_WAIT_STATE
+     || ( it->cache.last_transmission
+     && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
+    ) continue;
+    DPAUCS_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
+  }
 }

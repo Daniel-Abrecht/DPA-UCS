@@ -100,7 +100,7 @@ typedef struct DPAUCS_transmissionControlBlock {
 
   struct {
     void **first, **last;
-    uint32_t first_SEQ; // Sequence number of next segment to be sent
+    uint32_t first_SEQ; // Sequence number of first segment in cache
     adelay_t last_transmission; // If there was no previous transmission, this must be zero. Otherwise, it mustn't be zero.
     struct { // RST must be handled specially, PUSH and URG are related to the segment in the retransmission cache.
       bool SYN : 1; // SYN not yet acknowledged
@@ -137,5 +137,14 @@ void WEAK tcp_do_next_task( void );
 bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream, void* ptr ), void** cids, size_t count, void* ptr );
 void DPAUCS_tcp_close( void* cid );
 void DPAUCS_tcp_abord( void* cid );
+
+bool DPAUCS_tcp_transmit(
+  DPAUCS_stream_t* stream,
+  DPAUCS_tcp_t* tcp,
+  DPAUCS_transmissionControlBlock_t* tcb,
+  uint16_t flags,
+  size_t size,
+  uint32_t SEQ
+);
 
 #endif

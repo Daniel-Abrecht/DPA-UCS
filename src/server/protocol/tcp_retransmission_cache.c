@@ -48,6 +48,16 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
   void** entry;
 
+  for( unsigned i=count; i--; ){
+    DPAUCS_transmissionControlBlock_t* it = tcb[i];
+    if( flags[i] & TCP_FLAG_SYN )
+      it->cache.flags.SYN = true;
+    if( flags[i] & TCP_FLAG_FIN )
+      it->cache.flags.FIN = true;
+    if( !it->cache.first )
+      it->cache.first_SEQ = it->SND.NXT;
+  }
+
   if( e.streamRealLength ){
 
     size_t                             fullSize  = sizeof( size_t );
@@ -106,7 +116,6 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       if( !it->cache.first ){
         it->cache.last_transmission = 0;
         it->cache.last = it->cache.first = entry;
-        it->cache.first_SEQ = it->SND.NXT;
       }else{
         tcp_cache_entryInfo_t inf;
         DPAUCS_tcp_cacheEntry_t*const e = DCE( *it->cache.last );
@@ -121,13 +130,6 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       }
     }
 
-  }
-
-  for( unsigned i=count; i--; ){
-    if( flags[i] & TCP_FLAG_SYN )
-      tcb[i]->cache.flags.SYN = true;
-    if( flags[i] & TCP_FLAG_FIN )
-      tcb[i]->cache.flags.FIN = true;
   }
 
   return true;
@@ -243,23 +245,7 @@ void tcp_cleanupCache( void ){
   }
 }
 
-/*static void retransmit( tcp_cache_entryInfo_t* ei ){
-  (void)ei;
-  DPAUCS_LOG("retransmit\n");
-}
-
-// TODO: Make this dynamic, it's required by RFC 793 Page 41
-
-static bool do_retransmissions( void** entry, void* unused ){
-  (void)unused;
-  DPAUCS_tcp_cacheEntry_t* e = *entry;
-  tcp_cache_entryInfo_t info;
-  getEntryInfo( &info, e );
-  retransmit( &info );
-  return true;
-}*/
-
-#define RETRANSMISSION_INTERVAL 1000
+#define RETRANSMISSION_INTERVAL AD_SEC
 
 void tcp_retransmission_cache_do_retransmissions( void ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
@@ -270,6 +256,30 @@ void tcp_retransmission_cache_do_retransmissions( void ){
      || ( it->cache.last_transmission
      && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
     ) continue;
+    adelay_start( &it->cache.last_transmission );
+
     DPAUCS_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
+
+    uint16_t flags = TCP_FLAG_ACK;
+
+    DPAUCS_tcp_t tcp;
+    DPAUCS_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
+    DPAUCS_stream_referenceWrite( stream, &tcp, sizeof(tcp) );
+
+    size_t size = 0;
+
+    if( it->cache.first ){
+      
+    }
+
+    if( it->cache.flags.SYN )
+      flags |= TCP_FLAG_SYN;
+    if( it->cache.flags.FIN )
+      flags |= TCP_FLAG_FIN;
+
+    DPAUCS_tcp_transmit( stream, &tcp, it, flags, size, it->cache.first_SEQ );
+
+    DPAUCS_layer3_destroyTransmissionStream( stream );
+
   }
 }

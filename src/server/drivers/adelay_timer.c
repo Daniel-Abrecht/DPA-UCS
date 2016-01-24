@@ -13,8 +13,7 @@ static uint16_t time;
 ISR(TIMER0_OVF_vect){
   time++;
   adelay_update_time(
-    time,
-    1<<sizeof(time),
+    time, 0xFFFFu,
     PRESCALER * (1ul<<COUNTER_BITS) / ( F_CPU / 100ul )
   );
 }

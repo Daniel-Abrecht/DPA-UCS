@@ -1,5 +1,13 @@
 #include <string.h>
+#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/ip_stack.h>
+
+typedef union DPAUCS_layer3_packetInfo {
+  DPAUCS_ip_packetInfo_t ip_packetInfo;
+#ifdef USE_IPv4
+  DPAUCS_IPv4_packetInfo_t IPv4_packetInfo;
+#endif
+} DPAUCS_layer3_packetInfo_t;
 
 // Should be initialized with zeros
 static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS];

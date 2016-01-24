@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <DPA/UCS/mempool.h>
+#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/tcp_stack.h>
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>

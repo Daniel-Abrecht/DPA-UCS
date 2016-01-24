@@ -86,7 +86,7 @@ typedef struct DPAUCS_transmissionControlBlock {
     ;
   } RCV;
 
-  DPAUCS_address_pair_t fromTo;
+  DPAUCS_mixedAddress_pair_t fromTo;
   uint16_t srcPort, destPort;
 
   // internal stuff //

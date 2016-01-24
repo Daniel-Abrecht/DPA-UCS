@@ -112,10 +112,14 @@ void DPAUCS_each_logicAddress(enum DPAUCS_address_types type, bool(*func)(const 
 }
 
 bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
+  return DPAUCS_get_logicAddress(logicAddress);
+}
+
+const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
     if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress))
-      return true;
-  return false;
+      return logicAddresses[i];
+  return 0;
 }
 
 void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, DPAUCS_service_t* service ){

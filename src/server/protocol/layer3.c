@@ -1,6 +1,6 @@
 #include <stddef.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/protocol/ip.h>
+#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 
 DPAUCS_DEFINE_BUFFER(unsigned char,DPAUCS_uchar_buffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);

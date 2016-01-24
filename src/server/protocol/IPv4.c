@@ -5,8 +5,8 @@
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/checksum.h>
 #include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
-#include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/ethtypes.h>
 
 void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){

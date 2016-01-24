@@ -1,8 +1,8 @@
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/protocol/ip.h>
+#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/services/http.h>
 #include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/protocol/address.h>
 
 uint8_t WEAK mac[] = { 0x5C, 0xF9, 0xDD, 0x55, 0x96, 0xC2 };
 

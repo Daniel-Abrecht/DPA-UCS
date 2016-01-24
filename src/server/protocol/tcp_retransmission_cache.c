@@ -215,8 +215,8 @@ static void tcp_cleanupEntry( void**const entry ){
   getEntryInfo( &info, e );
 
   uint32_t acknowledged_octets_min = ~0;
-  unsigned i = e->count;
-  while( i-- ){
+  unsigned n = e->count;
+  for( unsigned i = n; i--; ){
     DPAUCS_transmissionControlBlock_t* tcb = info.tcb_list[i].tcb;
     uint32_t acknowledged_octets = tcb->SND.UNA - tcb->cache.first_SEQ;
     if( acknowledged_octets_min > acknowledged_octets )
@@ -224,7 +224,7 @@ static void tcp_cleanupEntry( void**const entry ){
   }
 
   if( acknowledged_octets_min )
-  while( i-- ){
+  for( unsigned i = n; i--; ){
     DPAUCS_transmissionControlBlock_t* tcb = info.tcb_list[i].tcb;
     tcb->cache.first_SEQ += acknowledged_octets_min;
   }

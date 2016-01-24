@@ -48,12 +48,10 @@ static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlB
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
   for( DPAUCS_transmissionControlBlock_t* it=start; it<end ;it++ )
-    if(
-      it->state != TCP_CLOSED_STATE &&
-      it->srcPort == tcb->srcPort &&
-      it->destPort == tcb->destPort &&
-      DPAUCS_compare_logicAddress( &it->fromTo.source->logicAddress , &tcb->fromTo.source->logicAddress ) &&
-      DPAUCS_compare_logicAddress( &it->fromTo.destination->logicAddress, &tcb->fromTo.destination->logicAddress )
+    if( it->state != TCP_CLOSED_STATE
+     && it->srcPort == tcb->srcPort
+     && it->destPort == tcb->destPort
+     && DPAUCS_mixedPairEqual( &it->fromTo , &tcb->fromTo )
     ) return it;
   return 0;
 }
@@ -70,10 +68,10 @@ static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const id
 static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   if( tcb->state == TCP_CLOSED_STATE )
     return;
-  DPAUCS_arpCache_deregister( tcb->fromTo.destination );
   if(tcb->service->onclose)
     (*tcb->service->onclose)(tcb);
   tcp_setState(tcb,TCP_CLOSED_STATE);
+  DPAUCS_persistMixedAddress( &tcb->fromTo );
   tcb->currentId = 0;
   DPAUCS_LOG("Connection removed.\n");
 }
@@ -81,10 +79,8 @@ static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb ){
 static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   static unsigned i = 0;
   unsigned j = i;
-  DPAUCS_address_t* addr = DPAUCS_arpCache_register( tcb->fromTo.destination );
-  if( !addr )
+  if( !DPAUCS_persistMixedAddress( &tcb->fromTo ) )
     return 0;
-  tcb->fromTo.destination = addr;
   DPAUCS_transmissionControlBlock_t* stcb;
   do {
     if( j >= i+TRANSMISSION_CONTROL_BLOCK_COUNT )
@@ -146,9 +142,11 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t
     uint8_t padding, protocol;
     uint16_t length;
   };
+  DPAUCS_logicAddress_pair_t fromTo;
+  DPAUCS_mixedPairToLocalAddress( &fromTo, &tcb->fromTo );
   struct pseudoHeader pseudoHeader = {
-    .src = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->fromTo.source->logicAddress))->address ),
-    .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)(&tcb->fromTo.destination->logicAddress))->address ),
+    .src = htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.source     )->address ),
+    .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.destination)->address ),
     .padding = 0,
     .protocol = PROTOCOL_TCP,
     .length = htob16( length )
@@ -160,7 +158,7 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t
 
 static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
 
-  switch( tcb->fromTo.source->type ){
+  switch( DPAUCS_mixedPairGetType( &tcb->fromTo ) ){
 #ifdef USE_IPv4
     case DPAUCS_AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,length);
 #endif
@@ -227,9 +225,12 @@ bool DPAUCS_tcp_transmit(
   DPAUCS_tcp_t* tcp,
   DPAUCS_transmissionControlBlock_t* tcb,
   uint16_t flags,
-  size_t size,
+  size_t data_size,
   uint32_t SEQ
 ){
+
+  DPAUCS_address_pair_t addr;
+  DPAUCS_mixedPairToAddress( &addr, &tcb->fromTo );
 
   // get pointer to entry in stream which represents tcp header
   DPAUCS_streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( stream );
@@ -243,7 +244,7 @@ bool DPAUCS_tcp_transmit(
 
   // Get maximum size of payload the underlaying protocol can handle
   size_t l3_max = ~0;
-  DPAUCS_layer3_getPacketSizeLimit( tcb->fromTo.destination->type, &l3_max );
+  DPAUCS_layer3_getPacketSizeLimit( DPAUCS_mixedPairGetType( &tcb->fromTo ), &l3_max );
 
   DPAUCS_LOG(
     "DPAUCS_tcp_transmit: send tcb | SND.WND: %lu, SND.NXT: %lu, l3_max: %lu\n",
@@ -251,13 +252,18 @@ bool DPAUCS_tcp_transmit(
   );
 
   uint32_t next = SEQ;
-
   uint32_t offset = 0;
-  size_t segmentLength;
+  uint32_t size, off;
+
+  const bool SYN = flags & TCP_FLAG_SYN;
+  const bool FIN = flags & TCP_FLAG_FIN;
+  const bool ACK = flags & TCP_FLAG_ACK;
 
   do {
 
-    segmentLength = size;
+    flags = ACK ? TCP_FLAG_ACK : 0;
+
+    size = data_size;
 
     uint32_t alreadySent = tcb->SND.NXT - SEQ;
       // If SND.UNA is bigger than SEG.SEQ, some datas may already be acknowledged
@@ -271,25 +277,47 @@ bool DPAUCS_tcp_transmit(
     if( alreadyAcknowledged > alreadySent )
       alreadyAcknowledged = 0;
 
-    if( segmentLength < alreadyAcknowledged + offset )
-      break;
-    segmentLength -= alreadyAcknowledged + offset;
-    if( segmentLength > l3_max - headersize )
-      segmentLength = l3_max - headersize;
-    if( segmentLength > tcb->SND.WND - offset )
-      segmentLength = tcb->SND.WND - offset;
+    off = alreadyAcknowledged + offset;
+    if( SYN ){
+      if( off ){
+        off -= 1; // Remove SEQ for SYN
+      }else{
+        flags |= TCP_FLAG_SYN; // Set SYN flag
+      }
+    }
 
-    size_t data_length = segmentLength - tcp_flaglength( flags );
-    size_t packet_length = data_length + headersize;
+    // Check if there is anything to send, even if it's only an ACK
+    if( size + SYN + FIN < off + !ACK )
+      break;
+
+    size -= off;
+    // Ensure datas will fit into packet
+    if( size > l3_max - headersize )
+      size = l3_max - headersize;
+    // Ensure datas will fit into window
+    if( size > tcb->SND.WND - offset ){
+      size = tcb->SND.WND - offset;
+      if( !size && ( SYN || FIN ) )
+        break;
+      if( size < (uint32_t)SYN + FIN ){
+        size = 0;
+      }else{
+        size -= SYN + FIN;
+      }
+    }
+    if( FIN && size == data_size - off )
+      flags |= TCP_FLAG_FIN;
+
+    size_t packet_length = size + headersize;
 
     DPAUCS_tcp_segment_t tmp_segment = {
-      .LEN = segmentLength,
+      .LEN = size + tcp_flaglength(flags),
       .SEQ = SEQ + alreadyAcknowledged + offset,
       .flags = flags
     };
     tcp_from_tcb( tcp, tcb, &tmp_segment );
     if( !offset )
-      DPAUCS_stream_seek( stream, alreadyAcknowledged );
+      DPAUCS_stream_seek( stream, off );
     DPAUCS_streamEntry_t* dataEntry = DPAUCS_stream_getEntry( stream );
     size_t dataEntryOffset = dataEntry->offset;
     DPAUCS_stream_reverseSkipEntry( stream );
@@ -298,16 +326,17 @@ bool DPAUCS_tcp_transmit(
     dataEntry->offset = dataEntryOffset;
     tcp_calculateChecksum( tcb, tcp, stream, packet_length );
     dataEntry->offset = dataEntryOffset;
-    DPAUCS_layer3_transmit( stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
+    DPAUCS_layer3_transmit( stream, &addr, PROTOCOL_TCP, packet_length );
     DPAUCS_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
-    offset += segmentLength;
-    next += segmentLength;
+    size_t segSize = size + tcp_flaglength(flags);
+    offset += segSize;
+    next += segSize;
     if( tcb->SND.NXT < next )
       tcb->SND.NXT = next;
 
-  } while( segmentLength >= l3_max - headersize );
+  } while( size < off );
 
   DPAUCS_stream_restoreReadOffset( stream, &sros );
 
@@ -359,8 +388,11 @@ void tcb_from_tcp(
   tcb->SND.UNA = ISS;
   tcb->SND.NXT = ISS;
 
-  tcb->fromTo.source      = to;
-  tcb->fromTo.destination = from;
+  DPAUCS_address_pair_t ap = {
+    .source      = to,
+    .destination = from
+  };
+  DPAUCS_addressPairToMixed( &tcb->fromTo, &ap );
 }
 
 static inline void tcp_init_variables(
@@ -383,9 +415,11 @@ static inline void tcp_init_variables(
 }
 
 static inline bool tcp_is_tcb_valid( DPAUCS_transmissionControlBlock_t* tcb ){
+  DPAUCS_logicAddress_pair_t lap;
+  DPAUCS_mixedPairToLocalAddress( &lap, &tcb->fromTo );
   return tcb->service
       && tcb->destPort
-      && DPAUCS_isValidHostAddress( &tcb->fromTo.destination->logicAddress );
+      && DPAUCS_isValidHostAddress( lap.destination );
 }
 
 static inline bool tcp_get_recivewindow_data_offset( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG, uint16_t* offset ){
@@ -615,7 +649,7 @@ static bool tcp_processHeader(
     }
     tcb.state = TCP_SYN_RCVD_STATE;
     /* In case of a SYN with data,
-     * I won't buffer a syn with data, however, 
+     * I won't buffer a syn with data, however,
      * I can acknowledge the SYN only, 
      * causeing a retransmission of all datas later or a RST
      */

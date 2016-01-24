@@ -58,6 +58,20 @@ typedef struct DPAUCS_address_pair {
   struct DPAUCS_address* destination;
 } DPAUCS_address_pair_t;
 
+
+enum DPAUCS_mixedAddress_pair_type {
+  DPAUCS_AP_ADDRESS,
+  DPAUCS_AP_LOGIC_ADDRESS
+};
+
+typedef struct DPAUCS_mixedAddress_pair {
+  union {
+    DPAUCS_address_pair_t address;
+    DPAUCS_logicAddress_pair_t logicAddress;
+  };
+  enum DPAUCS_mixedAddress_pair_type type;
+} DPAUCS_mixedAddress_pair_t;
+
 #define DPAUCS_TYPE_CHECK(T,V) \
   (void)((struct{T x;}){.x=(V)})
 
@@ -84,6 +98,16 @@ typedef struct DPAUCS_address_pair {
       &(D)->logicAddress \
     ) \
   }
+
+bool DPAUCS_persistMixedAddress( DPAUCS_mixedAddress_pair_t* );
+void DPAUCS_freeMixedAddress( DPAUCS_mixedAddress_pair_t* );
+
+bool DPAUCS_addressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_address_pair_t* address );
+bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_logicAddress_pair_t* address );
+bool DPAUCS_mixedPairToAddress( DPAUCS_address_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
+bool DPAUCS_mixedPairToLocalAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
+bool DPAUCS_mixedPairEqual( const DPAUCS_mixedAddress_pair_t*, const DPAUCS_mixedAddress_pair_t* );
+enum DPAUCS_address_types DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* );
 
 bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t*);
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t*,const DPAUCS_logicAddress_t*);

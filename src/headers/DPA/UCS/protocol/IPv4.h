@@ -3,6 +3,7 @@
 
 #include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/address.h>
+#include <DPA/UCS/protocol/ip_stack.h>
 
 struct DPAUCS_packet_info;
 struct DPAUCS_stream;
@@ -39,6 +40,24 @@ typedef struct DPAUCS_logicAddress_IPv4 {
   };
   uint32_t address;
 } DPAUCS_logicAddress_IPv4_t;
+
+typedef struct DPAUCS_IPv4_packetInfo {
+  DPAUCS_ip_packetInfo_t ipPacketInfo;
+  DPAUCS_IPv4_address_t src;
+  DPAUCS_IPv4_address_t dest;
+  uint16_t id;
+  uint8_t tos; // Type of Service
+} DPAUCS_IPv4_packetInfo_t;
+
+typedef struct DPAUCS_IPv4_fragment {
+  DPAUCS_ip_fragment_t ipFragment;
+  uint8_t flags;
+} DPAUCS_IPv4_fragment_t;
+
+bool DPAUCS_areFragmentsFromSameIPv4Packet(
+  DPAUCS_IPv4_packetInfo_t*,
+  DPAUCS_IPv4_packetInfo_t*
+);
 
 void DPAUCS_IPv4_transmit(
   struct DPAUCS_stream* inputStream,

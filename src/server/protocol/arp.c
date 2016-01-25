@@ -4,6 +4,7 @@
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/binaryUtils.h>
 #include <DPA/UCS/protocol/arp.h>
+#include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/ethtypes.h>
 #include <DPA/UCS/protocol/anyAddress.h>
 
@@ -17,8 +18,8 @@ typedef struct {
 
 ARP_entry_t entries[ ARP_ENTRY_COUNT ];
 
-static inline ARP_entry_t* arpCache_getEntryByAddress( DPAUCS_address_t* addr ){
-  ARP_entry_t* entry = (void*)( ((char*)addr) - offsetof(ARP_entry_t,address) );
+static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress_t* addr ){
+  ARP_entry_t* entry = (void*)( ((char*)addr) - offsetof(DPAUCS_address_t,logicAddress) - offsetof(ARP_entry_t,address) );
 
   if( entry >= entries && entry < entries + ARP_ENTRY_COUNT )
     return entry;
@@ -30,46 +31,54 @@ static inline ARP_entry_t* arpCache_getEntryByAddress( DPAUCS_address_t* addr ){
   ) if( 
     DPAUCS_compare_logicAddress( 
       &it->address.logicAddress,
-      &addr->logicAddress
+      addr
     )
   ) return it;
 
   return 0;
 }
 
-DPAUCS_address_t* DPAUCS_arpCache_register( DPAUCS_address_t* addr ){
+const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr ){
 
-  ARP_entry_t* entry = arpCache_getEntryByAddress( addr );
+  ARP_entry_t* entry = arpCache_getEntryByAddress( &addr->logicAddress );
 
-  if( entry )
-    goto returnEntry;
+  if( !entry ){
 
-  for(
-    ARP_entry_t* it = entries;
-    it < entries + ARP_ENTRY_COUNT;
-    it++
-  ) if(!it->referenceCount)
-    entry = it;
+    for(
+      ARP_entry_t* it = entries;
+      it < entries + ARP_ENTRY_COUNT;
+      it++
+    ) if(!it->referenceCount)
+      entry = it;
 
-  if(!entry)
+    if(!entry)
+      return 0;
+
+    entry->address = *addr;
+    DPAUCS_copy_logicAddress( &entry->address.logicAddress, &addr->logicAddress );
+
+  }
+
+  if( entry->referenceCount == 0xFFu )
     return 0;
 
-  entry->address = *addr;
-  DPAUCS_copy_logicAddress( &entry->address.logicAddress, &addr->logicAddress );
-
- returnEntry:
   entry->referenceCount++;
-  return &entry->address;
 
+  return &entry->address;
 }
 
-bool DPAUCS_arpCache_deregister( DPAUCS_address_t* addr ){
+bool DPAUCS_arpCache_deregister( const DPAUCS_logicAddress_t* addr ){
   ARP_entry_t* entry = arpCache_getEntryByAddress(addr);
   if(!entry)
     return false;
   entry->referenceCount--;
   return true;
 }
+
+DPAUCS_address_t* DPAUCS_arpCache_getAddress( const DPAUCS_logicAddress_t* la ){
+  return &arpCache_getEntryByAddress( la )->address;
+}
+
 
 void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
 

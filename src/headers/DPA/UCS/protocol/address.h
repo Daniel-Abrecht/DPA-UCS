@@ -34,6 +34,7 @@ enum DPAUCS_address_types {
 #ifdef USE_IPv6
   DPAUCS_AT_IPv6 = 1<<1,
 #endif
+  DPAUCS_AT_UNKNOWN = 1<<15
 };
 
 typedef struct DPAUCS_logicAddress {
@@ -64,12 +65,19 @@ enum DPAUCS_mixedAddress_pair_type {
   DPAUCS_AP_LOGIC_ADDRESS
 };
 
+enum ap_flags {
+ DPAUCS_F_AP_PERSISTENT     = 1<<0,
+ DPAUCS_F_AP_SRC_SVR_OR_APC = 1<<1,
+ DPAUCS_F_AP_DST_SVR_OR_APC = 1<<2
+};
+
 typedef struct DPAUCS_mixedAddress_pair {
   union {
     DPAUCS_address_pair_t address;
     DPAUCS_logicAddress_pair_t logicAddress;
   };
   enum DPAUCS_mixedAddress_pair_type type;
+  uint8_t flags;
 } DPAUCS_mixedAddress_pair_t;
 
 #define DPAUCS_TYPE_CHECK(T,V) \
@@ -100,7 +108,7 @@ typedef struct DPAUCS_mixedAddress_pair {
   }
 
 bool DPAUCS_persistMixedAddress( DPAUCS_mixedAddress_pair_t* );
-void DPAUCS_freeMixedAddress( DPAUCS_mixedAddress_pair_t* );
+bool DPAUCS_freeMixedAddress( DPAUCS_mixedAddress_pair_t* );
 
 bool DPAUCS_addressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_address_pair_t* address );
 bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_logicAddress_pair_t* address );

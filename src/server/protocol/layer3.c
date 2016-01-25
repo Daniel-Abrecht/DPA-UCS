@@ -46,6 +46,7 @@ void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fro
       max_size
     ); break;
 #endif
+    case DPAUCS_AT_UNKNOWN: break;
 
   }
 
@@ -57,6 +58,7 @@ bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types type, size_t* l
 #ifdef USE_IPv4
     case DPAUCS_AT_IPv4: *limit = 0xFFFFu; return true;
 #endif
+    case DPAUCS_AT_UNKNOWN: break;
 
   }
   return false;

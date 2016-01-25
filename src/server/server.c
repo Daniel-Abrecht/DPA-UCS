@@ -4,17 +4,17 @@
 #include <DPA/UCS/eth.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/service.h>
-#include <DPA/UCS/packet.h>
-#include <DPA/UCS/binaryUtils.h>
-#include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/logger.h>
-#include <DPA/UCS/protocol/ethtypes.h>
-#include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/protocol/icmp.h>
+#include <DPA/UCS/packet.h>
+#include <DPA/UCS/service.h>
+#include <DPA/UCS/binaryUtils.h>
+#include <DPA/UCS/protocol/ip.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/tcp.h>
-#include <DPA/UCS/protocol/ip.h>
+#include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/protocol/icmp.h>
+#include <DPA/UCS/protocol/address.h>
+#include <DPA/UCS/protocol/ethtypes.h>
 
 static void DPAUCS_init( void );
 static void DPAUCS_shutdown( void );
@@ -119,6 +119,12 @@ const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress(const DPAUCS_logicAddress_t
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
     if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress))
       return logicAddresses[i];
+  return 0;
+}
+
+const DPAUCS_address_t* DPAUCS_get_address( const DPAUCS_logicAddress_t* logicAddress ){
+  (void)logicAddress;
+  // TO DO
   return 0;
 }
 

@@ -27,7 +27,8 @@ void DPAUCS_add_logicAddress( const struct DPAUCS_logicAddress*const logicAddres
 void DPAUCS_remove_logicAddress( const struct DPAUCS_logicAddress*const logicAddress );
 void DPAUCS_each_logicAddress(enum DPAUCS_address_types, bool(*)(const struct DPAUCS_logicAddress*,void*), void*);
 bool DPAUCS_has_logicAddress(const struct DPAUCS_logicAddress* addr);
-const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress(const DPAUCS_logicAddress_t* addr);
+const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_t* addr );
+const DPAUCS_address_t* DPAUCS_get_address( const DPAUCS_logicAddress_t* logicAddress );
 
 void DPAUCS_add_service( const struct DPAUCS_logicAddress* logicAddress, uint16_t port, struct DPAUCS_service* service );
 struct DPAUCS_service* DPAUCS_get_service( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port, uint8_t tos );

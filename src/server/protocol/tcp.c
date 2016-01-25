@@ -71,7 +71,7 @@ static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   if(tcb->service->onclose)
     (*tcb->service->onclose)(tcb);
   tcp_setState(tcb,TCP_CLOSED_STATE);
-  DPAUCS_persistMixedAddress( &tcb->fromTo );
+  DPAUCS_freeMixedAddress( &tcb->fromTo );
   tcb->currentId = 0;
   DPAUCS_LOG("Connection removed.\n");
 }
@@ -162,6 +162,7 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
 #ifdef USE_IPv4
     case DPAUCS_AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,length);
 #endif
+    case DPAUCS_AT_UNKNOWN: break;
   }
   return 0;
 }

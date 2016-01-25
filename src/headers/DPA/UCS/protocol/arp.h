@@ -2,10 +2,10 @@
 #define ARP_H
 
 #include <DPA/UCS/helper_macros.h>
-#include <DPA/UCS/protocol/address.h>
 
 struct DPAUCS_packet_info;
 struct DPAUCS_address;
+struct DPAUCS_logicAddress;
 
 #define ARP_REQUEST 1
 #define ARP_RESPONSE 2
@@ -27,8 +27,9 @@ typedef PACKED1 struct PACKED2 {
   // target protocol address
 } DPAUCS_arp_t;
 
-DPAUCS_address_t* DPAUCS_arpCache_register( struct DPAUCS_address* );
-bool DPAUCS_arpCache_deregister( struct DPAUCS_address* );
+const DPAUCS_address_t* DPAUCS_arpCache_register( const struct DPAUCS_address* );
+bool DPAUCS_arpCache_deregister( const struct DPAUCS_logicAddress* );
 void DPAUCS_arp_handler( struct DPAUCS_packet_info* info );
+DPAUCS_address_t* DPAUCS_arpCache_getAddress( const struct DPAUCS_logicAddress* );
 
 #endif

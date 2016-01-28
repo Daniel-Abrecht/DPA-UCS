@@ -2,6 +2,7 @@
 #include <string.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
+#include <DPA/UCS/logger.h>
 #include <DPA/UCS/binaryUtils.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/address.h>
@@ -96,8 +97,8 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
   (void)tha;
   (void)tpa;
 
-  // handle only 6 byte long hardware adresses
-  if( arp->hlen != 6 )
+  // handle only long enough hardware adresses
+  if( arp->hlen != sizeof(DPAUCS_mac_t) )
     return;
 
   switch( btoh16( arp->ptype ) ){
@@ -124,7 +125,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
 
           DPAUCS_packet_info_t infReply = *info;
           // set destination mac of ethernet frame to source mac of recived frame 
-          memcpy(infReply.destination_mac,info->source_mac,6);
+          memcpy(infReply.destination_mac,info->source_mac,sizeof(DPAUCS_mac_t));
 
           // Fill in source mac and payload pointing to new buffer
           // Initializes ethernet frame
@@ -142,15 +143,15 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
             *rtpa = rtha + rarp->hlen  // Target protocol address
           ;
 
-          memcpy(rsha,mac,6); // source is my mac
+          memcpy(rsha,info->interface->mac,sizeof(DPAUCS_mac_t)); // source is my mac
           *(uint32_t*)rspa = htob32(dest_ip); // my source mac is the previous target ip
-          memcpy(rtha,sha,6); // target mac is previous source mac
+          memcpy(rtha,sha,sizeof(DPAUCS_mac_t)); // target mac is previous source mac
           *(uint32_t*)rtpa = htob32(src_ip); // target ip is previous source ip
 
           // send ethernet frame
           DPAUCS_sendPacket(
             &infReply,
-            sizeof(DPAUCS_arp_t) + 8 + 12 // 8: 2*IPv4 | 12: 2*MAC
+            sizeof(DPAUCS_arp_t) + 2*sizeof(DPAUCS_mac_t) + 8 // 8: 2*IPv4
           );
 
         } break;

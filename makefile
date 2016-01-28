@@ -100,6 +100,10 @@ LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
 LINUX_FILES_TMP += server/drivers/adelay_clock.o
 
+LINUX_ETHERNET_DRIVERS += X(linux)
+
+LINUX_OPTIONS += -DDPAUCS_ETHERNET_DRIVERS='$(LINUX_ETHERNET_DRIVERS)'
+
 ifdef DPAUCS_INIT
 LINUX_DPAUCS_INIT += $(DPAUCS_INIT)
 endif
@@ -134,7 +138,11 @@ AVR_GENERATED   = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 AVR_OPTIONS  += -I${TEMP_AVR}
 
 AVR_FILES_TMP  = $(FILES)
-AVR_FILES_TMP += server/drivers/$(AVR_NET_DRIVER).o
+AVR_FILES_TMP += server/drivers/eth/$(AVR_NET_DRIVER).o
+
+AVR_ETHERNET_DRIVERS += X($(AVR_NET_DRIVER))
+
+AVR_OPTIONS += -DDPAUCS_ETHERNET_DRIVERS='$(AVR_ETHERNET_DRIVERS)'
 
 ifndef NO_ADELAY_DRIVER
 AVR_FILES_TMP   += server/drivers/adelay_timer.o

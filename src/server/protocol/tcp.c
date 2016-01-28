@@ -143,7 +143,7 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t
     uint16_t length;
   };
   DPAUCS_logicAddress_pair_t fromTo;
-  DPAUCS_mixedPairToLocalAddress( &fromTo, &tcb->fromTo );
+  DPAUCS_mixedPairToLogicAddress( &fromTo, &tcb->fromTo );
   struct pseudoHeader pseudoHeader = {
     .src = htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.source     )->address ),
     .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.destination)->address ),
@@ -229,9 +229,6 @@ bool DPAUCS_tcp_transmit(
   size_t data_size,
   uint32_t SEQ
 ){
-
-  DPAUCS_address_pair_t addr;
-  DPAUCS_mixedPairToAddress( &addr, &tcb->fromTo );
 
   // get pointer to entry in stream which represents tcp header
   DPAUCS_streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( stream );
@@ -327,7 +324,7 @@ bool DPAUCS_tcp_transmit(
     dataEntry->offset = dataEntryOffset;
     tcp_calculateChecksum( tcb, tcp, stream, packet_length );
     dataEntry->offset = dataEntryOffset;
-    DPAUCS_layer3_transmit( stream, &addr, PROTOCOL_TCP, packet_length );
+    DPAUCS_layer3_transmit( stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
     DPAUCS_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
@@ -417,7 +414,7 @@ static inline void tcp_init_variables(
 
 static inline bool tcp_is_tcb_valid( DPAUCS_transmissionControlBlock_t* tcb ){
   DPAUCS_logicAddress_pair_t lap;
-  DPAUCS_mixedPairToLocalAddress( &lap, &tcb->fromTo );
+  DPAUCS_mixedPairToLogicAddress( &lap, &tcb->fromTo );
   return tcb->service
       && tcb->destPort
       && DPAUCS_isValidHostAddress( lap.destination );

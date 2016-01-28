@@ -1,7 +1,6 @@
 #include <setjmp.h>
 #include <string.h>
 #include <stdbool.h>
-#include <DPA/UCS/eth.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/logger.h>
@@ -15,6 +14,7 @@
 #include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/ethtypes.h>
+#include <DPA/UCS/driver/eth/driver.h>
 
 static void DPAUCS_init( void );
 static void DPAUCS_shutdown( void );
@@ -43,22 +43,60 @@ NORETURN void DPAUCS_fatal( const char* message ){
 }
 
 void DPAUCS_run( void(*callback)(void*), void* arg ){
-  if(setjmp(fatal_error_exitpoint))
-    goto shutdown;
-
-  DPAUCS_init();
-
-  (*callback)(arg);
-
- shutdown:
+  if(!setjmp(fatal_error_exitpoint)){
+    DPAUCS_init();
+    (*callback)(arg);
+  }
   DPAUCS_shutdown();
+}
+
+#ifdef DPAUCS_ETHERNET_DRIVERS
+#define X(NAME) extern DPAUCS_ETHERNET_DRIVER_DECLARATION( NAME );
+DPAUCS_ETHERNET_DRIVERS
+#undef X
+#endif
+
+typedef struct DPAUCS_driver_list {
+  const char* name;
+  DPAUCS_ethernet_driver_t* driver;
+} DPAUCS_driver_info_t;
+
+#define X(NAME) { \
+    .name = #NAME, \
+    .driver = &DPAUCS_ETHERNET_DRIVER_SYMBOL(NAME) \
+  },
+static const DPAUCS_driver_info_t ethernet_driver_list_start[] = {
+  DPAUCS_ETHERNET_DRIVERS
+};
+static const DPAUCS_driver_info_t* ethernet_driver_list_end = ethernet_driver_list_start
+               + sizeof(ethernet_driver_list_start) / sizeof(*ethernet_driver_list_start);
+#undef X
+
+static void DPAUCS_ethernet_init(){
+  for(
+    const DPAUCS_driver_info_t* it = ethernet_driver_list_start;
+    it < ethernet_driver_list_end; it++
+  ){
+    DPAUCS_LOG("Initialize ethernet driver \"%s\"\n",it->name);
+    (*it->driver->init)();
+  }
+}
+
+static void DPAUCS_ethernet_shutdown(){
+  for(
+    const DPAUCS_driver_info_t* it = ethernet_driver_list_start;
+    it < ethernet_driver_list_end; it++
+  ){
+    DPAUCS_LOG("Shutdown ethernet driver \"%s\"\n",it->name);
+    (*it->driver->shutdown)();
+  }
 }
 
 static void DPAUCS_init( void ){
 
   memset(services,0,sizeof(services));
 
-  DPAUCS_ethInit(mac);
+  DPAUCS_ethernet_init();
 
   if(DPAUCS_icmpInit)
     DPAUCS_icmpInit();
@@ -76,7 +114,7 @@ static void DPAUCS_shutdown( void ){
   if(DPAUCS_icmpShutdown)
     DPAUCS_icmpShutdown();
 
-  DPAUCS_ethShutdown();
+  DPAUCS_ethernet_shutdown();
 
 #ifdef DPAUCS_SHUTDOWN // Allows to add shutdown functions using makefile
 #define X(F) void F( void ); F();
@@ -115,18 +153,13 @@ bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
   return DPAUCS_get_logicAddress(logicAddress);
 }
 
-const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
+const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_t* logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
     if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress))
       return logicAddresses[i];
   return 0;
 }
 
-const DPAUCS_address_t* DPAUCS_get_address( const DPAUCS_logicAddress_t* logicAddress ){
-  (void)logicAddress;
-  // TO DO
-  return 0;
-}
 
 void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, DPAUCS_service_t* service ){
   if(!service)
@@ -172,12 +205,14 @@ DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAdd
     return 0;
 }
 
-void getPacketInfo( DPAUCS_packet_info_t* info, DPAUCS_packet_t* packet ){
+void getPacketInfo( const DPAUCS_interface_t* interface, DPAUCS_packet_info_t* info, DPAUCS_packet_t* packet ){
 
   memset(info,0,sizeof(*info));
 
-  memcpy(info->destination_mac,packet->data.dest,6);
-  memcpy(info->source_mac,packet->data.src,6);
+  info->interface = interface;
+
+  memcpy(info->destination_mac,packet->data.dest,sizeof(DPAUCS_mac_t));
+  memcpy(info->source_mac,packet->data.src,sizeof(DPAUCS_mac_t));
 
   info->is_vlan = packet->data.vlan.tpid == IEEE_802_1Q_TPID_CONST;
 
@@ -211,36 +246,92 @@ void getPacketInfo( DPAUCS_packet_info_t* info, DPAUCS_packet_t* packet ){
 
 }
 
+typedef struct receive_driver_state {
+  const DPAUCS_driver_info_t* driverInfo;
+  const DPAUCS_interface_t* interface;
+} receive_driver_state_t;
+static receive_driver_state_t current_receive_driver_state;
+
+const DPAUCS_interface_t* DPAUCS_getInterface( const DPAUCS_logicAddress_t* logicAddress ){
+  (void)logicAddress;
+  // TO DO
+  return 0;
+}
+
+const DPAUCS_driver_info_t* getDriverOfInterface( const DPAUCS_interface_t* interface ){
+  for(
+    const DPAUCS_driver_info_t* driverInfo = ethernet_driver_list_start;
+    driverInfo < ethernet_driver_list_end;
+    driverInfo++
+  ) if( (size_t)( interface - driverInfo->driver->interfaces )
+      < driverInfo->driver->interface_count
+    ) return driverInfo;
+  return 0;
+}
+
+static bool DPAUCS_receive_next_interface( void ){
+  if( (size_t)( current_receive_driver_state.driverInfo - ethernet_driver_list_start )
+   >= (size_t)( ethernet_driver_list_end - ethernet_driver_list_start )
+  ) current_receive_driver_state.driverInfo = ethernet_driver_list_start;
+  if( current_receive_driver_state.driverInfo
+   && !current_receive_driver_state.driverInfo->driver->interface_count ){
+    current_receive_driver_state.driverInfo++;
+    return false;
+  }
+  if( (size_t)(
+    ++current_receive_driver_state.interface
+    - current_receive_driver_state.driverInfo->driver->interfaces
+  ) >= current_receive_driver_state.driverInfo->driver->interface_count ){
+    current_receive_driver_state.driverInfo++;
+    if( (size_t)( current_receive_driver_state.driverInfo - ethernet_driver_list_start )
+     >= (size_t)( ethernet_driver_list_end - ethernet_driver_list_start )
+    ) current_receive_driver_state.driverInfo = ethernet_driver_list_start;
+    current_receive_driver_state.interface = current_receive_driver_state.driverInfo->driver->interfaces;
+  }
+  return true;
+}
+
+static void DPAUCS_receive_next(){
+
+  DPAUCS_packet_t*const packet = &packetInputBuffer;
+
+  if( !DPAUCS_receive_next_interface() )
+    return;
+
+  packet->size = (*current_receive_driver_state.driverInfo->driver->receive)(
+    current_receive_driver_state.interface,
+    packet->data.raw,
+    PACKET_SIZE
+  );
+
+  if(!packet->size)
+    return;
+
+  if( memcmp(packet->data.dest,"\xFF\xFF\xFF\xFF\xFF\xFF",sizeof(DPAUCS_mac_t)) // not broadcast
+   && memcmp(packet->data.dest,current_receive_driver_state.interface->mac,sizeof(DPAUCS_mac_t)) // not my mac
+  ) return; // ignore packet
+
+  DPAUCS_packet_info_t info;
+
+  getPacketInfo(
+    current_receive_driver_state.interface,
+    &info, packet
+  );
+
+  if(info.invalid){
+    packet->size = 0; // discard package
+    return;
+  }
+
+  switch(info.type){
+    case ETH_TYPE_ARP: DPAUCS_arp_handler(&info); break;
+    case ETH_TYPE_IP_V4: DPAUCS_ip_handler(&info); break;
+  }
+}
 
 void DPAUCS_doNextTask( void ){
-  do { // Recive & handle packet
 
-    DPAUCS_packet_t*const packet = &packetInputBuffer;
-    packet->size = DPAUCS_ethReceive(packet->data.raw,PACKET_SIZE);
-
-    if(!packet->size)
-      break;
-
-    if(
-         memcmp(packet->data.dest,"\xFF\xFF\xFF\xFF\xFF\xFF",6) // not broadcast
-      && memcmp(packet->data.dest,mac,6) // not my mac
-    ) break; // ignore packet
-
-    DPAUCS_packet_info_t info;
-
-    getPacketInfo(&info,packet);
-
-    if(info.invalid){
-      packet->size = 0; // discard package
-      break;
-    }
-
-    switch(info.type){
-      case ETH_TYPE_ARP: DPAUCS_arp_handler(&info); break;
-      case ETH_TYPE_IP_V4: DPAUCS_ip_handler(&info); break;
-    }
-
-  } while(0);
+  DPAUCS_receive_next();
 
   if(adelay_update)
     adelay_update();
@@ -254,10 +345,8 @@ void DPAUCS_preparePacket( DPAUCS_packet_info_t* info ){
 
   DPAUCS_packet_t* packet = &nextPacketToSend;
 
-  memcpy(info->source_mac,mac,6);
-
-  memcpy(packet->data.dest,info->destination_mac,6);
-  memcpy(packet->data.src,info->source_mac,6);
+  memcpy(packet->data.dest,info->destination_mac,sizeof(DPAUCS_mac_t));
+  memcpy(packet->data.src,info->source_mac,sizeof(DPAUCS_mac_t));
 
   if( info->is_vlan ){
     packet->data.vlan.tpid = IEEE_802_1Q_TPID_CONST;
@@ -275,8 +364,17 @@ void DPAUCS_preparePacket( DPAUCS_packet_info_t* info ){
 }
 
 void DPAUCS_sendPacket( DPAUCS_packet_info_t* info, uint16_t size ){
+  if( !info->interface ){
+    DPAUCS_LOG("DPAUCS_sendPacket: Missing interface!\n");
+    return;
+  }
   size += (uint8_t*)info->payload - nextPacketToSend.data.raw; // add ethernetheadersize
   nextPacketToSend.size = size;
-  DPAUCS_ethSend( nextPacketToSend.data.raw, size );
+  const DPAUCS_driver_info_t* driverInfo = getDriverOfInterface( info->interface );
+  if(!driverInfo){
+    DPAUCS_LOG("DPAUCS_sendPacket: interface or driver unavailable\n");
+    return;
+  }
+  (*driverInfo->driver->send)( info->interface, nextPacketToSend.data.raw, size );
 }
 

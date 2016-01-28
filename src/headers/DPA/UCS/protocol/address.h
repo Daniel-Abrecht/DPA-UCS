@@ -8,24 +8,14 @@
 
 #define DPAUCS_MAC( a,b,c,d,e,f ) {0x##a,0x##b,0x##c,0x##d,0x##e,0x##f}
 
-#define DPAUCS_LA_IPv4_INIT \
-  .type = DPAUCS_AT_IPv4
-
-#define DPAUCS_LA_IPv4( a,b,c,d ) { \
-    DPAUCS_LA_IPv4_INIT, \
-    .address = ((uint32_t)a<<24) \
-             | ((uint32_t)b<<16) \
-             | ((uint32_t)c<<8) \
-             | ((uint32_t)d) \
-  }
-
-#define DPAUCS_LA_SIZE( type ) ( \
-    (type) == AT_IPv4 ? 4 : \
-    0 \
-  )
-
 #define DPAUCS_ANY_ADDRESS 0
 #define DPAUCS_AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
+
+typedef uint8_t DPAUCS_mac_t[6];
+
+typedef struct DPAUCS_interface {
+  DPAUCS_mac_t mac;
+} DPAUCS_interface_t;
 
 enum DPAUCS_address_types {
 #ifdef USE_IPv4
@@ -42,7 +32,7 @@ typedef struct DPAUCS_logicAddress {
 } DPAUCS_logicAddress_t;
 
 typedef struct DPAUCS_address {
-  uint8_t mac[6];
+  DPAUCS_mac_t mac;
   union {
     enum DPAUCS_address_types type;
     DPAUCS_logicAddress_t logicAddress;
@@ -113,9 +103,17 @@ bool DPAUCS_freeMixedAddress( DPAUCS_mixedAddress_pair_t* );
 bool DPAUCS_addressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_address_pair_t* address );
 bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_logicAddress_pair_t* address );
 bool DPAUCS_mixedPairToAddress( DPAUCS_address_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
-bool DPAUCS_mixedPairToLocalAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
+bool DPAUCS_mixedPairToLogicAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
 bool DPAUCS_mixedPairEqual( const DPAUCS_mixedAddress_pair_t*, const DPAUCS_mixedAddress_pair_t* );
 enum DPAUCS_address_types DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* );
+const DPAUCS_logicAddress_t* DPAUCS_mixedPairComponentToLogicAddress(
+  const DPAUCS_mixedAddress_pair_t* mixed,
+  bool source_or_destination
+);
+const DPAUCS_address_t* DPAUCS_mixedPairComponentToAddress(
+  const DPAUCS_mixedAddress_pair_t* mixed,
+  bool source_or_destination
+);
 
 bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t*);
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t*,const DPAUCS_logicAddress_t*);

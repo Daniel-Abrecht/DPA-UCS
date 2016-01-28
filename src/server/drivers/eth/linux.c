@@ -13,14 +13,20 @@
 #include <DPA/UCS/logger.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
+#include <DPA/UCS/driver/eth/driver.h>
+#include <assert.h>
+
+static_assert( sizeof(DPAUCS_mac_t) == 6, "Expect DPAUCS_mac_t to be 6 bytes long" );
 
 static int ethernet_frame_min_size = 0;
 static int sock = -1;
 static char ifname[IFNAMSIZ];
 
-uint8_t mac[] = {0,0,0,0,0,0};
+static DPAUCS_interface_t interfaces;
+
 
 static int setIfaceNameMac( const char* ifName ){
+
   char buf[8192] = {0};
   int sck = sock;
 
@@ -46,20 +52,19 @@ static int setIfaceNameMac( const char* ifName ){
       continue;
     }
 
-    if(
-        !item->ifr_hwaddr.sa_data[0]
+    if( !item->ifr_hwaddr.sa_data[0]
      && !item->ifr_hwaddr.sa_data[1]
      && !item->ifr_hwaddr.sa_data[2]
      && !item->ifr_hwaddr.sa_data[3]
      && !item->ifr_hwaddr.sa_data[4]
      && !item->ifr_hwaddr.sa_data[5]
     ) continue;
-    
+
     if( ifName && strcmp(ifName,item->ifr_name) )
       continue;
 
     strcpy(ifname,item->ifr_name);
-    memcpy(mac,item->ifr_hwaddr.sa_data,6);
+    memcpy(interfaces.mac,item->ifr_hwaddr.sa_data,6);
 
     if( ioctl( sck, SIOCGIFINDEX, item ) < 0 )
       DPAUCS_LOG( "error: ioctl %d %s\n", errno, strerror(errno) );
@@ -68,11 +73,9 @@ static int setIfaceNameMac( const char* ifName ){
   return -1;
 }
 
-void DPAUCS_ethInit( uint8_t* macaddr ){
+void eth_init( void ){
 
   int ifi;
-
-  (void) macaddr; // unused
 
   {
     // There is currently no way to automatically determinate this
@@ -121,10 +124,13 @@ void DPAUCS_ethInit( uint8_t* macaddr ){
   }
     /* display result */
 
-  DPAUCS_LOG("Using device: %s mac: %02x:%02x:%02x:%02x:%02x:%02x\n", 
-    ifname,
-    mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
-  );
+  {
+    uint8_t* mac = interfaces.mac;
+    DPAUCS_LOG("Using device: %s mac: %02x:%02x:%02x:%02x:%02x:%02x\n", 
+      ifname,
+      mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
+    );
+  }
 
   {
     struct packet_mreq mr;
@@ -137,11 +143,12 @@ void DPAUCS_ethInit( uint8_t* macaddr ){
 
   return;
 
-  fatal_error: DPAUCS_fatal( "DPAUCS_ethInit failed\n" );
+  fatal_error: DPAUCS_fatal( "Ethernet driver \"linux\": init failed\n" );
 
 }
 
-void DPAUCS_ethSend( uint8_t* packet, uint16_t len ){
+static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len ){
+  (void)interface;
 
   // Some drivers have... "limitations"
   if( len < ethernet_frame_min_size )
@@ -163,14 +170,24 @@ void DPAUCS_ethSend( uint8_t* packet, uint16_t len ){
 
 }
 
-uint16_t DPAUCS_ethReceive( uint8_t* packet, uint16_t maxlen ){
+static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t maxlen ){
+  (void)interface;
   long i = recv(sock, packet, maxlen, 0);
   if( i<0 && errno != EAGAIN && errno != EWOULDBLOCK )
     DPAUCS_LOG( "recv: error: %d %s\n", errno, strerror(errno) );
   return i < 0 ? 0 : i;
 }
 
-void DPAUCS_ethShutdown(){
+static void eth_shutdown( void ){
   if( sock >= 0 )
     close( sock );
 }
+
+DPAUCS_ETHERNET_DRIVER( linux ){
+  .init       = &eth_init,
+  .send       = &eth_send,
+  .receive    = &eth_receive,
+  .shutdown   = &eth_shutdown,
+  .interfaces = &interfaces,
+  .interface_count = 1
+};

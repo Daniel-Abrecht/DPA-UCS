@@ -4,8 +4,6 @@
 #include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/address.h>
 
-uint8_t WEAK mac[] = { 0x5C, 0xF9, 0xDD, 0x55, 0x96, 0xC2 };
-
 void server_main(void* arg){
   (void)arg;
 

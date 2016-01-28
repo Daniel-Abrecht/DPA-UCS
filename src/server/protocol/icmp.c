@@ -54,10 +54,11 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
       icmp->type = ICMP_ECHO_REPLY;
       icmp->checksum = 0;
       icmp->checksum = checksum( payload, sizeof(DPAUCS_icmp_t) );
-      DPAUCS_address_pair_t fromTo = {
+      DPAUCS_mixedAddress_pair_t fromTo;
+      DPAUCS_addressPairToMixed( &fromTo, (DPAUCS_address_pair_t[]){{
         .source = to,
         .destination = from
-      };
+      }} );
       DPAUCS_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
       DPAUCS_stream_referenceWrite( stream, payload, length );
       DPAUCS_layer3_transmit( stream, &fromTo, PROTOCOL_ICMP, ~0 );

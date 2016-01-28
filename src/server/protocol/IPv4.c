@@ -63,8 +63,8 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
     .id = ip->id,
     .tos = ip->tos,
   };
-  memcpy(ipInfo.src.address.mac,info->source_mac,6);
-  memcpy(ipInfo.dest.address.mac,info->destination_mac,6);
+  memcpy(ipInfo.src.address.mac,info->source_mac,sizeof(DPAUCS_mac_t));
+  memcpy(ipInfo.dest.address.mac,info->destination_mac,sizeof(DPAUCS_mac_t));
 
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
@@ -151,15 +151,39 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
 
 }
 
-void DPAUCS_IPv4_transmit(
+bool DPAUCS_IPv4_transmit(
   DPAUCS_stream_t* inputStream,
-  const DPAUCS_IPv4_address_t* src,
-  const DPAUCS_IPv4_address_t* dst,
+  const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
   size_t max_size_arg
-){
-  const uint16_t hl = 5;
+){ // TODO
+
+  const DPAUCS_IPv4_address_t* src = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, true );
+  const DPAUCS_IPv4_address_t* dst = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, false );
+  DPAUCS_IPv4_address_t tmp_IPv4Addr = { DPAUCS_IPv4_INIT };
+
+  static const uint16_t hl = 5;
   static uint16_t id = 0;
+
+  if(!dst){
+    DPAUCS_LOG( "DPAUCS_IPv4_transmit: destination address incomplete\n" );
+    return false;
+  }
+  const DPAUCS_logicAddress_t* laddr = src ? &src->address.logicAddress
+                                           : DPAUCS_mixedPairComponentToLogicAddress( fromTo, true );
+  if(!laddr){
+    DPAUCS_LOG("DPAUCS_IPv4_transmit: Can't convert source address\n");
+    return false;
+  }
+  const DPAUCS_interface_t* interface = DPAUCS_getInterface( laddr );
+  if( !interface ){
+    DPAUCS_LOG("DPAUCS_IPv4_transmit: Can't find source interface\n");
+    return false;
+  }
+  if(!src){
+    DPAUCS_copy_logicAddress( &tmp_IPv4Addr.address.logicAddress, laddr );
+    memcpy( tmp_IPv4Addr.address.mac, interface->mac, sizeof(DPAUCS_mac_t) );
+  }
 
   uint16_t max_size = DPAUCS_MIN(max_size_arg,(uint16_t)~0);
 
@@ -171,8 +195,9 @@ void DPAUCS_IPv4_transmit(
     DPAUCS_packet_info_t p;
     memset( &p, 0, sizeof(DPAUCS_packet_info_t) );
     p.type = ETH_TYPE_IP_V4;
-    memcpy( p.destination_mac, dst->address.mac, 6 );
-    memcpy( p.source_mac, src->address.mac, 6 );
+    p.interface = interface;
+    memcpy( p.destination_mac, dst->address.mac, sizeof(DPAUCS_mac_t) );
+    memcpy( p.source_mac, src->address.mac, sizeof(DPAUCS_mac_t) );
     DPAUCS_preparePacket( &p );
 
     // create ip header
@@ -217,4 +242,5 @@ void DPAUCS_IPv4_transmit(
   }
 
   id++;
+  return true;
 }

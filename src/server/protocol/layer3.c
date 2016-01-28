@@ -33,23 +33,23 @@ DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream( void ){
   return &outputStream;
 }
 
-void DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type, size_t max_size ){
+bool DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t max_size ){
 
-  switch( fromTo->source->type ){
+  switch( DPAUCS_mixedPairGetType( fromTo ) ){
 
 #ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: DPAUCS_IPv4_transmit(
+    case DPAUCS_AT_IPv4: return DPAUCS_IPv4_transmit(
       stream,
-      (const DPAUCS_IPv4_address_t*)fromTo->source,
-      (const DPAUCS_IPv4_address_t*)fromTo->destination,
+      fromTo,
       type,
       max_size
-    ); break;
+    );
 #endif
     case DPAUCS_AT_UNKNOWN: break;
 
   }
 
+  return false;
 }
 
 bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types type, size_t* limit ){

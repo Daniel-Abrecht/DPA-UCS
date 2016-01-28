@@ -93,37 +93,60 @@ bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DP
   return true;
 }
 
+const DPAUCS_logicAddress_t* DPAUCS_mixedPairComponentToLogicAddress(
+  const DPAUCS_mixedAddress_pair_t* mixed,
+  bool source_or_destination
+){
+  switch( mixed->type ){
+    case DPAUCS_AP_ADDRESS:
+      return source_or_destination
+       ? &mixed->address.source->logicAddress
+       : &mixed->address.destination->logicAddress;
+    case DPAUCS_AP_LOGIC_ADDRESS:
+      return source_or_destination
+       ? mixed->logicAddress.source
+       : mixed->logicAddress.destination;
+  }
+  return 0;
+}
+
+const DPAUCS_address_t* DPAUCS_mixedPairComponentToAddress(
+  const DPAUCS_mixedAddress_pair_t* mixed,
+  bool source_or_destination
+){
+  switch( mixed->type ){
+    case DPAUCS_AP_ADDRESS:
+      return source_or_destination
+       ? mixed->address.source
+       : mixed->address.destination;
+    case DPAUCS_AP_LOGIC_ADDRESS: {
+      if(!( mixed->flags & DPAUCS_F_AP_PERSISTENT ))
+        break;
+      if(!( mixed->flags & ( source_or_destination
+                              ? DPAUCS_F_AP_SRC_SVR_OR_APC
+                              : DPAUCS_F_AP_DST_SVR_OR_APC
+      ))) break;
+      const DPAUCS_logicAddress_t* logicAddress = source_or_destination
+                                            ? mixed->logicAddress.source
+                                            : mixed->logicAddress.destination;
+      return DPAUCS_arpCache_getAddress( logicAddress );
+    }
+  }
+  return 0;
+}
+
 bool DPAUCS_mixedPairToAddress( DPAUCS_address_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed ){
   switch( mixed->type ){
     case DPAUCS_AP_ADDRESS: {
       address->source = mixed->address.source;
       address->destination = mixed->address.destination;
     } return true;
-    case DPAUCS_AP_LOGIC_ADDRESS: {
-      if(!( mixed->flags & DPAUCS_F_AP_PERSISTENT ))
-        return false;
-      DPAUCS_address_pair_t ap;
-      if( mixed->flags & DPAUCS_F_AP_SRC_SVR_OR_APC ){
-        
-      }else{
-        ap.source = DPAUCS_arpCache_getAddress( mixed->logicAddress.source );
-        if(!ap.source)
-          return false;
-      }
-      if( mixed->flags & DPAUCS_F_AP_DST_SVR_OR_APC ){
-        
-      }else{
-        ap.destination = DPAUCS_arpCache_getAddress( mixed->logicAddress.destination );
-        if(!ap.destination)
-          return false;
-      }
-      *address = ap;
-    } return true;
+    case DPAUCS_AP_LOGIC_ADDRESS: break;
   }
   return false;
 }
 
-bool DPAUCS_mixedPairToLocalAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed ){
+bool DPAUCS_mixedPairToLogicAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed ){
   switch( mixed->type ){
     case DPAUCS_AP_ADDRESS: {
       address->source = &mixed->address.source->logicAddress;
@@ -138,8 +161,8 @@ bool DPAUCS_mixedPairToLocalAddress( DPAUCS_logicAddress_pair_t* address, const 
 
 bool DPAUCS_mixedPairEqual( const DPAUCS_mixedAddress_pair_t* ma, const DPAUCS_mixedAddress_pair_t* mb ){
   DPAUCS_logicAddress_pair_t la,lb;
-  return DPAUCS_mixedPairToLocalAddress( &la, ma )
-      && DPAUCS_mixedPairToLocalAddress( &lb, mb )
+  return DPAUCS_mixedPairToLogicAddress( &la, ma )
+      && DPAUCS_mixedPairToLogicAddress( &lb, mb )
       && DPAUCS_compare_logicAddress( la.source, lb.source )
       && DPAUCS_compare_logicAddress( la.destination, lb.destination );
 }

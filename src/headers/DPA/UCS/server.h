@@ -15,13 +15,22 @@
 
 struct DPAUCS_service;
 struct DPAUCS_packet_info;
+struct DPAUCS_ethernet_driver;
+
+typedef struct DPAUCS_driver_info {
+  const char* name;
+  struct DPAUCS_ethernet_driver* driver;
+} DPAUCS_driver_info_t;
+
+extern const DPAUCS_driver_info_t ethernet_driver_list_start[];
+extern const DPAUCS_driver_info_t* ethernet_driver_list_end;
 
 void DPAUCS_run( void(*)(void*), void* );
 
 NORETURN void DPAUCS_fatal( const char* message );
 void DPAUCS_onfatalerror( const char* message );
 
-void DPAUCS_add_logicAddress( const struct DPAUCS_logicAddress*const logicAddress );
+void DPAUCS_add_logicAddress( const DPAUCS_interface_t*const interface, const DPAUCS_logicAddress_t*const logicAddress );
 void DPAUCS_remove_logicAddress( const struct DPAUCS_logicAddress*const logicAddress );
 void DPAUCS_each_logicAddress(enum DPAUCS_address_types, bool(*)(const struct DPAUCS_logicAddress*,void*), void*);
 bool DPAUCS_has_logicAddress(const struct DPAUCS_logicAddress* addr);

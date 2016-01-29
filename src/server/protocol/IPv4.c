@@ -156,7 +156,7 @@ bool DPAUCS_IPv4_transmit(
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
   size_t max_size_arg
-){ // TODO
+){
 
   const DPAUCS_IPv4_address_t* src = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, true );
   const DPAUCS_IPv4_address_t* dst = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, false );
@@ -183,6 +183,7 @@ bool DPAUCS_IPv4_transmit(
   if(!src){
     DPAUCS_copy_logicAddress( &tmp_IPv4Addr.address.logicAddress, laddr );
     memcpy( tmp_IPv4Addr.address.mac, interface->mac, sizeof(DPAUCS_mac_t) );
+    src = &tmp_IPv4Addr;
   }
 
   uint16_t max_size = DPAUCS_MIN(max_size_arg,(uint16_t)~0);

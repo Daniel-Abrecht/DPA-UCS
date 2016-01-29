@@ -53,18 +53,20 @@ bool DPAUCS_persistMixedAddress( DPAUCS_mixedAddress_pair_t* map ){
   ) return false;
   const DPAUCS_logicAddress_t* src = DPAUCS_get_logicAddress( &map->address.source->logicAddress );
   if( src ){
-    map->flags |= DPAUCS_F_AP_SRC_SVR_OR_APC;
     map->logicAddress.source = src;
   }else{
+    map->flags |= DPAUCS_F_AP_SRC_SVR_OR_APC;
     map->logicAddress.source = &DPAUCS_arpCache_register( map->address.source )->logicAddress;
   }
   const DPAUCS_logicAddress_t* dest = DPAUCS_get_logicAddress( &map->address.source->logicAddress );
   if( dest ){
-    map->flags |= DPAUCS_F_AP_DST_SVR_OR_APC;
     map->logicAddress.destination = dest;
   }else{
+    map->flags |= DPAUCS_F_AP_DST_SVR_OR_APC;
     map->logicAddress.destination = &DPAUCS_arpCache_register( map->address.destination )->logicAddress;
   }
+  map->type = DPAUCS_AP_LOGIC_ADDRESS;
+  map->flags |= DPAUCS_F_AP_PERSISTENT;
   return true;
 }
 

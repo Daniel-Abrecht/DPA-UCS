@@ -1,11 +1,23 @@
+#include <DPA/UCS/driver/eth/driver.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/services/http.h>
 #include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/address.h>
+
+static const DPAUCS_interface_t* getFirstInterface(){
+  const DPAUCS_driver_info_t* it;
+  for( it = ethernet_driver_list_start; it < ethernet_driver_list_end; it++ )
+    if( it->driver->interface_count )
+      return it->driver->interfaces;
+
+  return 0;
+}
 
 void server_main(void* arg){
   (void)arg;
+
+  const DPAUCS_interface_t* interface = getFirstInterface();
 
 #ifdef USE_IPv4
   static const DPAUCS_logicAddress_IPv4_t IPv4addrs[] = {
@@ -16,7 +28,7 @@ void server_main(void* arg){
   };
 
   for( unsigned i=0; i<sizeof(IPv4addrs); i++ )
-    DPAUCS_add_logicAddress( &IPv4addrs[i].logicAddress );
+    DPAUCS_add_logicAddress( interface, &IPv4addrs[i].logicAddress );
 #endif
 
   DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 80, &http_service );

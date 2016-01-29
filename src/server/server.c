@@ -19,7 +19,12 @@
 static void DPAUCS_init( void );
 static void DPAUCS_shutdown( void );
 
-const DPAUCS_logicAddress_t* logicAddresses[MAX_LOGIC_ADDRESSES] = {0};
+typedef struct DPAUCS_address_entry {
+  const DPAUCS_logicAddress_t* logicAddress;
+  const DPAUCS_interface_t* interface;
+} DPAUCS_address_entry_t;
+
+DPAUCS_address_entry_t address_list[MAX_LOGIC_ADDRESSES];
 
 static DPAUCS_packet_t packetInputBuffer;
 static DPAUCS_packet_t nextPacketToSend;
@@ -56,19 +61,14 @@ DPAUCS_ETHERNET_DRIVERS
 #undef X
 #endif
 
-typedef struct DPAUCS_driver_list {
-  const char* name;
-  DPAUCS_ethernet_driver_t* driver;
-} DPAUCS_driver_info_t;
-
 #define X(NAME) { \
     .name = #NAME, \
     .driver = &DPAUCS_ETHERNET_DRIVER_SYMBOL(NAME) \
   },
-static const DPAUCS_driver_info_t ethernet_driver_list_start[] = {
+const DPAUCS_driver_info_t ethernet_driver_list_start[] = {
   DPAUCS_ETHERNET_DRIVERS
 };
-static const DPAUCS_driver_info_t* ethernet_driver_list_end = ethernet_driver_list_start
+const DPAUCS_driver_info_t* ethernet_driver_list_end = ethernet_driver_list_start
                + sizeof(ethernet_driver_list_start) / sizeof(*ethernet_driver_list_start);
 #undef X
 
@@ -124,10 +124,11 @@ static void DPAUCS_shutdown( void ){
 
 }
 
-void DPAUCS_add_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){
+void DPAUCS_add_logicAddress( const DPAUCS_interface_t*const interface, const DPAUCS_logicAddress_t*const logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
-    if(!logicAddresses[i]){
-      logicAddresses[i] = logicAddress;
+    if(!address_list[i].logicAddress){
+      address_list[i].logicAddress = logicAddress;
+      address_list[i].interface    = interface;
       break;
     }
   }
@@ -135,8 +136,8 @@ void DPAUCS_add_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){
 
 void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
-    if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress)){
-      logicAddresses[i] = 0;
+    if(DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress)){
+      address_list[i].logicAddress = 0;
       break;
     }
   }
@@ -144,8 +145,8 @@ void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress 
 
 void DPAUCS_each_logicAddress(enum DPAUCS_address_types type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
   for( int i=0; i<MAX_LOGIC_ADDRESSES; i++ )
-    if( logicAddresses[i]->type & type )
-      if( !(*func)(logicAddresses[i],x) )
+    if( address_list[i].logicAddress->type & type )
+      if( !(*func)(address_list[i].logicAddress,x) )
         break;
 }
 
@@ -155,8 +156,8 @@ bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
 
 const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_t* logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
-    if(DPAUCS_compare_logicAddress(logicAddresses[i],logicAddress))
-      return logicAddresses[i];
+    if(DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress))
+      return address_list[i].logicAddress;
   return 0;
 }
 
@@ -253,8 +254,9 @@ typedef struct receive_driver_state {
 static receive_driver_state_t current_receive_driver_state;
 
 const DPAUCS_interface_t* DPAUCS_getInterface( const DPAUCS_logicAddress_t* logicAddress ){
-  (void)logicAddress;
-  // TO DO
+  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
+    if(DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress))
+      return address_list[i].interface;
   return 0;
 }
 

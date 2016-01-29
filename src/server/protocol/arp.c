@@ -77,9 +77,11 @@ bool DPAUCS_arpCache_deregister( const DPAUCS_logicAddress_t* addr ){
 }
 
 DPAUCS_address_t* DPAUCS_arpCache_getAddress( const DPAUCS_logicAddress_t* la ){
-  return &arpCache_getEntryByAddress( la )->address;
+  ARP_entry_t* entry = arpCache_getEntryByAddress( la );
+  if(!entry)
+    return 0;
+  return &entry->address;
 }
-
 
 void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
 

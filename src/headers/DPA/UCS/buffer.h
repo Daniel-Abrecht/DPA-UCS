@@ -39,7 +39,10 @@
 #define DPAUCS_BUFFER_GET_OFFSET(buf,readOrWrite) DPAUCS_buffer_get_offset( &(buf)->state, (readOrWrite) )
 #define DPAUCS_BUFFER_SET_OFFSET(buf,readOrWrite,offset) DPAUCS_buffer_set_offset( &(buf)->state, (readOrWrite), (offset) )
 #define DPAUCS_BUFFER_SIZE(buf) DPAUCS_buffer_size(&(buf)->state)
+#define DPAUCS_BUFFER_RESET(buf) DPAUCS_buffer_reset(&(buf)->state)
 #define DPAUCS_BUFFER_INCREMENT(buf) DPAUCS_buffer_increment( &(buf)->state, true )
+#define DPAUCS_BUFFER_GET_OFFSET_DIFFERENCE( bigger, buf, offset, readOrWrite ) \
+  DPAUCS_buffer_getOffsetDifference( bigger, &(buf)->state, offset, readOrWrite )
 
 #define DPAUCS_BUFFER_MAX_SIZE ((size_t)~1)
 
@@ -74,6 +77,8 @@ typedef struct DPAUCS_ringbuffer_state {
 size_t DPAUCS_buffer_get_offset( DPAUCS_ringbuffer_state_t* state, bool readOrWrite );
 size_t DPAUCS_buffer_increment( DPAUCS_ringbuffer_state_t* state, bool readOrWrite );
 size_t DPAUCS_buffer_size( const DPAUCS_ringbuffer_state_t* state );
+void DPAUCS_buffer_reset( DPAUCS_ringbuffer_state_t* state );
+size_t DPAUCS_buffer_getOffsetDifference( bool* bigger, DPAUCS_ringbuffer_state_t* state, size_t offset, bool readOrWrite );
 void DPAUCS_buffer_set_offset( DPAUCS_ringbuffer_state_t* state, bool readOrWrite, size_t offset );
 void DPAUCS_buffer_skip( DPAUCS_ringbuffer_state_t* state, size_t s, bool reverse );
 

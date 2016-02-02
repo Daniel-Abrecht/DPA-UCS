@@ -34,6 +34,40 @@ size_t DPAUCS_buffer_size( const DPAUCS_ringbuffer_state_t* state ){
   ;
 }
 
+void DPAUCS_buffer_reset( DPAUCS_ringbuffer_state_t* state ){
+  state->offset.start = state->offset.end = state->inverse ? state->size - 1 : 0;
+}
+
+// Returns diffrence between offsets
+size_t DPAUCS_buffer_getOffsetDifference(
+  bool* bigger,
+  DPAUCS_ringbuffer_state_t* state,
+  size_t offset,
+  bool readOrWrite
+){
+  if(!~offset){
+    // If the other stream was empty, which is the case when ~offset == 0, it doesn't have a valid offset but a size of 0.
+    // Therefore, the difference between both offsets is the size of the first stream
+    *bigger = false;
+    return DPAUCS_buffer_size( state );
+  }
+  bool startOrEnd = state->inverse != readOrWrite;
+  // Unchanged other offset
+  size_t offset2 = (!startOrEnd) ? state->offset.start : state->offset.end;
+  size_t start = startOrEnd ? offset  : offset2;
+  size_t end   = startOrEnd ? offset2 : offset ;
+  size_t size  = DPAUCS_buffer_size( state );
+  size_t size2 = end > start ? end - start : state->size - end + start;
+  if( size2 > size ){
+    *bigger = true;
+    return size2 - size;
+  }else{
+    *bigger = false;
+    return size - size2;
+  }
+}
+
+
 void DPAUCS_buffer_skip( DPAUCS_ringbuffer_state_t* state, size_t x, bool reverse ){
   if(!x)
     return;
@@ -60,7 +94,7 @@ void DPAUCS_buffer_skip( DPAUCS_ringbuffer_state_t* state, size_t x, bool revers
     size_t p = state->size - *offset_read;
     if( p <= x ){
       *offset_read  = x - p;
-    }else{ 
+    }else{
       *offset_read += x;
     }
   }

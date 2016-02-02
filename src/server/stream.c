@@ -3,10 +3,8 @@
 #include <DPA/UCS/stream.h>
 
 void DPAUCS_stream_reset( DPAUCS_stream_t* stream ){
-  DPAUCS_stream_offsetStorage_t sros;
-  memset( &sros, 0, sizeof(sros) );
-  DPAUCS_stream_restoreWriteOffset( stream, &sros );
-  DPAUCS_stream_restoreReadOffset ( stream, &sros );
+  DPAUCS_BUFFER_RESET( stream->buffer_buffer );
+  DPAUCS_BUFFER_RESET( stream->buffer );
 }
 
 void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
@@ -15,9 +13,38 @@ void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DP
   sros->bufferBufferInfoOffset = binf->offset;
 }
 
+static void moveBufferInfoOffset( DPAUCS_bufferInfo_t* bi, size_t size, bool forwardOrRewind ){
+  if( bi->type == BUFFER_BUFFER ){
+    DPAUCS_uchar_buffer_t* ucb = bi->ptr;
+    DPAUCS_BUFFER_SKIP( ucb, size, forwardOrRewind );
+  }
+  bi->offset = 0;
+}
+
+static void rewindReadBuffer( DPAUCS_buffer_buffer_t* bb, size_t size ){
+  DPAUCS_BUFFER_SKIP( bb, size, false );
+  while( size-- ){
+    DPAUCS_bufferInfo_t* bi = &DPAUCS_BUFFER_GET( bb );
+    moveBufferInfoOffset( bi, bi->offset, false );
+  }
+  DPAUCS_BUFFER_SKIP( bb, size, false );
+}
+
+static void rewindWriteBuffer( DPAUCS_buffer_buffer_t* bb, size_t size ){
+  DPAUCS_BUFFER_REVERSE( bb );
+  rewindReadBuffer( bb, size );
+  DPAUCS_BUFFER_REVERSE( bb );
+}
+
 void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros ){
-  DPAUCS_BUFFER_SET_OFFSET( stream->buffer_buffer, true, sros->bufferBufferOffset );
-  DPAUCS_BUFFER_BEGIN(stream->buffer_buffer)->offset = sros->bufferBufferInfoOffset;
+  bool bigger;
+  size_t diff = DPAUCS_BUFFER_GET_OFFSET_DIFFERENCE( &bigger, stream->buffer_buffer, sros->bufferBufferOffset, true );
+  if( !bigger ){
+    rewindReadBuffer( stream->buffer_buffer, diff );
+  }else{
+    DPAUCS_BUFFER_SET_OFFSET( stream->buffer_buffer, true, sros->bufferBufferOffset );
+  }
+  DPAUCS_BUFFER_BEGIN( stream->buffer_buffer )->offset = sros->bufferBufferInfoOffset;
 }
 
 void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream ){
@@ -26,7 +53,13 @@ void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, const D
 }
 
 void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros ){
-  DPAUCS_BUFFER_SET_OFFSET( stream->buffer, false, sros->bufferOffset );
+  bool bigger;
+  size_t diff = DPAUCS_BUFFER_GET_OFFSET_DIFFERENCE( &bigger, stream->buffer_buffer, sros->bufferBufferOffset, false );
+  if( bigger ){
+    rewindWriteBuffer( stream->buffer_buffer, diff );
+  }else{
+    DPAUCS_BUFFER_SET_OFFSET( stream->buffer, false, sros->bufferOffset );
+  }
   DPAUCS_BUFFER_SET_OFFSET( stream->buffer_buffer, false, sros->bufferBufferOffset );
 }
 
@@ -184,7 +217,7 @@ bool DPAUCS_stream_referenceWrite( DPAUCS_stream_t* stream, const void* p, size_
 static inline size_t stream_read_from_buffer( DPAUCS_bufferInfo_t* info, void* p, size_t max_size ){
   unsigned char* uch = p;
   size_t size = info->size - info->offset;
-  DPAUCS_uchar_buffer_t* buffer = (DPAUCS_uchar_buffer_t*)info->ptr;
+  DPAUCS_uchar_buffer_t* buffer = info->ptr;
   size_t i;
   for( i = size < max_size ? size : max_size; i--; )
     *(uch++) = DPAUCS_BUFFER_GET(buffer);
@@ -224,7 +257,7 @@ size_t DPAUCS_stream_read( DPAUCS_stream_t* stream, void* p, size_t max_size ){
 }
 
 void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size ){
-  while( !DPAUCS_BUFFER_EOF(stream->buffer_buffer) ){
+  while( size && !DPAUCS_BUFFER_EOF(stream->buffer_buffer) ){
     DPAUCS_bufferInfo_t* info = DPAUCS_BUFFER_BEGIN(stream->buffer_buffer);
     if( info->size - info->offset <= size ){
       size -= info->size - info->offset;

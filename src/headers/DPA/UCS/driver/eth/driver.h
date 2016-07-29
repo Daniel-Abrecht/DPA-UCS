@@ -1,5 +1,5 @@
-#ifndef DPAUCS_ETH_DRIVER
-#define DPAUCS_ETH_DRIVER
+#ifndef DPAUCS_ETH_DRIVER_H
+#define DPAUCS_ETH_DRIVER_H
 
 #include <stdint.h>
 #include <DPA/UCS/protocol/address.h>

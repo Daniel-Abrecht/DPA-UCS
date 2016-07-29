@@ -117,7 +117,7 @@ static void DPAUCS_shutdown( void ){
   DPAUCS_ethernet_shutdown();
 
 #ifdef DPAUCS_SHUTDOWN // Allows to add shutdown functions using makefile
-#define X(F) void F( void ); F();
+#define X(F) void WEAK F( void ); if(F){F();}
   DPAUCS_SHUTDOWN
 #undef X
 #endif

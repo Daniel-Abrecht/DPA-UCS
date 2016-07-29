@@ -7,7 +7,15 @@
 
 DPAUCS_MODUL( icmp );
 
-void WEAK DPAUCS_icmpInit( void );
-void WEAK DPAUCS_icmpShutdown( void );
+#ifdef ICMP_C
+#define W
+#else
+#define W WEAK
+#endif
+
+void W DPAUCS_icmpInit( void );
+void W DPAUCS_icmpShutdown( void );
+
+#undef W
 
 #endif

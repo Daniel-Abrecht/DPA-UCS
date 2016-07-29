@@ -1,3 +1,5 @@
+#define HTTP_C
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>

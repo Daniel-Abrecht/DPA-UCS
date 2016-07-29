@@ -3,8 +3,8 @@
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-DPAUCS_DEFINE_BUFFER(unsigned char,DPAUCS_uchar_buffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
-DPAUCS_DEFINE_BUFFER(DPAUCS_bufferInfo_t,DPAUCS_buffer_buffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE,false);
+DPAUCS_DEFINE_RINGBUFFER(unsigned char,DPAUCS_uchar_ringbuffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
+DPAUCS_DEFINE_RINGBUFFER(DPAUCS_bufferInfo_t,DPAUCS_buffer_ringbuffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE,false);
 
 static DPAUCS_stream_t outputStream = {
   &outputStreamBuffer,

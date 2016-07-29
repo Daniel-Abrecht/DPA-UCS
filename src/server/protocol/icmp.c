@@ -1,6 +1,8 @@
+#define ICMP_C
+
+#include <stdbool.h>
 #include <DPA/UCS/checksum.h>
 #include <DPA/UCS/protocol/icmp.h>
-#include <stdbool.h>
 #include <DPA/UCS/protocol/layer3.h>
 
 DPAUCS_MODUL( icmp ){}

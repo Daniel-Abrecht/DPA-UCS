@@ -41,8 +41,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
   DPAUCS_tcp_cacheEntry_t e = {
     .count = count,
-    .charBufferSize   = DPAUCS_BUFFER_SIZE( t->stream->buffer        ),
-    .bufferBufferSize = DPAUCS_BUFFER_SIZE( t->stream->buffer_buffer ),
+    .charBufferSize   = DPAUCS_ringbuffer_size( t->stream->buffer        ),
+    .bufferBufferSize = DPAUCS_ringbuffer_size( t->stream->buffer_buffer ),
   };
   e.streamRealLength = DPAUCS_stream_getLength( t->stream, ~0, &e.streamIsLonger );
 

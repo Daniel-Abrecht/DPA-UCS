@@ -2,30 +2,41 @@
 #define STREAM_H
 
 #include <stdbool.h>
-#include <DPA/UCS/buffer.h>
+#include <DPA/UCS/ringbuffer.h>
+
+#define DPAUCS_BUFFER_BUFFER_USERDEFINED(buf) ( DPAUCS_BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
+#define DPAUCS_BUFFER_BUFFER_TYPE(buf) ( DPAUCS_BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )
+#define DPAUCS_BUFFER_BUFFER_SIZE(buf) ( DPAUCS_BUFFER_GET(buf).size )
+#define DPAUCS_BUFFER_BUFFER_PTR(buf) ( DPAUCS_BUFFER_GET(buf).ptr )
+
+enum DPAUCS_buffer_type {
+  BUFFER_BUFFER,
+  BUFFER_ARRAY,
+  BUFFER_TYPE_SIZE
+};
+
+typedef struct DPAUCS_bufferInfo {
+  enum DPAUCS_buffer_type type;
+  DPAUCS_buffer_range_t range;
+  void* ptr;
+} DPAUCS_bufferInfo_t;
 
 typedef struct DPAUCS_stream {
-  struct DPAUCS_uchar_buffer* buffer;
-  struct DPAUCS_buffer_buffer* buffer_buffer;
+  DPAUCS_uchar_ringbuffer_t* buffer;
+  DPAUCS_buffer_ringbuffer_t* buffer_buffer;
 } DPAUCS_stream_t;
 
 typedef struct DPAUCS_stream_offsetStorage {
   size_t bufferOffset;
-  size_t bufferBufferOffset;
+  size_t bufferBufferSize;
   size_t bufferBufferInfoOffset;
 } DPAUCS_stream_offsetStorage_t;
 
 typedef DPAUCS_bufferInfo_t DPAUCS_streamEntry_t;
 
-typedef struct DPAUCS_stream_stream_raw_buffer_entry {
-  enum DPAUCS_buffer_type type;
-  size_t size;
-  void* ptr;
-} DPAUCS_stream_stream_raw_buffer_entry_t;
-
 typedef struct DPAUCS_stream_raw {
   size_t bufferBufferSize, charBufferSize;
-  struct DPAUCS_stream_stream_raw_buffer_entry* bufferBuffer;
+  DPAUCS_bufferInfo_t* bufferBuffer;
   unsigned char* charBuffer;
 } DPAUCS_stream_raw_t;
 
@@ -44,14 +55,14 @@ void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size );
 /* Be careful with the following functions */
 bool DPAUCS_stream_to_raw_buffer( const DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw );
 void DPAUCS_raw_stream_truncate( DPAUCS_stream_raw_t* raw, size_t size );
-void DPAUCS_stream_prepare_from_buffer( DPAUCS_stream_raw_t* raw, size_t count, void(*func)( DPAUCS_stream_t* stream ) );
+void DPAUCS_raw_as_stream( DPAUCS_stream_raw_t* raw, void(*func)( DPAUCS_stream_t* stream, void* ptr ), void* ptr );
 void DPAUCS_stream_swapEntries( DPAUCS_streamEntry_t* a, DPAUCS_streamEntry_t* b  );
 DPAUCS_streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream );
-bool DPAUCS_stream_skipEntry( DPAUCS_stream_t* stream );
-bool DPAUCS_stream_reverseSkipEntry( DPAUCS_stream_t* stream );
+bool DPAUCS_stream_nextEntry( DPAUCS_stream_t* stream );
+bool DPAUCS_stream_previousEntry( DPAUCS_stream_t* stream );
 /*-----------------------------------------*/
 
 
-#define DPAUCS_stream_eof(s) DPAUCS_BUFFER_EOF((s)->buffer_buffer)
+#define DPAUCS_stream_eof(s) DPAUCS_ringbuffer_eof(&(s)->buffer_buffer->super)
 
 #endif

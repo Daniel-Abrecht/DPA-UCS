@@ -15,7 +15,8 @@ typedef uint16_t adelay_duration_t;
 void adelay_start( adelay_t* ); // starts the delay
 // Checks if the delay finished, duration 1/AD_SEC
 bool adelay_done( adelay_t*, adelay_duration_t );
-void WEAK adelay_update( void );
 void adelay_update_time( unsigned long current, unsigned long max_mask, unsigned long ticks_per_sec );
+
+void WEAK adelay_update( void );
 
 #endif

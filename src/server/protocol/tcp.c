@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <string.h>
+
+#define TCP_C
+
 #include <DPA/UCS/utils.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/logger.h>
@@ -232,9 +235,9 @@ bool DPAUCS_tcp_transmit(
 
   // get pointer to entry in stream which represents tcp header
   DPAUCS_streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( stream );
-  DPAUCS_stream_skipEntry( stream ); // Skip tcp header
+  DPAUCS_stream_nextEntry( stream ); // Skip tcp header
 
-  size_t headersize = tcpHeaderEntry->size; // get size of TCP Header
+  size_t headersize = tcpHeaderEntry->range.size; // get size of TCP Header
 
   // save start of datas of stream
   DPAUCS_stream_offsetStorage_t sros;
@@ -317,13 +320,13 @@ bool DPAUCS_tcp_transmit(
     if( !offset )
       DPAUCS_stream_seek( stream, off );
     DPAUCS_streamEntry_t* dataEntry = DPAUCS_stream_getEntry( stream );
-    size_t dataEntryOffset = dataEntry->offset;
-    DPAUCS_stream_reverseSkipEntry( stream );
+    size_t dataEntryOffset = dataEntry->range.offset;
+    DPAUCS_stream_previousEntry( stream );
     DPAUCS_streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( stream );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
-    dataEntry->offset = dataEntryOffset;
+    dataEntry->range.offset = dataEntryOffset;
     tcp_calculateChecksum( tcb, tcp, stream, packet_length );
-    dataEntry->offset = dataEntryOffset;
+    dataEntry->range.offset = dataEntryOffset;
     DPAUCS_layer3_transmit( stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
     DPAUCS_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
     DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );

@@ -1,5 +1,5 @@
-#ifndef BINARY_UTILS_H
-#define BINARY_UTILS_H
+#ifndef DPAUCS_BINARY_UTILS_H
+#define DPAUCS_BINARY_UTILS_H
 
 #include <stdint.h>
 

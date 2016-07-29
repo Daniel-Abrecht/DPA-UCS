@@ -1,5 +1,5 @@
-#ifndef TCP_STACK_H
-#define TCP_STACK_H
+#ifndef DPAUCS_TCP_STACK_H
+#define DPAUCS_TCP_STACK_H
 
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 

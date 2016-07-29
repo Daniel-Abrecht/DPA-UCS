@@ -96,7 +96,7 @@ FILES += $(OPTIONAL_FILES)
 
 LINUX_OPTIONS	= $(OPTIONS)
 TEMP_LINUX	= tmp/linux
-LINUX_NAME      = dpaucs-linux
+LINUX_NAME	= dpaucs-linux
 LINUX_TARGET	= $(BIN)/$(LINUX_NAME)
 LINUX_LIBRARY   = $(BIN)/lib$(LINUX_NAME).a
 LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
@@ -147,8 +147,9 @@ TESTS=$(shell \
 
 AVR_OPTIONS	= $(OPTIONS) -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
 TEMP_AVR	= tmp/avr_$(AVR_MCU)
-AVR_TARGET	= $(BIN)/avr_$(AVR_MCU)
-AVR_LIBRARY	= $(BIN)/libdpaucs-avr_$(AVR_MCU).a
+AVR_NAME	= dpaucs-$(AVR_MCU)
+AVR_TARGET	= $(BIN)/$(AVR_NAME)
+AVR_LIBRARY	= $(BIN)/lib$(AVR_NAME).a
 AVR_GENERATED   = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 
 AVR_OPTIONS  += -I${TEMP_AVR}
@@ -273,8 +274,8 @@ $(AVR_LIBRARY): $(AVR_FILES) $(AVR_GENERATED)
 	rm -f "$@"
 	$(AVR_AR) scr $@ $^
 
-$(AVR_TARGET): $(TEMP_AVR)/$(MAIN_FILE) $(AVR_LIBRARY)
-	$(AVR_CC) $(AVR_OPTIONS) -Wl,-gc-sections,--whole-archive $^ -o $@
+$(AVR_TARGET): $(TEMP_AVR)/$(MAIN_FILE) | $(AVR_LIBRARY)
+	$(AVR_CC) $(AVR_OPTIONS) $^ -Wl,--whole-archive -l$(AVR_NAME) -Wl,--no-whole-archive -o $@
 
 $(TEMP_AVR)/%.o: $(SRC)/%.c $(HEADERS)
 	@mkdir -p "$(shell dirname "$@")"

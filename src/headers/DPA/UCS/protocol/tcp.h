@@ -1,5 +1,5 @@
-#ifndef TCP_H
-#define TCP_H
+#ifndef DPAUCS_TCP_H
+#define DPAUCS_TCP_H
 
 #define PROTOCOL_TCP 6
 
@@ -129,7 +129,7 @@ typedef struct DPAUCS_tcp_transmission {
 
 extern DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
-#ifdef TCP_C
+#ifdef DPAUCS_TCP_C
 #define W
 #else
 #define W WEAK

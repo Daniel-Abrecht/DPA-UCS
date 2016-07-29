@@ -1,5 +1,5 @@
-#ifndef ICMP_H
-#define ICMP_H
+#ifndef DPAUCS_ICMP_H
+#define DPAUCS_ICMP_H
 
 #define PROTOCOL_ICMP 1
 
@@ -7,7 +7,7 @@
 
 DPAUCS_MODUL( icmp );
 
-#ifdef ICMP_C
+#ifdef DPAUCS_ICMP_C
 #define W
 #else
 #define W WEAK

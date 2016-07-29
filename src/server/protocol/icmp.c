@@ -1,4 +1,4 @@
-#define ICMP_C
+#define DPAUCS_ICMP_C
 
 #include <stdbool.h>
 #include <DPA/UCS/checksum.h>

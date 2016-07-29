@@ -1,4 +1,4 @@
-#define HTTP_C
+#define DPAUCS_HTTP_C
 
 #include <stdio.h>
 #include <stdint.h>

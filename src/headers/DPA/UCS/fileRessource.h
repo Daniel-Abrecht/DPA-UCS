@@ -1,5 +1,5 @@
-#ifndef FILE_RESSOURCE_H
-#define FILE_RESSOURCE_H
+#ifndef DPAUCS_FILE_RESSOURCE_H
+#define DPAUCS_FILE_RESSOURCE_H
 
 #include <DPA/UCS/helper_macros.h>
 

@@ -1,5 +1,5 @@
-#ifndef TCP_RETRANSMISSION_CACHE_H
-#define TCP_RETRANSMISSION_CACHE_H
+#ifndef DPAUCS_TCP_RETRANSMISSION_CACHE_H
+#define DPAUCS_TCP_RETRANSMISSION_CACHE_H
 
 #include <stddef.h>
 #include <stdbool.h>

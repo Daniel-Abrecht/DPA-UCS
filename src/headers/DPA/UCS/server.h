@@ -1,5 +1,5 @@
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef DPAUCS_SERVER_H
+#define DPAUCS_SERVER_H
 
 #include <stdint.h>
 #include <DPA/UCS/helper_macros.h>

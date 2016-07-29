@@ -1,5 +1,5 @@
 #if !defined( IPv4_H ) && defined( USE_IPv4 )
-#define IPv4_H
+#define DPAUCS_IPv4_H
 
 #include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/address.h>

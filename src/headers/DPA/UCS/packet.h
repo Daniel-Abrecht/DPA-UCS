@@ -1,5 +1,5 @@
-#ifndef PACKET_H
-#define PACKET_H
+#ifndef DPAUCS_PACKET_H
+#define DPAUCS_PACKET_H
 
 #include <stdint.h>
 #include <stdbool.h>

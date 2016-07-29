@@ -1,5 +1,5 @@
-#ifndef ANY_ADDRESS_H
-#define ANY_ADDRESS_H
+#ifndef DPAUCS_ANY_ADDRESS_H
+#define DPAUCS_ANY_ADDRESS_H
 
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/IPv4.h>

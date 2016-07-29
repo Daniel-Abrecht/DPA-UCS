@@ -1,5 +1,5 @@
-#ifndef ETHTAYPES_H
-#define ETHTAYPES_H
+#ifndef DPAUCS_ETHTAYPES_H
+#define DPAUCS_ETHTAYPES_H
 
 #define ETH_TYPE_IP_V4        0x0800
 #define ETH_TYPE_ARP          0x0806

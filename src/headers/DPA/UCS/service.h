@@ -1,5 +1,5 @@
-#ifndef SERVICE_H
-#define SERVICE_H
+#ifndef DPAUCS_SERVICE_H
+#define DPAUCS_SERVICE_H
 
 #include <stddef.h>
 #include <stdbool.h>

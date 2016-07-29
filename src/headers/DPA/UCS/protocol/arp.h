@@ -1,5 +1,5 @@
-#ifndef ARP_H
-#define ARP_H
+#ifndef DPAUCS_ARP_H
+#define DPAUCS_ARP_H
 
 #include <DPA/UCS/helper_macros.h>
 

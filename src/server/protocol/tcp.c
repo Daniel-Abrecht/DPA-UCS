@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TCP_C
+#define DPAUCS_TCP_C
 
 #include <DPA/UCS/utils.h>
 #include <DPA/UCS/server.h>

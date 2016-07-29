@@ -1,5 +1,5 @@
-#ifndef IP_STACK_H
-#define IP_STACK_H
+#ifndef DPAUCS_IP_STACK_H
+#define DPAUCS_IP_STACK_H
 
 #include <stdint.h>
 #include <stdbool.h>

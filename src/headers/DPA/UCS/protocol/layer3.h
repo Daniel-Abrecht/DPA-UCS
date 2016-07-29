@@ -1,5 +1,5 @@
-#ifndef LAYER3_H
-#define LAYER3_H
+#ifndef DPAUCS_LAYER3_H
+#define DPAUCS_LAYER3_H
 
 #include <DPA/UCS/stream.h>
 #include <DPA/UCS/protocol/address.h>

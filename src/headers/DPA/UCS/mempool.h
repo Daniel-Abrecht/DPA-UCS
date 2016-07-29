@@ -1,5 +1,5 @@
-#ifndef MEMPOOL_H
-#define MEMPOOL_H
+#ifndef DPAUCS_MEMPOOL_H
+#define DPAUCS_MEMPOOL_H
 
 #include <stddef.h>
 #include <stdint.h>

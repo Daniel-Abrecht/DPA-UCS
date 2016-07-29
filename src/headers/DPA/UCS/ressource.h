@@ -1,5 +1,5 @@
-#ifndef RESOURCE_H
-#define RESOURCE_H
+#ifndef DPAUCS_RESOURCE_H
+#define DPAUCS_RESOURCE_H
 
 #include <stdbool.h>
 #include <DPA/UCS/stream.h>

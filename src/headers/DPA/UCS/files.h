@@ -1,5 +1,5 @@
-#ifndef FILES_H
-#define FILES_H
+#ifndef DPAUCS_FILES_H
+#define DPAUCS_FILES_H
 
 #include <stddef.h>
 #include <DPA/UCS/ressource.h>

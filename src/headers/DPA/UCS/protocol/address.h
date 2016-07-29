@@ -1,5 +1,5 @@
-#ifndef ADDRESS_TYPES_H
-#define ADDRESS_TYPES_H
+#ifndef DPAUCS_ADDRESS_TYPES_H
+#define DPAUCS_ADDRESS_TYPES_H
 
 #include <stddef.h>
 #include <stdint.h>

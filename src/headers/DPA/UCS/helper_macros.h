@@ -1,5 +1,5 @@
-#ifndef HELPER_MACROS_H
-#define HELPER_MACROS_H
+#ifndef DPAUCS_HELPER_MACROS_H
+#define DPAUCS_HELPER_MACROS_H
 
 #if __STDC_VERSION__ < 201112L
 #pragma anon_unions

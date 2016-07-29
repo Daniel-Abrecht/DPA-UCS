@@ -1,5 +1,5 @@
 #if !defined( IPv6_H ) && defined( USE_IPv6 )
-#define IPv6_H
+#define DPAUCS_IPv6_H
 
 #include <stdint.h>
 #include <DPA/UCS/helper_macros.h>

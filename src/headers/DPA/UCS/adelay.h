@@ -1,5 +1,5 @@
-#ifndef ASYNC_DELAY_H
-#define ASYNC_DELAY_H
+#ifndef DPAUCS_ASYNC_DELAY_H
+#define DPAUCS_ASYNC_DELAY_H
 
 #include <stdint.h>
 #include <stdbool.h>

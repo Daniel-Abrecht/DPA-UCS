@@ -38,13 +38,13 @@ bool memrcharpos( size_t* position, size_t size, void* haystack, char needle ){
 void memtrim( const char**restrict mem, size_t*restrict size, char c ){
   while( *size && **mem == c )
     (*mem)++, (*size)--;
-  while( (*size) && (*mem)[(*size)-1] == ' ' )
+  while( (*size) && (*mem)[(*size)-1] == c )
     (*size)--;
 }
 
 bool streq_nocase( const char* str, const char* mem, size_t size ){
   while( size-- && ( ( *str >= 'A' && *str <= 'Z' ) ? (*str) - 'A' + 'a' : *str ) == ( ( *mem >= 'A' && *mem <= 'Z' ) ? (*mem) - 'A' + 'a' : *mem ) ) str++, mem++;
-  return !~size;
+  return !(size+1);
 }
 
 void memrcpy( size_t size, void*restrict dest, const void*restrict src, size_t count ){

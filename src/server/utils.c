@@ -52,8 +52,8 @@ void memrcpy( size_t size, void*restrict dest, const void*restrict src, size_t c
   const char* s = src;
   s += size * count;
   while( count-- ){
+    s -= size;
     memcpy(d,s,size);
     d += size;
-    s -= size;
   }
 }

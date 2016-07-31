@@ -22,13 +22,11 @@ size_t DPAUCS_ringbuffer_increment_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
 static inline size_t DPAUCS_ringbuffer_end( DPAUCS_ringbuffer_base_t* ringbuffer ){
   size_t offset = ringbuffer->range.offset;
   size_t size = ringbuffer->range.size;
-  if(!size){
-    return ringbuffer->range.offset + ( ringbuffer->inverse ? -1 : 1 );
-  }else if( ringbuffer->inverse ){
+  if( ringbuffer->inverse ){
     if( offset <= size ){
       return offset - size;
     }else{
-      return ringbuffer->size - size + offset;
+      return ringbuffer->size - offset + size;
     }
   }else{
     size_t remaining = ringbuffer->size - offset;
@@ -69,6 +67,13 @@ size_t DPAUCS_ringbuffer_decrement_write( DPAUCS_ringbuffer_base_t* ringbuffer )
 
 void DPAUCS_ringbuffer_reverse( DPAUCS_ringbuffer_base_t* ringbuffer ){
   ringbuffer->range.offset = DPAUCS_ringbuffer_end(ringbuffer);
+  if(ringbuffer->inverse){
+    if( ringbuffer->range.offset == ringbuffer->size )
+      ringbuffer->range.offset = 0;
+  }else{
+    if( ringbuffer->range.offset == 0 )
+      ringbuffer->range.offset = ringbuffer->size;
+  }
   ringbuffer->inverse = !ringbuffer->inverse;
 }
 
@@ -118,21 +123,19 @@ size_t DPAUCS_ringbuffer_write( DPAUCS_ringbuffer_base_t* ringbuffer, const void
     size = count;
   if( ringbuffer->inverse ){
     size_t n = size;
-    size_t off = 0;
     if( offset < size ){
       n = offset;
-      off = size-offset;
-      size_t newoff = fullsize-off;
-      memrcpy( ts, ((char*)ringbuffer->buffer)+newoff*ts, source, off );
+      size_t s = size-offset;
+      memrcpy( ts, ((char*)ringbuffer->buffer)+(fullsize-s)*ts, ((const char*)source)+offset*ts, s );
     }
-    memrcpy( ts, ((char*)ringbuffer->buffer)+(offset-n)*ts, ((const char*)source)+off*ts, n );
+    memrcpy( ts, ((char*)ringbuffer->buffer)+(offset-n)*ts, source, n );
   }else{
     size_t remaining = fullsize - offset;
     size_t n = size;
     if( remaining < size ){
       n = remaining;
       size_t amount = size-remaining;
-      memcpy( ringbuffer->buffer, ((const char*)source)+amount*ts, amount*ts );
+      memcpy( ringbuffer->buffer, ((const char*)source)+remaining*ts, amount*ts );
     }
     memcpy( ((char*)ringbuffer->buffer) + offset * ts, source, n * ts );
   }

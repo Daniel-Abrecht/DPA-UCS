@@ -24,6 +24,9 @@ AVR_F_CPU = 3686400UL
 OPTIONS        += -std=c11 #--short-enums
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
 OPTIONS        += -Wall -Wextra -pedantic -Werror -Wno-error=comment
+ifdef SANITIZE
+OPTIONS        += -fsanitize=undefined
+endif
 ifdef DEBUG
 OPTIONS        += -Og -g -DDEBUG
 else

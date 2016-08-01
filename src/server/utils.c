@@ -28,11 +28,12 @@ bool mempos( size_t* position, void* haystack, size_t haystack_size, void* needl
 
 bool memrcharpos( size_t* position, size_t size, void* haystack, char needle ){
   char* ch = (char*)haystack + size;
-  size_t i = size;
-  while( i-- && *--ch != needle );
-  if(!~i) return false;
-  *position = i;
-  return true;
+  while( size-- )
+  if( *--ch == needle ){
+    *position = size;
+    return true;
+  }
+  return false;
 }
 
 void memtrim( const char**restrict mem, size_t*restrict size, char c ){
@@ -43,8 +44,13 @@ void memtrim( const char**restrict mem, size_t*restrict size, char c ){
 }
 
 bool streq_nocase( const char* str, const char* mem, size_t size ){
-  while( size-- && ( ( *str >= 'A' && *str <= 'Z' ) ? (*str) - 'A' + 'a' : *str ) == ( ( *mem >= 'A' && *mem <= 'Z' ) ? (*mem) - 'A' + 'a' : *mem ) ) str++, mem++;
-  return !(size+1);
+  while( size-- ){
+    char a = *str++;
+    char b = *mem++;
+    if( ( ( a >= 'A' && a <= 'Z' ) ? a - 'A' + 'a' : a ) != ( ( b >= 'A' && b <= 'Z' ) ? b - 'A' + 'a' : b ) )
+      return false;
+  }
+  return true;
 }
 
 void memrcpy( size_t size, void*restrict dest, const void*restrict src, size_t count ){

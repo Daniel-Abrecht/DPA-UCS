@@ -37,7 +37,7 @@ FTest(ringbuffer,write){
   cr_assert_arr_eq( rb.buffer, ((int[]){1,257}), 2 );
 }
 
-RTest(ringbuffer,reverse_write){
+RTest(ringbuffer_reverse,write){
   size_t res = DPAUCS_ringbuffer_write(&rb.super,(int[]){1,257},2);
   cr_assert_eq(res,2,"Check if number of written bytes matches");
   cr_assert_eq(rb.range.offset,4,"Check if offset hasn't chnged");
@@ -53,7 +53,7 @@ FTest(ringbuffer,write_full){
   cr_assert_arr_eq( rb.buffer, ((int[]){1,2,3,4}), 4 );
 }
 
-RTest(ringbuffer,reverse_write_full){
+RTest(ringbuffer_reverse,write_full){
   size_t res = DPAUCS_ringbuffer_write(&rb.super,(int[]){1,2,3,4,5},5);
   cr_assert_eq(res,4,"Check if number of written bytes doesn't exceed buffer size");
   cr_assert_eq(rb.range.offset,4,"Check if offset hasn't chnged");
@@ -71,7 +71,7 @@ FTest(ringbuffer,write_overflow){
   cr_assert_arr_eq( rb.buffer, ((int[]){3,4,1,2}), 4 );
 }
 
-RTest(ringbuffer,reverse_write_overflow){
+RTest(ringbuffer_reverse,write_overflow){
   rb.range.offset = 2;
   rb.buffer[2] = 4;
   size_t res = DPAUCS_ringbuffer_write(&rb.super,(int[]){1,2,3},3);

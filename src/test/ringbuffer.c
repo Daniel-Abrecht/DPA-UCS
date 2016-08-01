@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <criterion/criterion.h>
 #include <DPA/UCS/ringbuffer.h>
 
@@ -153,8 +152,93 @@ RTest(ringbuffer_reverse,read_overflow){
   rb.range.offset = 2;
   size_t ret = DPAUCS_ringbuffer_read( &rb.super, destination, 3 );
   cr_assert_eq(ret,3,"wrong amount read");
-  printf("%u %u %u %u\n",destination[0],destination[1],destination[2],destination[3]);
   cr_assert_arr_eq( destination, ((int[]){257,256,259,10}), 4*sizeof(int) );
   cr_assert_eq(rb.range.size,1,"Check if size was correctly updated");
   cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+/* DPAUCS_ringbuffer_reverse */
+FTest(ringbuffer,reverse){
+  rb.range.size = 2;
+  rb.range.offset = 1;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,2,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,reverse){
+  rb.range.size = 2;
+  rb.range.offset = 3;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,2,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,1,"Check if offset is correct");
+}
+
+FTest(ringbuffer,reverse_full){
+  rb.range.size = 4;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,4,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,4,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,reverse_full){
+  rb.range.size = 4;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,4,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,0,"Check if offset is correct");
+}
+
+FTest(ringbuffer,reverse_empty){
+  rb.range.offset = 1;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,0,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,1,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,reverse_empty){
+  rb.range.offset = 1;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,0,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,1,"Check if offset is correct");
+}
+
+FTest(ringbuffer,reverse_wrap_empty){
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,0,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,4,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,reverse_wrap_empty){
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,0,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,0,"Check if offset is correct");
+}
+
+FTest(ringbuffer,reverse_overflow){
+  rb.range.size = 3;
+  rb.range.offset = 2;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,3,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,1,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,reverse_overflow){
+  rb.range.offset = 2;
+  rb.range.size = 3;
+  DPAUCS_ringbuffer_reverse(&rb.super);
+  cr_assert_eq(rb.range.size,3,"Check if size hasn't changed");
+  cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+FTest(ringbuffer,increment_write){
+  DPAUCS_ringbuffer_increment_write(&rb.super);
+  cr_assert_eq(rb.range.size,1,"Check if size is correct");
+  cr_assert_eq(rb.range.offset,0,"Check if offset hasn't changed");
+}
+
+FTest(ringbuffer,increment_write_full){
+  rb.range.size = 4;
+  DPAUCS_ringbuffer_increment_write(&rb.super);
+  cr_assert_eq(rb.range.size,4,"Check if size is correct");
+  cr_assert_eq(rb.range.offset,0,"Check if offset hasn't changed");
 }

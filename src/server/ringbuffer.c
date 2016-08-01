@@ -1,6 +1,7 @@
 #include <string.h>
 #include <DPA/UCS/utils.h>
 #include <DPA/UCS/ringbuffer.h>
+#include <DPA/UCS/logger.h>
 
 size_t DPAUCS_ringbuffer_increment_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
   if(!ringbuffer->range.size)
@@ -86,27 +87,30 @@ size_t DPAUCS_ringbuffer_read( DPAUCS_ringbuffer_base_t* ringbuffer, void* desti
     size = count;
   if( ringbuffer->inverse ){
     size_t n = size;
-    size_t off = 0;
     if( offset < size ){
       n = offset;
-      off = size-offset;
-      size_t newoff = fullsize-off;
-      memrcpy( ts, destination, ((char*)ringbuffer->buffer)+newoff*ts, off );
+      size_t s = size-offset;
+      size_t newoff = fullsize-s;
+      memrcpy( ts, ((char*)destination)+offset*ts, ((char*)ringbuffer->buffer)+newoff*ts, s );
       ringbuffer->range.offset = newoff;
     }else{
       ringbuffer->range.offset -= size;
+      if( ringbuffer->range.offset == 0 )
+        ringbuffer->range.offset = fullsize;
     }
-    memrcpy( ts, ((char*)destination)+off*ts, ((char*)ringbuffer->buffer)+(offset-n)*ts, n );
+    memrcpy( ts, destination, ((char*)ringbuffer->buffer)+(offset-n)*ts, n );
   }else{
     size_t remaining = fullsize - offset;
     size_t n = size;
     if( remaining < size ){
       n = remaining;
       size_t amount = size-remaining;
-      memcpy( ((char*)destination)+amount*ts, ringbuffer->buffer, amount*ts );
+      memcpy( ((char*)destination)+remaining*ts, ringbuffer->buffer, amount*ts );
       ringbuffer->range.offset = amount;
     }else{
       ringbuffer->range.offset += size;
+      if( ringbuffer->range.offset == fullsize )
+        ringbuffer->range.offset = 0;
     }
     memcpy( destination, ((char*)ringbuffer->buffer) + offset * ts, n * ts );
   }

@@ -39,22 +39,23 @@ static inline size_t DPAUCS_ringbuffer_end( DPAUCS_ringbuffer_base_t* ringbuffer
   }
 }
 
-void DPAUCS_ringbuffer_increment_write( DPAUCS_ringbuffer_base_t* ringbuffer ){
+size_t DPAUCS_ringbuffer_increment_write( DPAUCS_ringbuffer_base_t* ringbuffer ){
   if( ringbuffer->range.size != ringbuffer->size )
     ringbuffer->range.size++;
+  return DPAUCS_ringbuffer_end(ringbuffer) - !ringbuffer->inverse;
 }
 
-void DPAUCS_ringbuffer_decrement_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
+size_t DPAUCS_ringbuffer_decrement_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
   if( ringbuffer->range.size != ringbuffer->size )
     ringbuffer->range.size++;
   if( ringbuffer->inverse ){
     if( ringbuffer->range.offset >= ringbuffer->range.size )
       ringbuffer->range.offset = 0;
-    ringbuffer->range.offset++;
+    return ringbuffer->range.offset++;
   }else{
     if( !ringbuffer->range.offset )
       ringbuffer->range.offset = ringbuffer->size;
-    ringbuffer->range.offset--;
+    return --ringbuffer->range.offset;
   }
 }
 

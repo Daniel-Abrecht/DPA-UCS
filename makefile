@@ -24,10 +24,20 @@ AVR_F_CPU = 3686400UL
 OPTIONS        += -std=c11 #--short-enums
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
 OPTIONS        += -Wall -Wextra -pedantic -Werror -Wno-error=comment
+
+LINUX_LIBS=
+
+ifdef TEST
+SANITIZE=true
+OPTIONS        += -fprofile-arcs -ftest-coverage
+LINUX_LIBS     += -lgcov
+endif
+
 ifdef SANITIZE
 OPTIONS        += -fsanitize=undefined
 endif
-ifdef DEBUG
+
+ifneq ($(and $(DEBUG),$(SANITIZE),$(TEST)),)
 OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os #-flto
@@ -229,10 +239,10 @@ $(LINUX_LIBRARY): $(LINUX_FILES) $(LINUX_GENERATED)
 $(LINUX_TARGET): $(TEMP_LINUX)/$(MAIN_FILE) | $(LINUX_LIBRARY)
 	# First pass, won't remove unused symbols because it will supress undefined reference errors
 	# in unused symbols and they are used for dependendy checking
-	$(LINUX_CC) $(LINUX_OPTIONS) $^  -Wl,--whole-archive -l$(LINUX_NAME) -Wl,--no-whole-archive -o $(LINUX_TARGET)_tmp
+	$(LINUX_CC) $(LINUX_OPTIONS) $^  -Wl,--whole-archive -l$(LINUX_NAME) -Wl,--no-whole-archive $(LINUX_LIBS) -o $(LINUX_TARGET)_tmp
 	rm $(LINUX_TARGET)_tmp
 	# Second pass, there isn't any undefined reference, remove all unused symbols
-	$(LINUX_CC) $(LINUX_OPTIONS) -Wl,-gc-sections $^ -Wl,--whole-archive -l$(LINUX_NAME) -Wl,--no-whole-archive -o $@
+	$(LINUX_CC) $(LINUX_OPTIONS) -Wl,-gc-sections $^ -Wl,--whole-archive -l$(LINUX_NAME) -Wl,--no-whole-archive $(LINUX_LIBS) -o $@
 
 $(TEMP_LINUX)/%.o: $(SRC)/%.c $(HEADERS)
 	@mkdir -p "$(shell dirname "$@")"
@@ -258,13 +268,13 @@ $(TEMP_LINUX)/test/%.o: $(SRC)/test/%.c
 	$(LINUX_CC) $(LINUX_OPTIONS) -I"$(LIB)/Criterion/include/" -c $^ -o $@
 
 $(TEMP_LINUX)/test/%: $(TEMP_LINUX)/test/%.o $(LINUX_LIBRARY) | $(CRITERION_LIB)
-	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ -lcriterion -o $@
+	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ $(LINUX_LIBS) -lcriterion -o $@
 
 test-%: $(TEMP_LINUX)/test/%
 	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^
 
 $(TEMP_LINUX)/test/test-all: $(TESTS) $(LINUX_LIBRARY) | $(CRITERION_LIB)
-	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ -lcriterion -o $@
+	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ $(LINUX_LIBS) -lcriterion -o $@
 
 test: $(TEMP_LINUX)/test/test-all
 	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^

@@ -231,14 +231,86 @@ RTest(ringbuffer_reverse,reverse_overflow){
 }
 
 FTest(ringbuffer,increment_write){
-  DPAUCS_ringbuffer_increment_write(&rb.super);
-  cr_assert_eq(rb.range.size,1,"Check if size is correct");
-  cr_assert_eq(rb.range.offset,0,"Check if offset hasn't changed");
+  struct params {
+    size_t ret, size, offset;
+  };
+  struct params results[] = {
+    {0,1,0},
+    {1,2,0},
+    {2,3,0},
+    {3,4,0},
+    {3,4,0}
+  };
+  for(
+    struct params *it=results, *end=results+sizeof(results)/sizeof(*results);
+    it < end; it++
+  ){
+    size_t ret = DPAUCS_ringbuffer_increment_write(&rb.super);
+    cr_assert_eq(ret,it->ret,"Check if returned offset is correct");
+    cr_assert_eq(rb.range.size,it->size,"Check if size is correct");
+    cr_assert_eq(rb.range.offset,it->offset,"Check if offset hasn't changed");
+  }
 }
 
-FTest(ringbuffer,increment_write_full){
-  rb.range.size = 4;
-  DPAUCS_ringbuffer_increment_write(&rb.super);
-  cr_assert_eq(rb.range.size,4,"Check if size is correct");
-  cr_assert_eq(rb.range.offset,0,"Check if offset hasn't changed");
+RTest(ringbuffer_reverse,increment_write){
+  struct params {
+    size_t ret, size, offset;
+  };
+  struct params results[] = {
+    {3,1,4},
+    {2,2,4},
+    {1,3,4},
+    {0,4,4},
+    {0,4,4}
+  };
+  for(
+    struct params *it=results, *end=results+sizeof(results)/sizeof(*results);
+    it < end; it++
+  ){
+    size_t ret = DPAUCS_ringbuffer_increment_write(&rb.super);
+    cr_assert_eq(ret,it->ret,"Check if returned offset is correct");
+    cr_assert_eq(rb.range.size,it->size,"Check if size is correct");
+    cr_assert_eq(rb.range.offset,it->offset,"Check if offset hasn't changed");
+  }
 }
+
+FTest(ringbuffer,increment_write_overflow){
+  struct params {
+    size_t ret, size, offset;
+  };
+  struct params results[] = {
+    {3,1,3},
+    {0,2,3}
+  };
+  rb.range.offset = 3;
+  for(
+    struct params *it=results, *end=results+sizeof(results)/sizeof(*results);
+    it < end; it++
+  ){
+    size_t ret = DPAUCS_ringbuffer_increment_write(&rb.super);
+    cr_assert_eq(ret,it->ret,"Check if returned offset is correct");
+    cr_assert_eq(rb.range.size,it->size,"Check if size is correct");
+    cr_assert_eq(rb.range.offset,it->offset,"Check if offset hasn't changed");
+  }
+}
+
+RTest(ringbuffer_reverse,increment_write_overflow){
+  struct params {
+    size_t ret, size, offset;
+  };
+  struct params results[] = {
+    {0,1,1},
+    {3,2,1}
+  };
+  rb.range.offset = 1;
+  for(
+    struct params *it=results, *end=results+sizeof(results)/sizeof(*results);
+    it < end; it++
+  ){
+    size_t ret = DPAUCS_ringbuffer_increment_write(&rb.super);
+    cr_assert_eq(ret,it->ret,"Check if returned offset is correct");
+    cr_assert_eq(rb.range.size,it->size,"Check if size is correct");
+    cr_assert_eq(rb.range.offset,it->offset,"Check if offset hasn't changed");
+  }
+}
+

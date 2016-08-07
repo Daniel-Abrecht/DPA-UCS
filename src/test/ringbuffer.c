@@ -1,6 +1,8 @@
 #include <criterion/criterion.h>
 #include <DPA/UCS/ringbuffer.h>
 
+// TEST FOR: server/ringbuffer
+
 #define FTest(...) Test(__VA_ARGS__, .init = setup_normal)
 #define RTest(...) Test(__VA_ARGS__, .init = setup_reverse)
 

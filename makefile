@@ -37,7 +37,10 @@ ifdef SANITIZE
 OPTIONS        += -fsanitize=undefined
 endif
 
-ifneq ($(and $(DEBUG),$(SANITIZE),$(TEST)),)
+ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(v))))
+ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
+
+ifneq ($(call ifdef_any_of,DEBUG SANITIZE TEST),)
 OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os #-flto
@@ -271,13 +274,15 @@ $(TEMP_LINUX)/test/%: $(TEMP_LINUX)/test/%.o $(LINUX_LIBRARY) | $(CRITERION_LIB)
 	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ $(LINUX_LIBS) -lcriterion -o $@
 
 test-%: $(TEMP_LINUX)/test/%
-	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^
+	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^ --no-early-exit
+	gcov -rn $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep '^//\s*TEST FOR:' "$(SRC)/test/$*.c" | sed 's|^//\s*TEST FOR:\s*||')))
 
 $(TEMP_LINUX)/test/test-all: $(TESTS) $(LINUX_LIBRARY) | $(CRITERION_LIB)
 	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ $(LINUX_LIBS) -lcriterion -o $@
 
 test: $(TEMP_LINUX)/test/test-all
-	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^
+	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^ --no-early-exit
+	gcov -rn $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep -hr '^//\s*TEST FOR:' "$(SRC)/test/" | sed 's|^//\s*TEST FOR:\s*||')))
 
 ###################
 #       AVR       #

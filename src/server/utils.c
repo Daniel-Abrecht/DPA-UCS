@@ -3,10 +3,8 @@
 
 bool mempos( size_t* position, void* haystack, size_t haystack_size, void* needle, size_t needle_size ){
 
-  if( needle_size == 0 ){
-    *position = 0;
-    return true;
-  }
+  if( needle_size == 0 )
+    return false;
 
   if( needle_size > haystack_size )
     return false;

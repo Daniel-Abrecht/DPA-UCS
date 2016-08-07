@@ -1,6 +1,8 @@
 #include <criterion/criterion.h>
 #include <DPA/UCS/utils.h>
 
+// TEST FOR: server/utils
+
 Test(utils,memrcpy){
   int src[] = {1,2,3,4};
   int res[4] = {0};
@@ -22,6 +24,14 @@ Test(utils,mempos_check_has_no_result){
   char haystack[] = "__";
   char needle[] = "test";
   bool res = mempos( &position, haystack, sizeof(haystack)-1, needle, sizeof(needle)-1 );
+  cr_assert(!res,"needle found in haystack, but doesn't exist in haystack");
+  cr_assert_eq(position,77,"position was changed");
+}
+
+Test(utils,mempos_check_no_needle){
+  size_t position = 77;
+  char haystack[] = "__";
+  bool res = mempos( &position, haystack, sizeof(haystack)-1, 0, 0 );
   cr_assert(!res,"needle found in haystack, but doesn't exist in haystack");
   cr_assert_eq(position,77,"position was changed");
 }

@@ -23,15 +23,12 @@ AVR_F_CPU = 3686400UL
 
 OPTIONS        += -std=c11 #--short-enums
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
-OPTIONS        += -Wall -Wextra -pedantic -Werror -Wno-error=comment
+OPTIONS        += -Wall -Wextra -pedantic -Werror
 
 LINUX_LIBS=
 
-ifdef TEST
-SANITIZE=true
-OPTIONS        += -fprofile-arcs -ftest-coverage
-LINUX_LIBS     += -lgcov
-endif
+test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined
+test-% test: LINUX_LIBS += -lgcov
 
 ifdef SANITIZE
 OPTIONS        += -fsanitize=undefined
@@ -40,7 +37,7 @@ endif
 ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(v))))
 ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
 
-ifneq ($(call ifdef_any_of,DEBUG SANITIZE TEST),)
+ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
 OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os #-flto

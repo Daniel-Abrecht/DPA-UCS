@@ -6,10 +6,11 @@
 #include <DPA/UCS/protocol/address.h>
 
 static const DPAUCS_interface_t* getFirstInterface(){
-  const DPAUCS_driver_info_t* it;
-  for( it = ethernet_driver_list_start; it < ethernet_driver_list_end; it++ )
+
+  DPAUCS_EACH_ETHERNET_DRIVER(it){
     if( it->driver->interface_count )
       return it->driver->interfaces;
+  }
 
   return 0;
 }

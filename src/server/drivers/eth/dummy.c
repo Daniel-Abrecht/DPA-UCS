@@ -19,7 +19,7 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
 
 static void eth_shutdown( void ){}
 
-DPAUCS_ETHERNET_DRIVER( dummy ){
+static DPAUCS_ethernet_driver_t driver = {
   .init       = &eth_init,
   .send       = &eth_send,
   .receive    = &eth_receive,
@@ -27,3 +27,5 @@ DPAUCS_ETHERNET_DRIVER( dummy ){
   .interfaces = &interfaces,
   .interface_count = 1
 };
+
+DPAUCS_EXPORT_ETHERNET_DRIVER( dummy, &driver );

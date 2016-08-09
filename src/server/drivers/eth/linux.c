@@ -183,7 +183,7 @@ static void eth_shutdown( void ){
     close( sock );
 }
 
-DPAUCS_ETHERNET_DRIVER( linux ){
+static DPAUCS_ethernet_driver_t driver = {
   .init       = &eth_init,
   .send       = &eth_send,
   .receive    = &eth_receive,
@@ -191,3 +191,5 @@ DPAUCS_ETHERNET_DRIVER( linux ){
   .interfaces = &interfaces,
   .interface_count = 1
 };
+
+DPAUCS_EXPORT_ETHERNET_DRIVER( linux, &driver );

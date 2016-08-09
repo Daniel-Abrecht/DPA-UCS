@@ -4,15 +4,14 @@
 #include <stdint.h>
 #include <DPA/UCS/protocol/address.h>
 
-#define DPAUCS_ETHERNET_DRIVER_SYMBOL( NAME ) \
-  DPAUCS_ethernet_driver_ ## NAME
+#define DPAUCS_EXPORT_ETHERNET_DRIVER( NAME, DRIVER ) \
+  DPA_SECTION_LIST_ENTRY_HACK( DPAUCS_ethernet_driver_entry, DPAUCS_ethernet_driver_ ## NAME ){ #NAME, DRIVER }
 
-#define DPAUCS_ETHERNET_DRIVER_DECLARATION( NAME ) \
-  DPAUCS_ethernet_driver_t DPAUCS_ETHERNET_DRIVER_SYMBOL( NAME )
+#define DPAUCS_EACH_ETHERNET_DRIVER( ITERATOR ) \
+  DPA_FOR_SECTION_LIST_HACK( DPAUCS_ethernet_driver_entry, ITERATOR )
 
-#define DPAUCS_ETHERNET_DRIVER( NAME ) \
-  extern DPAUCS_ETHERNET_DRIVER_DECLARATION( NAME ); \
-  DPAUCS_ETHERNET_DRIVER_DECLARATION( NAME ) =
+#define DPAUCS_ETHERNET_DRIVER_GET_LIST( START, END ) \
+  DPA_FOR_SECTION_GET_LIST( DPAUCS_ethernet_driver_entry, START, END )
 
 typedef struct DPAUCS_ethernet_driver {
 
@@ -25,5 +24,11 @@ typedef struct DPAUCS_ethernet_driver {
   unsigned interface_count;
 
 } DPAUCS_ethernet_driver_t;
+
+typedef struct DPAUCS_ethernet_driver_entry {
+  const char* name;
+  const struct DPAUCS_ethernet_driver* driver;
+} DPAUCS_ethernet_driver_entry_t;
+
 
 #endif

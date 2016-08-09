@@ -22,9 +22,6 @@ typedef struct DPAUCS_driver_info {
   struct DPAUCS_ethernet_driver* driver;
 } DPAUCS_driver_info_t;
 
-extern const DPAUCS_driver_info_t ethernet_driver_list_start[];
-extern const DPAUCS_driver_info_t* ethernet_driver_list_end;
-
 void DPAUCS_run( void(*)(void*), void* );
 
 NORETURN void DPAUCS_fatal( const char* message );

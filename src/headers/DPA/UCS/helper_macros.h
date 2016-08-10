@@ -50,20 +50,20 @@
 #define DPAUCS_STRINGIFY(x) #x
 #define DPAUCS_TOSTRING(x) DPAUCS_STRINGIFY(x)
 
-#define DPA_FOR_SECTION_LIST_HACK(NAME,ITERATOR) \
-  extern const struct NAME __start_ ## NAME ## _section_list_hack[]; \
-  extern const struct NAME __stop_ ## NAME ## _section_list_hack[]; \
-  for( const struct NAME* ITERATOR = __start_ ## NAME ## _section_list_hack; \
+#define DPA_FOR_SECTION_LIST_HACK(TYPE,NAME,ITERATOR) \
+  extern TYPE __start_ ## NAME ## _section_list_hack[]; \
+  extern TYPE __stop_ ## NAME ## _section_list_hack[]; \
+  for( TYPE* ITERATOR = __start_ ## NAME ## _section_list_hack; \
        ITERATOR < __stop_ ## NAME ## _section_list_hack; ITERATOR++ )
 
-#define DPA_FOR_SECTION_GET_LIST(NAME,START,END) \
-  extern const struct NAME __start_ ## NAME ## _section_list_hack[]; \
-  extern const struct NAME __stop_ ## NAME ## _section_list_hack[]; \
-  static const struct NAME* START = __start_ ## NAME ## _section_list_hack; \
-  static const struct NAME* END = __stop_ ## NAME ## _section_list_hack;
+#define DPA_FOR_SECTION_GET_LIST(TYPE,NAME,START,END) \
+  extern TYPE __start_ ## NAME ## _section_list_hack[]; \
+  extern TYPE __stop_ ## NAME ## _section_list_hack[]; \
+  static TYPE* START = __start_ ## NAME ## _section_list_hack; \
+  static TYPE* END = __stop_ ## NAME ## _section_list_hack;
 
-#define DPA_SECTION_LIST_ENTRY_HACK(TYPE,NAME) \
-  extern const struct TYPE NAME; const struct TYPE NAME \
-  __attribute__ ((section ( DPAUCS_TOSTRING( TYPE ## _section_list_hack ) ))) =
+#define DPA_SECTION_LIST_ENTRY_HACK(TYPE,NAME,SYMBOL) \
+  extern TYPE SYMBOL; TYPE SYMBOL \
+  __attribute__ ((section ( DPAUCS_TOSTRING( NAME ## _section_list_hack ) ))) =
 
 #endif

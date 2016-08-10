@@ -5,13 +5,13 @@
 #include <DPA/UCS/protocol/address.h>
 
 #define DPAUCS_EXPORT_ETHERNET_DRIVER( NAME, DRIVER ) \
-  DPA_SECTION_LIST_ENTRY_HACK( DPAUCS_ethernet_driver_entry, DPAUCS_ethernet_driver_ ## NAME ){ #NAME, DRIVER }
+  DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS_ethernet_driver_entry, DPAUCS_ethernet_driver_entry, DPAUCS_ethernet_driver_ ## NAME ){ #NAME, DRIVER }
 
 #define DPAUCS_EACH_ETHERNET_DRIVER( ITERATOR ) \
-  DPA_FOR_SECTION_LIST_HACK( DPAUCS_ethernet_driver_entry, ITERATOR )
+  DPA_FOR_SECTION_LIST_HACK( const struct DPAUCS_ethernet_driver_entry, DPAUCS_ethernet_driver_entry, ITERATOR )
 
 #define DPAUCS_ETHERNET_DRIVER_GET_LIST( START, END ) \
-  DPA_FOR_SECTION_GET_LIST( DPAUCS_ethernet_driver_entry, START, END )
+  DPA_FOR_SECTION_GET_LIST( const struct DPAUCS_ethernet_driver_entry, DPAUCS_ethernet_driver_entry, START, END )
 
 typedef struct DPAUCS_ethernet_driver {
 

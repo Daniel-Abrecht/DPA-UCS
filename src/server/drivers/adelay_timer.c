@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <DPA/UCS/server.h>
 #include <DPA/UCS/adelay.h>
 
 #define PRESCALER        1024
@@ -18,7 +19,7 @@ ISR(TIMER0_OVF_vect){
   );
 }
 
-void adelay_timer_init( void ){
+DPAUCS_INIT( adelay_timer ){
   TCCR0 = PRESCALER_BITS; 
   // Overflow Interrupt erlauben
   TIMSK |= (1<<TOIE0);

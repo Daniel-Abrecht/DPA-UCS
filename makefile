@@ -60,9 +60,9 @@ ifndef NO_TCP
 ifndef NO_HTTP
 OPTIONAL_FILES  += server/services/http.o
 endif
-OPTIONAL_FILES  += server/protocol/tcp.o server/protocol/tcp_stack.o server/protocol/tcp_retransmission_cache.o
-DPAUCS_INIT     += X(DPAUCS_tcpInit)
-DPAUCS_SHUTDOWN += X(DPAUCS_tcpShutdown)
+OPTIONAL_FILES  += server/protocol/tcp.o
+OPTIONAL_FILES  += server/protocol/tcp_stack.o
+OPTIONAL_FILES  += server/protocol/tcp_retransmission_cache.o
 OPTIONS += -DUSE_TCP
 endif
 
@@ -120,20 +120,6 @@ LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
 LINUX_FILES_TMP += server/drivers/adelay_clock.o
 
-ifdef DPAUCS_INIT
-LINUX_DPAUCS_INIT += $(DPAUCS_INIT)
-endif
-ifdef LINUX_DPAUCS_INIT
-LINUX_OPTIONS     += -DDPAUCS_INIT='$(LINUX_DPAUCS_INIT)'
-endif
-
-ifdef DPAUCS_SHUTDOWN
-LINUX_DPAUCS_SHUTDOWN += $(DPAUCS_SHUTDOWN)
-endif
-ifdef LINUX_DPAUCS_SHUTDOWN
-LINUX_OPTIONS  += -DDPAUCS_SHUTDOWN='$(LINUX_DPAUCS_SHUTDOWN)'
-endif
-
 LINUX_FILES = $(shell \
   for file in ${LINUX_FILES_TMP}; \
   do \
@@ -167,21 +153,6 @@ AVR_FILES_TMP += server/drivers/eth/dummy.o
 
 ifndef NO_ADELAY_DRIVER
 AVR_FILES_TMP   += server/drivers/adelay_timer.o
-AVR_DPAUCS_INIT += X(adelay_timer_init)
-endif
-
-ifdef DPAUCS_INIT
-AVR_DPAUCS_INIT += $(DPAUCS_INIT)
-endif
-ifdef AVR_DPAUCS_INIT
-AVR_OPTIONS += -DDPAUCS_INIT='$(AVR_DPAUCS_INIT)'
-endif
-
-ifdef DPAUCS_SHUTDOWN
-AVR_DPAUCS_SHUTDOWN = $(DPAUCS_SHUTDOWN)
-endif
-ifdef AVR_DPAUCS_SHUTDOWN
-AVR_OPTIONS += -DDPAUCS_SHUTDOWN='$(AVR_DPAUCS_SHUTDOWN)'
 endif
 
 AVR_FILES = $(shell \

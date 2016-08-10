@@ -815,12 +815,12 @@ static DPAUCS_layer3_protocolHandler_t tcp_handler = {
 
 static int counter = 0;
 
-void DPAUCS_tcpInit(){
+DPAUCS_INIT( tcp ){
   if(counter++) return;
   DPAUCS_layer3_addProtocolHandler(&tcp_handler);
 }
 
-void DPAUCS_tcpShutdown(){
+DPAUCS_SHUTDOWN( tcp ){
   if(--counter) return;
   DPAUCS_layer3_removeProtocolHandler(&tcp_handler);
 }

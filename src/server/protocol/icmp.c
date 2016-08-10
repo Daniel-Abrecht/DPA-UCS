@@ -1,6 +1,7 @@
 #define DPAUCS_ICMP_C
 
 #include <stdbool.h>
+#include <DPA/UCS/server.h>
 #include <DPA/UCS/checksum.h>
 #include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/layer3.h>
@@ -77,12 +78,12 @@ static DPAUCS_layer3_protocolHandler_t icmp_handler = {
 
 static int counter = 0;
 
-void DPAUCS_icmpInit(){
+DPAUCS_INIT( icmp ){
   if(counter++) return;
   DPAUCS_layer3_addProtocolHandler(&icmp_handler);
 }
 
-void DPAUCS_icmpShutdown(){
+DPAUCS_SHUTDOWN( icmp ){
   if(--counter) return;
   DPAUCS_layer3_removeProtocolHandler(&icmp_handler);
 }

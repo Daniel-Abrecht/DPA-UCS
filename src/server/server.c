@@ -55,49 +55,31 @@ void DPAUCS_run( void(*callback)(void*), void* arg ){
   DPAUCS_shutdown();
 }
 
-static void DPAUCS_ethernet_init(){
-  DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPAUCS_LOG("Initialize ethernet driver \"%s\"\n",it->name);
-    (*it->driver->init)();
-  }
-}
-
-static void DPAUCS_ethernet_shutdown(){
-  DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPAUCS_LOG("Shutdown ethernet driver \"%s\"\n",it->name);
-    (*it->driver->shutdown)();
-  }
-}
-
 static void DPAUCS_init( void ){
 
   memset(services,0,sizeof(services));
 
-  DPAUCS_ethernet_init();
+  DPAUCS_EACH_ETHERNET_DRIVER(it){
+    DPAUCS_LOG("Initialize ethernet driver \"%s\"\n",it->name);
+    (*it->driver->init)();
+  }
 
-  if(DPAUCS_icmpInit)
-    DPAUCS_icmpInit();
-
-#ifdef DPAUCS_INIT // Allows to add init functions using makefile
-#define X(F) void F( void ); F();
-  DPAUCS_INIT
-#undef X
-#endif
+  DPAUCS_EACH_INIT_FUNCTION( func ){
+    (*func)();
+  }
 
 }
 
 static void DPAUCS_shutdown( void ){
 
-  if(DPAUCS_icmpShutdown)
-    DPAUCS_icmpShutdown();
+  DPAUCS_EACH_ETHERNET_DRIVER(it){
+    DPAUCS_LOG("Shutdown ethernet driver \"%s\"\n",it->name);
+    (*it->driver->shutdown)();
+  }
 
-  DPAUCS_ethernet_shutdown();
-
-#ifdef DPAUCS_SHUTDOWN // Allows to add shutdown functions using makefile
-#define X(F) void F( void ); F();
-  DPAUCS_SHUTDOWN
-#undef X
-#endif
+  DPAUCS_EACH_SHUTDOWN_FUNCTION( func ){
+    (*func)();
+  }
 
 }
 

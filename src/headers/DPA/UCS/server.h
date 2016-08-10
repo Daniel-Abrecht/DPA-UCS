@@ -13,14 +13,29 @@
 #define MAX_SERVICES 16
 #endif
 
+#define DPAUCS_INIT( NAME ) \
+  static void DPAUCS_real_init_ ## NAME ## _func(void); \
+  DPA_SECTION_LIST_ENTRY_HACK( const DPAUCS_init_func_t, DPAUCS_init_func, DPAUCS_ ## NAME ## _init ) &DPAUCS_real_init_ ## NAME ## _func; \
+  void DPAUCS_real_init_ ## NAME ## _func(void)
+
+#define DPAUCS_SHUTDOWN( NAME ) \
+  static void DPAUCS_real_shutdown_ ## NAME ## _func(void); \
+  DPA_SECTION_LIST_ENTRY_HACK( const DPAUCS_shutdown_func_t, DPAUCS_shutdown_func, DPAUCS_ ## NAME ## _shutdown ) &DPAUCS_real_shutdown_ ## NAME ## _func; \
+  void DPAUCS_real_shutdown_ ## NAME ## _func(void)
+
+#define DPAUCS_EACH_INIT_FUNCTION( ITERATOR ) \
+  DPA_FOR_SECTION_LIST_HACK( const DPAUCS_init_func_t, DPAUCS_init_func, ITERATOR )
+
+#define DPAUCS_EACH_SHUTDOWN_FUNCTION( ITERATOR ) \
+  DPA_FOR_SECTION_LIST_HACK( const DPAUCS_shutdown_func_t, DPAUCS_shutdown_func, ITERATOR )
+
+
+typedef void(*DPAUCS_init_func_t)(void);
+typedef void(*DPAUCS_shutdown_func_t)(void);
+
 struct DPAUCS_service;
 struct DPAUCS_packet_info;
 struct DPAUCS_ethernet_driver;
-
-typedef struct DPAUCS_driver_info {
-  const char* name;
-  struct DPAUCS_ethernet_driver* driver;
-} DPAUCS_driver_info_t;
 
 void DPAUCS_run( void(*)(void*), void* );
 

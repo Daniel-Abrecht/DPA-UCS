@@ -7,12 +7,12 @@
 
 typedef struct DPAUCS_service {
   uint8_t tos;
-  void(*start)();
+  void(*start)( void );
   bool(*onopen)( void* cid );
   void(*onreceive)( void* cid, void* data, size_t size );
   void(*oneof)( void* cid );
   void(*onclose)( void* cid );
-  void(*stop)();
+  void(*stop)( void );
 } DPAUCS_service_t;
 
 #endif

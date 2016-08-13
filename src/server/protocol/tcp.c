@@ -3,13 +3,12 @@
 
 #define DPAUCS_TCP_C
 
-#include <DPA/UCS/utils.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/logger.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/service.h>
+#include <DPA/utils/utils.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/checksum.h>
-#include <DPA/UCS/binaryUtils.h>
 #include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/IPv4.h>
@@ -97,7 +96,7 @@ static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionCo
 }
 
 void printFrame( DPAUCS_tcp_t* tcp ){
-  uint16_t flags = btoh16( tcp->flags );
+  uint16_t flags = DPA_btoh16( tcp->flags );
   DPA_LOG( "TCP Packet:\n"
     "  source: " "%u" "\n"
     "  destination: " "%u" "\n"
@@ -108,10 +107,10 @@ void printFrame( DPAUCS_tcp_t* tcp ){
     "  windowSize: " "%u" "\n"
     "  checksum: " "%u" "\n"
     "  urgentPointer: " "%u" "\n",
-    (unsigned)btoh16(tcp->source),
-    (unsigned)btoh16(tcp->destination),
-    (unsigned)btoh32(tcp->sequence),
-    (unsigned)btoh32(tcp->acknowledgment),
+    (unsigned)DPA_btoh16(tcp->source),
+    (unsigned)DPA_btoh16(tcp->destination),
+    (unsigned)DPA_btoh32(tcp->sequence),
+    (unsigned)DPA_btoh32(tcp->acknowledgment),
     (unsigned)((tcp->dataOffset>>2)&~3u),
     ( flags & TCP_FLAG_FIN ) ? "FIN" : "",
     ( flags & TCP_FLAG_SYN ) ? "SYN" : "",
@@ -122,20 +121,20 @@ void printFrame( DPAUCS_tcp_t* tcp ){
     ( flags & TCP_FLAG_ECE ) ? "ECE" : "",
     ( flags & TCP_FLAG_CWR ) ? "CWR" : "",
     ( flags & TCP_FLAG_NS  ) ? "NS"  : "",
-    (unsigned)btoh16(tcp->windowSize),
-    (unsigned)btoh16(tcp->checksum),
-    (unsigned)btoh16(tcp->urgentPointer)
+    (unsigned)DPA_btoh16(tcp->windowSize),
+    (unsigned)DPA_btoh16(tcp->checksum),
+    (unsigned)DPA_btoh16(tcp->urgentPointer)
   );
 }
 
 void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG ){
   memset( tcp, 0, sizeof(*tcp) );
-  tcp->destination = htob16( tcb->destPort );
-  tcp->source = htob16( tcb->srcPort );
-  tcp->acknowledgment = btoh32( tcb->RCV.NXT );
-  tcp->sequence = htob32( SEG->SEQ );
-  tcp->windowSize = htob16( tcb->RCV.WND );
-  tcp->flags = htob16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | SEG->flags );
+  tcp->destination = DPA_htob16( tcb->destPort );
+  tcp->source = DPA_htob16( tcb->srcPort );
+  tcp->acknowledgment = DPA_btoh32( tcb->RCV.NXT );
+  tcp->sequence = DPA_htob32( SEG->SEQ );
+  tcp->windowSize = DPA_htob16( tcb->RCV.WND );
+  tcp->flags = DPA_htob16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | SEG->flags );
 }
 
 #ifdef USE_IPv4
@@ -148,11 +147,11 @@ static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t
   DPAUCS_logicAddress_pair_t fromTo;
   DPAUCS_mixedPairToLogicAddress( &fromTo, &tcb->fromTo );
   struct pseudoHeader pseudoHeader = {
-    .src = htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.source     )->address ),
-    .dst = htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.destination)->address ),
+    .src = DPA_htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.source     )->address ),
+    .dst = DPA_htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.destination)->address ),
     .padding = 0,
     .protocol = PROTOCOL_TCP,
-    .length = htob16( length )
+    .length = DPA_htob16( length )
   };
   (void)tcp;
   return checksum( &pseudoHeader, sizeof(pseudoHeader) );
@@ -380,9 +379,9 @@ void tcb_from_tcp(
 ){
   memset(tcb,0,sizeof(*tcb));
 
-  tcb->srcPort     = btoh16( tcp->destination );
-  tcb->destPort    = btoh16( tcp->source );
-  tcb->service     = DPAUCS_get_service( &to->logicAddress, btoh16( tcp->destination ), PROTOCOL_TCP );
+  tcb->srcPort     = DPA_btoh16( tcp->destination );
+  tcb->destPort    = DPA_btoh16( tcp->source );
+  tcb->service     = DPAUCS_get_service( &to->logicAddress, DPA_btoh16( tcp->destination ), PROTOCOL_TCP );
   tcb->currentId   = id;
   tcb->next_length = 0;
 
@@ -406,12 +405,12 @@ static inline void tcp_init_variables(
   uint32_t* ACK
 ){
 
-  SEG->SEQ   = btoh32( tcp->sequence );
-  SEG->flags = btoh16( tcp->flags );
+  SEG->SEQ   = DPA_btoh32( tcp->sequence );
+  SEG->flags = DPA_btoh16( tcp->flags );
 
   tcb_from_tcp(tcb,tcp,id,from,to);
 
-  *ACK = btoh32( tcp->acknowledgment );
+  *ACK = DPA_btoh32( tcp->acknowledgment );
 
 }
 
@@ -460,10 +459,10 @@ static bool tcp_processPacket(
 
   chunck_len -= headerLength;
 
-  SEG.SEQ   = btoh32( tcp->sequence );
-  SEG.flags = btoh16( tcp->flags );
+  SEG.SEQ   = DPA_btoh32( tcp->sequence );
+  SEG.flags = DPA_btoh16( tcp->flags );
 
-  uint32_t ACK = btoh32( tcp->acknowledgment );
+  uint32_t ACK = DPA_btoh32( tcp->acknowledgment );
 
   if(!tcb){
     tcb_from_tcp(&tmp_tcb,tcp,id,from,to);
@@ -510,7 +509,7 @@ static bool tcp_processPacket(
 
   // Statechanges //
 
-  tcb->SND.WND = btoh32( tcp->windowSize );
+  tcb->SND.WND = DPA_btoh32( tcp->windowSize );
 
   {
     unsigned long RCV_NXT_old = tcb->RCV.NXT;
@@ -524,7 +523,7 @@ static bool tcp_processPacket(
   }
 
   if( SEG.flags & TCP_FLAG_ACK ){
-    tcp_una_change_handler( tcb, btoh32( tcp->acknowledgment ) );
+    tcp_una_change_handler( tcb, DPA_btoh32( tcp->acknowledgment ) );
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
       DPA_LOG("TCP Keep-Alive\n");
       tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_ACK });
@@ -668,7 +667,7 @@ static bool tcp_processHeader(
         return false;
       }
     }
-    stcb->SND.WND = btoh32( tcp->windowSize );
+    stcb->SND.WND = DPA_btoh32( tcp->windowSize );
     stcb->RCV.WND = DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE;
     tcp_sendNoData( 1, &stcb, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_SYN });
     return last;

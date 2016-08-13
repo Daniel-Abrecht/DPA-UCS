@@ -2,7 +2,7 @@
 #define DPAUCS_RESOURCE_H
 
 #include <stdbool.h>
-#include <DPA/UCS/stream.h>
+#include <DPA/utils/stream.h>
 #include <DPA/UCS/helper_macros.h>
 
 

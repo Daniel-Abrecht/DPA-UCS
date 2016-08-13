@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <DPA/UCS/logger.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/driver/eth/driver.h>

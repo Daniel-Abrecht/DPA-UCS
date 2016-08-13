@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdint.h>
-#include <DPA/UCS/stream.h>
-#include <DPA/UCS/logger.h>
+#include <DPA/utils/stream.h>
+#include <DPA/utils/logger.h>
 
 void DPA_stream_reset( DPA_stream_t* stream ){
   DPA_ringbuffer_reset( &stream->buffer_buffer->super );

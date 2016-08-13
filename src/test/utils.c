@@ -1,5 +1,5 @@
 #include <criterion/criterion.h>
-#include <DPA/UCS/utils.h>
+#include <DPA/utils/utils.h>
 
 // TEST FOR: server/utils
 

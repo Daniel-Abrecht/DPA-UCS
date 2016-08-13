@@ -5,18 +5,18 @@
 #include <stdbool.h>
 #include <string.h>
 #include <DPA/UCS/files.h>
-#include <DPA/UCS/utils.h>
-#include <DPA/UCS/logger.h>
+#include <DPA/utils/utils.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/ressource.h>
 #include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/services/http.h>
 
-#if DPAUCS_MAX_HTTP_CONNECTIONS > TRANSMISSION_CONTROL_BLOCK_COUNT
-#undef DPAUCS_MAX_HTTP_CONNECTIONS
+#if DPA_MAX_HTTP_CONNECTIONS > TRANSMISSION_CONTROL_BLOCK_COUNT
+#undef DPA_MAX_HTTP_CONNECTIONS
 #endif
 
-#ifndef DPAUCS_MAX_HTTP_CONNECTIONS
-#define DPAUCS_MAX_HTTP_CONNECTIONS TRANSMISSION_CONTROL_BLOCK_COUNT
+#ifndef DPA_MAX_HTTP_CONNECTIONS
+#define DPA_MAX_HTTP_CONNECTIONS TRANSMISSION_CONTROL_BLOCK_COUNT
 #endif
 
 DPA_MODULE( http ){
@@ -89,7 +89,7 @@ typedef struct HTTP_Connection {
   const DPAUCS_service_t* upgradeService;
 } HTTP_Connections_t;
 
-static HTTP_Connections_t connections[DPAUCS_MAX_HTTP_CONNECTIONS];
+static HTTP_Connections_t connections[DPA_MAX_HTTP_CONNECTIONS];
 
 
 //////////////////////////////////////////////////////////////////
@@ -258,7 +258,7 @@ void HTTP_sendErrorPage( void* cid, uint16_t code, bool headOnly ){
 
 static HTTP_Connections_t* getConnection( void* cid ){
   HTTP_Connections_t *it, *end;
-  for( it = connections, end = it + DPAUCS_MAX_HTTP_CONNECTIONS; it < end; it++ )
+  for( it = connections, end = it + DPA_MAX_HTTP_CONNECTIONS; it < end; it++ )
     if( it->cid == cid )
       return it;
   return 0;
@@ -267,7 +267,7 @@ static HTTP_Connections_t* getConnection( void* cid ){
 static bool onopen( void* cid ){
   DPA_LOG("http_service->onopen\n");
   HTTP_Connections_t *it, *end;
-  for( it = connections, end = it + DPAUCS_MAX_HTTP_CONNECTIONS; it < end; it++ )
+  for( it = connections, end = it + DPA_MAX_HTTP_CONNECTIONS; it < end; it++ )
     if(!it->cid) goto add_connection;
   return false;
  add_connection:

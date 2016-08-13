@@ -1,5 +1,5 @@
 #include <criterion/criterion.h>
-#include <DPA/UCS/ringbuffer.h>
+#include <DPA/utils/ringbuffer.h>
 
 // TEST FOR: server/ringbuffer
 

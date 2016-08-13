@@ -1,7 +1,7 @@
 #include <string.h>
-#include <DPA/UCS/utils.h>
-#include <DPA/UCS/ringbuffer.h>
-#include <DPA/UCS/logger.h>
+#include <DPA/utils/utils.h>
+#include <DPA/utils/ringbuffer.h>
+#include <DPA/utils/logger.h>
 
 size_t DPA_ringbuffer_increment_read( DPA_ringbuffer_base_t* ringbuffer ){
   if(!ringbuffer->range.size)

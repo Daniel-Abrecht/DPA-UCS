@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/logger.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/service.h>
-#include <DPA/UCS/binaryUtils.h>
+#include <DPA/utils/utils.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/ip.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/tcp.h>
@@ -177,17 +177,17 @@ void getPacketInfo( const DPAUCS_interface_t* interface, DPAUCS_packet_info_t* i
   info->is_vlan = packet->data.vlan.tpid == IEEE_802_1Q_TPID_CONST;
 
   if( info->is_vlan ){ // maybe an IEEE 802.1Q tag
-    info->vid     = btoh16(packet->data.vlan.pcp_dei_vid) & 0x0FFF;
-    info->type    = btoh16(packet->data.vlan.type);
+    info->vid     = DPA_btoh16(packet->data.vlan.pcp_dei_vid) & 0x0FFF;
+    info->type    = DPA_btoh16(packet->data.vlan.type);
     info->payload = packet->data.vlan.payload;
     info->llc     = &packet->data.vlan.llc;
-    info->size    = btoh16(packet->data.length);
+    info->size    = DPA_btoh16(packet->data.length);
   }else{
     info->vid     = 0;
-    info->type    = btoh16(packet->data.type);
+    info->type    = DPA_btoh16(packet->data.type);
     info->payload = packet->data.payload;
     info->llc     = &packet->data.llc;
-    info->size    = btoh16(packet->data.vlan.length);
+    info->size    = DPA_btoh16(packet->data.vlan.length);
   }
 
   if( info->type < 1536 && info->type > 1500 ){ // undefined case
@@ -199,7 +199,7 @@ void getPacketInfo( const DPAUCS_interface_t* interface, DPAUCS_packet_info_t* i
       info->invalid = true;
       return;
     }else{ // ok, it's snap
-      info->type    = btoh16(info->llc->extended_control.snap.type);
+      info->type    = DPA_btoh16(info->llc->extended_control.snap.type);
       info->payload = info->llc->extended_control.payload;
     }
   }
@@ -310,12 +310,12 @@ void DPAUCS_preparePacket( DPAUCS_packet_info_t* info ){
 
   if( info->is_vlan ){
     packet->data.vlan.tpid = IEEE_802_1Q_TPID_CONST;
-    packet->data.vlan.pcp_dei_vid = htob16(info->vid);
-    packet->data.vlan.type = htob16(info->type);
+    packet->data.vlan.pcp_dei_vid = DPA_htob16(info->vid);
+    packet->data.vlan.type = DPA_htob16(info->type);
     info->payload = packet->data.vlan.payload;
   }else{
     packet->data.vlan.pcp_dei_vid  = 0;
-    packet->data.type      = htob16(info->type);
+    packet->data.type      = DPA_htob16(info->type);
     info->payload          = packet->data.payload;
   }
 

@@ -10,7 +10,7 @@ typedef union DPAUCS_layer3_packetInfo {
 } DPAUCS_layer3_packetInfo_t;
 
 // Should be initialized with zeros
-static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS];
+static DPAUCS_layer3_packetInfo_t incompletePackageInfos[DPA_MAX_INCOMPLETE_LAYER3_PACKETS];
 
 unsigned DPAUCS_layer3_getPacketTypeSize(enum DPAUCS_fragmentType type){
   switch(type){
@@ -31,9 +31,9 @@ bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS
   if( a->type != b->type )
     return false;
   if(  (DPAUCS_layer3_packetInfo_t*)a < incompletePackageInfos
-    || (DPAUCS_layer3_packetInfo_t*)a >= incompletePackageInfos + DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS
+    || (DPAUCS_layer3_packetInfo_t*)a >= incompletePackageInfos + DPA_MAX_INCOMPLETE_LAYER3_PACKETS
     || (DPAUCS_layer3_packetInfo_t*)b < incompletePackageInfos
-    || (DPAUCS_layer3_packetInfo_t*)b >= incompletePackageInfos + DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS
+    || (DPAUCS_layer3_packetInfo_t*)b >= incompletePackageInfos + DPA_MAX_INCOMPLETE_LAYER3_PACKETS
   ){
     switch( a->type ){
 #ifdef USE_TCP
@@ -67,7 +67,7 @@ bool DPAUCS_areFragmentsFromSameIPv4Packet( DPAUCS_IPv4_packetInfo_t* a, DPAUCS_
 unsigned incompleteIpPackageInfoOffset = 0;
 static DPAUCS_ip_packetInfo_t* getNextIncompletePacket(){
   DPAUCS_ip_packetInfo_t* next = &incompletePackageInfos[incompleteIpPackageInfoOffset].ip_packetInfo;
-  incompleteIpPackageInfoOffset = ( incompleteIpPackageInfoOffset + 1) % DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS;
+  incompleteIpPackageInfoOffset = ( incompleteIpPackageInfoOffset + 1) % DPA_MAX_INCOMPLETE_LAYER3_PACKETS;
   next->valid = false;
   return next;
 }
@@ -78,7 +78,7 @@ DPAUCS_ip_fragment_t** DPAUCS_layer3_allocFragment( DPAUCS_ip_packetInfo_t* pack
     info = getNextIncompletePacket();
   }else if(
        (DPAUCS_layer3_packetInfo_t*)packet < incompletePackageInfos
-    || (DPAUCS_layer3_packetInfo_t*)packet >= incompletePackageInfos + DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS
+    || (DPAUCS_layer3_packetInfo_t*)packet >= incompletePackageInfos + DPA_MAX_INCOMPLETE_LAYER3_PACKETS
   ){
     info = DPAUCS_layer3_normalize_packet_info_ptr( packet );
     if(!info)
@@ -105,7 +105,7 @@ DPAUCS_ip_packetInfo_t* DPAUCS_layer3_save_packet_info( DPAUCS_ip_packetInfo_t* 
 }
 
 DPAUCS_ip_packetInfo_t* DPAUCS_layer3_normalize_packet_info_ptr(DPAUCS_ip_packetInfo_t* ipf){
-  for(unsigned i=0;i<DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS;i++)
+  for(unsigned i=0;i<DPA_MAX_INCOMPLETE_LAYER3_PACKETS;i++)
     if( incompletePackageInfos[i].ip_packetInfo.valid && DPAUCS_layer3_areFragmentsFromSamePacket( &incompletePackageInfos[i].ip_packetInfo, ipf ) )
       return &incompletePackageInfos[i].ip_packetInfo;
   return 0;

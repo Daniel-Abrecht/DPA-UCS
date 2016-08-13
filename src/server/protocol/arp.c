@@ -2,8 +2,8 @@
 #include <string.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/logger.h>
-#include <DPA/UCS/binaryUtils.h>
+#include <DPA/utils/utils.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/ethtypes.h>
@@ -103,14 +103,14 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
   if( arp->hlen != sizeof(DPAUCS_mac_t) )
     return;
 
-  switch( btoh16( arp->ptype ) ){
+  switch( DPA_btoh16( arp->ptype ) ){
 #ifdef USE_IPv4
     case ETH_TYPE_IP_V4: {
       // IPv4 addresses must be 4 bytes long
       if( arp->plen != 4 ) return;
 
-      uint32_t src_ip  = btoh32( *(uint32_t*)spa );
-      uint32_t dest_ip = btoh32( *(uint32_t*)tpa );
+      uint32_t src_ip  = DPA_btoh32( *(uint32_t*)spa );
+      uint32_t dest_ip = DPA_btoh32( *(uint32_t*)tpa );
 
       if( dest_ip ){
         DPAUCS_logicAddress_IPv4_t addr = {
@@ -122,7 +122,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
         ) return;
       }
 
-      switch( btoh16( arp->oper ) ){
+      switch( DPA_btoh16( arp->oper ) ){
         case ARP_REQUEST: { // request recived, make a response
 
           DPAUCS_packet_info_t infReply = *info;
@@ -136,7 +136,7 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
           DPAUCS_arp_t* rarp = infReply.payload;
           *rarp = *arp; // preserve htype, ptype, etc.
 
-          rarp->oper = htob16( ARP_RESPONSE );
+          rarp->oper = DPA_htob16( ARP_RESPONSE );
 
           uint8_t 
             *rsha = (uint8_t*)infReply.payload + sizeof(DPAUCS_arp_t), // Sender hardware address
@@ -146,9 +146,9 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
           ;
 
           memcpy(rsha,info->interface->mac,sizeof(DPAUCS_mac_t)); // source is my mac
-          *(uint32_t*)rspa = htob32(dest_ip); // my source mac is the previous target ip
+          *(uint32_t*)rspa = DPA_htob32(dest_ip); // my source mac is the previous target ip
           memcpy(rtha,sha,sizeof(DPAUCS_mac_t)); // target mac is previous source mac
-          *(uint32_t*)rtpa = htob32(src_ip); // target ip is previous source ip
+          *(uint32_t*)rtpa = DPA_htob32(src_ip); // target ip is previous source ip
 
           // send ethernet frame
           DPAUCS_sendPacket(

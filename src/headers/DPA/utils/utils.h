@@ -2,10 +2,17 @@
 #define DPA_UTILS_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
-#define DPAUCS_MIN( a, b ) (((a)<(b))?(a):(b))
-#define DPAUCS_MAX( a, b ) (((a)>(b))?(a):(b))
+#define DPA_MIN( a, b ) (((a)<(b))?(a):(b))
+#define DPA_MAX( a, b ) (((a)>(b))?(a):(b))
+
+#define DPA_htob16 DPA_btoh16
+#define DPA_htob32 DPA_btoh32
+
+uint16_t DPA_btoh16( uint16_t ); // big endian to host byte order
+uint32_t DPA_btoh32( uint32_t ); // big endian to host byte order
 
 bool DPA_mempos( size_t* position, void* haystack, size_t haystack_size, void* needle, size_t needle_size );
 bool DPA_memrcharpos( size_t* position, size_t size, void* haystack, char needle );

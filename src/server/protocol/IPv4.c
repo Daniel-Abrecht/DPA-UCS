@@ -1,20 +1,19 @@
 #include <string.h>
-#include <DPA/UCS/utils.h>
+#include <DPA/utils/utils.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/logger.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/checksum.h>
-#include <DPA/UCS/binaryUtils.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/ethtypes.h>
 
 void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
-  if( btoh16(ip->length) > info->size )
+  if( DPA_btoh16(ip->length) > info->size )
     return;
 
-  uint32_t source = btoh32(ip->source);
-  uint32_t destination = btoh32(ip->destination);
+  uint32_t source = DPA_btoh32(ip->source);
+  uint32_t destination = DPA_btoh32(ip->destination);
 
   {
     DPAUCS_logicAddress_IPv4_t addr = {
@@ -71,7 +70,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
   DPAUCS_IPv4_fragment_t fragment = {
     .ipFragment = {
       .offset = (uint16_t)( (uint16_t)( ip->flags_offset1 & 0x1F ) | (uint16_t)ip->offset2 << 5u ) * 8u,
-      .length = btoh16(ip->length) - headerlength,
+      .length = DPA_btoh16(ip->length) - headerlength,
       .datas = payload
     },
     .flags = ( ip->flags_offset1 >> 5 ) & 0x07
@@ -186,7 +185,7 @@ bool DPAUCS_IPv4_transmit(
     src = &tmp_IPv4Addr;
   }
 
-  uint16_t max_size = DPAUCS_MIN(max_size_arg,(uint16_t)~0);
+  uint16_t max_size = DPA_MIN(max_size_arg,(uint16_t)~0);
 
   size_t offset = 0;
 
@@ -204,14 +203,14 @@ bool DPAUCS_IPv4_transmit(
     // create ip header
     DPAUCS_IPv4_t* ip = p.payload;
     ip->version_ihl = (uint16_t)( 4u << 4u ) | ( hl & 0x0F );
-    ip->id = htob16( id );
+    ip->id = DPA_htob16( id );
     ip->ttl = DEFAULT_TTL;
     ip->protocol = type;
-    ip->source = htob32( src->ip );
-    ip->destination = htob32( dst->ip );
+    ip->source = DPA_htob32( src->ip );
+    ip->destination = DPA_htob32( dst->ip );
 
     // create content
-    size_t msize = DPAUCS_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
+    size_t msize = DPA_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
     size_t s = DPA_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
 
     // complete ip header
@@ -220,7 +219,7 @@ bool DPAUCS_IPv4_transmit(
     if( !DPA_stream_eof(inputStream) && (uint32_t)(offset+s) < max_size )
       flags |= IPv4_FLAG_MORE_FRAGMENTS;
 
-    ip->length = htob16( p.size + hl * 4 + s );
+    ip->length = DPA_htob16( p.size + hl * 4 + s );
     ip->flags_offset1 = ( flags << 5 ) | ( ( offset >> 11 ) & 0x1F );
     ip->offset2 = ( offset >> 3 ) & 0xFF;
 

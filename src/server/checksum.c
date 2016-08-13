@@ -1,7 +1,6 @@
-#include <DPA/UCS/utils.h>
-#include <DPA/UCS/stream.h>
+#include <DPA/utils/utils.h>
+#include <DPA/utils/stream.h>
 #include <DPA/UCS/checksum.h>
-#include <DPA/UCS/binaryUtils.h>
 
 uint16_t checksum( void* p, size_t l ){
   uint32_t checksum = 0;
@@ -12,12 +11,12 @@ uint16_t checksum( void* p, size_t l ){
     checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
   }
   if( l & 1 ){
-    checksum += htob16((uint16_t)*(char*)ptr<<8);
+    checksum += DPA_htob16((uint16_t)*(char*)ptr<<8);
     checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
   }
   if( unaligned ){
     uint8_t* x = p;
-    checksum += htob16(((uint16_t)x[0]<<8)|x[l-1]);
+    checksum += DPA_htob16(((uint16_t)x[0]<<8)|x[l-1]);
     checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
   }
   return ~checksum;
@@ -27,7 +26,7 @@ uint16_t checksumOfStream( DPA_stream_t* stream, size_t max_len ){
   uint32_t checksum = 0;
   while( !DPA_stream_eof(stream) && max_len ){
     uint16_t num = 0;
-    size_t s = DPAUCS_MIN( sizeof(num), max_len );
+    size_t s = DPA_MIN( sizeof(num), max_len );
     max_len -= s;
     DPA_stream_read( stream, &num, s );
     checksum += num;

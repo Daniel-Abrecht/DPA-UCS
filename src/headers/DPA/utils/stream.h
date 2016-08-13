@@ -2,7 +2,7 @@
 #define DPA_STREAM_H
 
 #include <stdbool.h>
-#include <DPA/UCS/ringbuffer.h>
+#include <DPA/utils/ringbuffer.h>
 
 #define DPA_BUFFER_BUFFER_USERDEFINED(buf) ( DPA_BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
 #define DPA_BUFFER_BUFFER_TYPE(buf) ( DPA_BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )

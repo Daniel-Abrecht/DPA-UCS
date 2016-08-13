@@ -1,7 +1,7 @@
 #ifndef DPAUCS_LAYER3_H
 #define DPAUCS_LAYER3_H
 
-#include <DPA/UCS/stream.h>
+#include <DPA/utils/stream.h>
 #include <DPA/UCS/protocol/address.h>
 
 #define MAX_LAYER3_PROTO_HANDLERS 3

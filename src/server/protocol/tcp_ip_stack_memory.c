@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <DPA/UCS/mempool.h>
+#include <DPA/utils/mempool.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/tcp_stack.h>
@@ -28,7 +28,7 @@ static DPA_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
 
 static unsigned short packetNumberCounter = 0;
 
-static DPAUCS_fragment_t* fragments[DPAUCS_MAX_FRAGMANTS] = {0};
+static DPAUCS_fragment_t* fragments[DPA_MAX_FRAGMANTS] = {0};
 static unsigned short fragmentsUsed = 0;
 
 static bool removeFragmentByPacketNumber(DPAUCS_fragment_t** fragment, void* packetNumber){
@@ -57,7 +57,7 @@ bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType new
   if( beforeTakeover )
     if(! (*beforeTakeover)( &fragment, newType ) )
       return false;
-  if( fragment < fragments || fragment > fragments + DPAUCS_MAX_FRAGMANTS
+  if( fragment < fragments || fragment > fragments + DPA_MAX_FRAGMANTS
    || !DPA_mempool_realloc( &mempool, (void**)fragment, tmp.size + DPAUCS_getFragmentTypeSize( newType ), true )
   ){
     void(*takeoverFailtureHandler)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->takeoverFailtureHandler;
@@ -79,13 +79,13 @@ DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t
   size_t fragmentTypeSize = DPAUCS_getFragmentTypeSize( type );
   unsigned short packetNumber = packetNumberCounter++;
   DPAUCS_eachFragment(DPAUCS_ANY_FRAGMENT,&removeFragmentByPacketNumber,&packetNumber);
-  if( fragmentsUsed < DPAUCS_MAX_FRAGMANTS )
+  if( fragmentsUsed < DPA_MAX_FRAGMANTS )
     DPAUCS_removeOldestFragment();
   unsigned short i;
-  for(i=DPAUCS_MAX_FRAGMANTS;i--;)
+  for(i=DPA_MAX_FRAGMANTS;i--;)
     if(!fragments[i])
       break;
-  if(i>=DPAUCS_MAX_FRAGMANTS)
+  if(i>=DPA_MAX_FRAGMANTS)
     return 0;
   DPAUCS_fragment_t** fragment_ptr = fragments + i;
   while( !DPA_mempool_alloc(&mempool,(void**)fragment_ptr,size + fragmentTypeSize) && fragmentsUsed )

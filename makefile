@@ -86,12 +86,11 @@ endif
 MAIN_FILE = main.o
 
 FILES += server/server.o
-FILES += server/utils.o
-FILES += server/ringbuffer.o
-FILES += server/stream.o
-FILES += server/mempool.o
+FILES += utils/utils.o
+FILES += utils/ringbuffer.o
+FILES += utils/stream.o
+FILES += utils/mempool.o
 FILES += server/checksum.o
-FILES += server/binaryUtils.o
 FILES += server/protocol/arp.o
 FILES += server/protocol/ip.o
 FILES += server/protocol/layer3.o
@@ -117,7 +116,7 @@ LINUX_OPTIONS  += -I${TEMP_LINUX}
 LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
 LINUX_FILES_TMP += server/drivers/adelay_clock.o
-LINUX_FILES_TMP += server/logger.o
+LINUX_FILES_TMP += utils/logger.o
 
 LINUX_FILES = $(shell \
   for file in ${LINUX_FILES_TMP}; \

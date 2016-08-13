@@ -7,7 +7,7 @@
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 
 #define DEFAULT_TTL 64
-#define DPAUCS_MAX_INCOMPLETE_LAYER3_PACKETS 32
+#define DPA_MAX_INCOMPLETE_LAYER3_PACKETS 32
 
 typedef struct DPAUCS_ip_packetInfo {
   enum DPAUCS_fragmentType type; // must be the first member

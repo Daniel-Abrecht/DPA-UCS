@@ -2,7 +2,7 @@
 #define DPAUCS_TCP_IP_STACK_MEMORY_H
 
 #define STACK_BUFFER_SIZE 1024u * 5u // 5 KB
-#define DPAUCS_MAX_FRAGMANTS 256
+#define DPA_MAX_FRAGMANTS 256
 
 // Don't add more than 16 fragment types
 // sizeof(enum) is equal to sizeof(int)

@@ -1,5 +1,5 @@
 #include <string.h>
-#include <DPA/UCS/utils.h>
+#include <DPA/utils/utils.h>
 
 bool DPA_mempos( size_t* position, void* haystack, size_t haystack_size, void* needle, size_t needle_size ){
 
@@ -61,3 +61,18 @@ void DPA_memrcpy( size_t size, void*restrict dest, const void*restrict src, size
     d += size;
   }
 }
+
+uint16_t DPA_btoh16(uint16_t y){
+  uint8_t* x = (uint8_t*)&y;
+  return ( (uint16_t)x[0] << 8u )
+       | ( (uint16_t)x[1] );
+}
+
+uint32_t DPA_btoh32(uint32_t y){
+  uint8_t* x = (uint8_t*)&y;
+  return ( (uint32_t)x[0] << 24u ) |
+         ( (uint32_t)x[1] << 16u ) |
+         ( (uint32_t)x[2] <<  8u ) |
+         ( (uint32_t)x[3] );
+}
+

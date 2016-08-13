@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include <DPA/UCS/logger.h>
-#include <DPA/UCS/mempool.h>
+#include <DPA/utils/logger.h>
+#include <DPA/utils/mempool.h>
 #include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/protocol/tcp_retransmission_cache.h>
 

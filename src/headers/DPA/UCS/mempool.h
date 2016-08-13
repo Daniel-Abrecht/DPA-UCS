@@ -1,5 +1,5 @@
-#ifndef DPAUCS_MEMPOOL_H
-#define DPAUCS_MEMPOOL_H
+#ifndef DPA_MEMPOOL_H
+#define DPA_MEMPOOL_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -27,8 +27,8 @@ struct maxAlignHelperStruct {
 #endif
 
 #define DPAUCS_CALC_PADDING(S) ( ( S & (MAX_ALIGN-1) ) ? MAX_ALIGN - ( S & (MAX_ALIGN-1) ) : 0 )
-// Add padding to ensure proper alignement of any type of datas after DPAUCS_mempoolEntry_t
-#define DPAUCS_MEMPOOL_ENTRY_SIZE ( sizeof(DPAUCS_mempoolEntry_t) + DPAUCS_CALC_PADDING(sizeof(DPAUCS_mempoolEntry_t)) )
+// Add padding to ensure proper alignement of any type of datas after DPA_mempoolEntry_t
+#define DPAUCS_MEMPOOL_ENTRY_SIZE ( sizeof(DPA_mempoolEntry_t) + DPAUCS_CALC_PADDING(sizeof(DPA_mempoolEntry_t)) )
 
 
 #define DPAUCS_MEMPOOL(BUFFER,SIZE) { \
@@ -40,33 +40,33 @@ struct maxAlignHelperStruct {
 }
 
 #define DPAUCS_GET_MEMPOOL_ENTRY( memory ) \
-  ((DPAUCS_mempoolEntry_t*)((uint8_t*)(memory) - DPAUCS_MEMPOOL_ENTRY_SIZE))
+  ((DPA_mempoolEntry_t*)((uint8_t*)(memory) - DPAUCS_MEMPOOL_ENTRY_SIZE))
 
 #define DPAUCS_MEMPOOL_SIZE( memory ) \
   DPAUCS_GET_MEMPOOL_ENTRY( memory )->size
 
-typedef struct DPAUCS_mempoolEntry {
+typedef struct DPA_mempoolEntry {
   void** reference;
   size_t size;
-  struct DPAUCS_mempoolEntry* lastEntry;
-  struct DPAUCS_mempoolEntry* nextEntry;
-} DPAUCS_mempoolEntry_t;
+  struct DPA_mempoolEntry* lastEntry;
+  struct DPA_mempoolEntry* nextEntry;
+} DPA_mempoolEntry_t;
 
-typedef struct DPAUCS_mempool {
+typedef struct DPA_mempool {
   size_t freeMemory;
   const size_t size;
   size_t largestContiguousFreeMemorySize;
   void* largestContiguousFreeMemoryBegin;
   union {
     void* memory;
-    DPAUCS_mempoolEntry_t* firstEntry;
+    DPA_mempoolEntry_t* firstEntry;
   };
-} DPAUCS_mempool_t;
+} DPA_mempool_t;
 
-bool DPAUCS_mempool_alloc( DPAUCS_mempool_t* mempool, void** ptr, size_t size );
-void DPAUCS_mempool_defragment( DPAUCS_mempool_t* mempool );
-bool DPAUCS_mempool_free( DPAUCS_mempool_t* mempool, void** memory );
-void DPAUCS_mempool_each( DPAUCS_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg );
-bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory, size_t size, bool preserveContentEnd );
+bool DPA_mempool_alloc( DPA_mempool_t* mempool, void** ptr, size_t size );
+void DPA_mempool_defragment( DPA_mempool_t* mempool );
+bool DPA_mempool_free( DPA_mempool_t* mempool, void** memory );
+void DPA_mempool_each( DPA_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg );
+bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_t size, bool preserveContentEnd );
 
 #endif

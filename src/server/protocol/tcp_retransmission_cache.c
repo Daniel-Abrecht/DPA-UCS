@@ -8,7 +8,7 @@
 #include <DPA/UCS/protocol/tcp_retransmission_cache.h>
 
 static char buffer[TCP_RETRANSMISSION_CACHE_SIZE] = {0};
-static DPAUCS_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
+static DPA_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
 static void* cacheEntries[TCP_RETRANSMISSION_CACHE_MAX_ENTRIES];
 
 #define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
@@ -69,7 +69,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     const size_t charBuffer_offset   = fullSize += count * sizeof( DPAUCS_transmissionControlBlock_t* );
                                        fullSize += e.charBufferSize;
 
-    DPAUCS_LOG(
+    DPA_LOG(
       "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
       (unsigned long long)fullSize, (unsigned long long)e.streamRealLength
     );
@@ -79,7 +79,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     if(entry < cacheEntries)
       return false;
 
-    DPAUCS_mempool_alloc( &mempool, (void**)entry, fullSize );
+    DPA_mempool_alloc( &mempool, (void**)entry, fullSize );
     if( !*entry ) return false;
 
     char* emem = (char*)*entry;
@@ -108,7 +108,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       DPAUCS_transmissionControlBlock_t* it = tcb[i];
       if( (!it->cache.first) != (it->SND.NXT==it->SND.UNA) ){
         // This should never happen
-        DPAUCS_LOG( "\x1b[31mCritical BUG: %s\x1b[39m\n",
+        DPA_LOG( "\x1b[31mCritical BUG: %s\x1b[39m\n",
           it->cache.first ? "A cache entry exists, but any octet is already acknowledged!"
                           : "Some octets aren't yet acknowledged, but they aren't cached!"
         );
@@ -136,7 +136,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 }
 
 static void removeFromCache( void** entry ){
-  DPAUCS_mempool_free( &mempool, entry );
+  DPA_mempool_free( &mempool, entry );
 }
 
 static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tcb ){
@@ -203,7 +203,7 @@ static void tcp_cacheDiscardEntryOctets( void**const entry, uint32_t size ){
     .charBuffer       = info.charBuffer
   };
   DPAUCS_raw_stream_truncate( &raw_stream, size );
-//  DPAUCS_mempool_realloc( mempool, (void**)entry,  );
+//  DPA_mempool_realloc( mempool, (void**)entry,  );
   (void)entry;
   (void)size;
 }
@@ -258,7 +258,7 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     ) continue;
     adelay_start( &it->cache.last_transmission );
 
-    DPAUCS_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
+    DPA_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
 
     uint16_t flags = TCP_FLAG_ACK;
 

@@ -164,7 +164,7 @@ static inline size_t stream_read_from_buffer( DPA_bufferInfo_t* info, void* p, s
   info->range.offset += read;
   if( read != amount ){
     info->range.size = read + info->range.offset;
-    DPAUCS_LOG(
+    DPA_LOG(
       "BUG: Ringbuffer doesn't contain es much data as expected."
       "This may happen if the streambuffers are modified without using the stream API or"
       "By using the stream API in unintended ways."

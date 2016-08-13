@@ -1,18 +1,19 @@
-#ifndef DPAUCS_LOGGER
-#define DPAUCS_LOGGER
+#ifndef DPA_LOGGER_H
+#define DPA_LOGGER_H
 
 #include <DPA/UCS/helper_macros.h>
 
-#define DPAUCS_DEFINE_LOGGER( LOG_FUNC ) \
-  int(*DPAUCS_log_func)(const char*,...) = LOG_FUNC;
+#ifdef DPA_LOGGER_C
+#define DPA_WEAK_LOGGER
+#else
+#define DPA_WEAK_LOGGER weak
+#endif
 
-#define DPAUCS_LOG( ... ) do { \
-  if( DPAUCS_log_func ) \
-    (*DPAUCS_log_func)( __FILE__ ":" DPA_TOSTRING(__LINE__) " | " __VA_ARGS__ ); \
+#define DPA_LOG( ... ) do { \
+    if( DPA_log_func ) \
+      (*DPA_log_func)( __FILE__ ":" DPA_TOSTRING(__LINE__) " | " __VA_ARGS__ ); \
   } while(0)
 
-
-extern int(*DPAUCS_log_func)(const char*,...);
-
+DPA_WEAK_LOGGER int (*const DPA_log_func)( const char*, ... );
 
 #endif

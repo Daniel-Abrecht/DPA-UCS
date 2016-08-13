@@ -35,7 +35,7 @@ static int setIfaceNameMac( const char* ifName ){
   ifc.ifc_buf = buf;
 
   if(ioctl(sck, SIOCGIFCONF, &ifc) < 0){
-    DPAUCS_LOG( "error: ioctl: %d %s\n", errno, strerror(errno) );
+    DPA_LOG( "error: ioctl: %d %s\n", errno, strerror(errno) );
     return -1;
   }
 
@@ -48,7 +48,7 @@ static int setIfaceNameMac( const char* ifName ){
  
     /* Get the MAC address */
     if(ioctl(sck, SIOCGIFHWADDR, item) < 0) {
-      DPAUCS_LOG( "error: ioctl: %d %s\n", errno, strerror(errno) );
+      DPA_LOG( "error: ioctl: %d %s\n", errno, strerror(errno) );
       continue;
     }
 
@@ -67,7 +67,7 @@ static int setIfaceNameMac( const char* ifName ){
     memcpy(interfaces.mac,item->ifr_hwaddr.sa_data,6);
 
     if( ioctl( sck, SIOCGIFINDEX, item ) < 0 )
-      DPAUCS_LOG( "error: ioctl %d %s\n", errno, strerror(errno) );
+      DPA_LOG( "error: ioctl %d %s\n", errno, strerror(errno) );
     return item->ifr_ifindex;
   }
   return -1;
@@ -89,19 +89,19 @@ void eth_init( void ){
 
   sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if(sock<0){
-    DPAUCS_LOG("error: socket: %d %s\n", errno, strerror(errno));
+    DPA_LOG("error: socket: %d %s\n", errno, strerror(errno));
     goto fatal_error;
   }
 
   {
     int flags = fcntl(sock,F_GETFL,0);
     if(flags<0){
-      DPAUCS_LOG("error: fcntl: %d %s\n",errno,strerror(errno));
+      DPA_LOG("error: fcntl: %d %s\n",errno,strerror(errno));
       goto fatal_error;
     }
     fcntl(sock, F_SETFL, flags | O_NONBLOCK);
     if(flags==-1){
-      DPAUCS_LOG("error: fcntl: %d %s\n",errno,strerror(errno));
+      DPA_LOG("error: fcntl: %d %s\n",errno,strerror(errno));
       goto fatal_error;
     }
   }
@@ -118,7 +118,7 @@ void eth_init( void ){
     addr.sll_ifindex  = ifi;
 
     if( bind( sock, (const struct sockaddr*)&addr, sizeof( addr ) ) < 0 ){
-      DPAUCS_LOG( "error: bind: %d %s\n", errno, strerror(errno) );
+      DPA_LOG( "error: bind: %d %s\n", errno, strerror(errno) );
       goto fatal_error;
     }
   }
@@ -126,7 +126,7 @@ void eth_init( void ){
 
   {
     uint8_t* mac = interfaces.mac;
-    DPAUCS_LOG("Using device: %s mac: %02x:%02x:%02x:%02x:%02x:%02x\n", 
+    DPA_LOG("Using device: %s mac: %02x:%02x:%02x:%02x:%02x:%02x\n", 
       ifname,
       mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
     );
@@ -138,7 +138,7 @@ void eth_init( void ){
     mr.mr_ifindex = ifi;
     mr.mr_type = PACKET_MR_PROMISC;
     if( setsockopt (sock, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr)) == -1 )
-      DPAUCS_LOG( "error: setsockopt: %d %s\n", errno, strerror(errno) ); // not fatal
+      DPA_LOG( "error: setsockopt: %d %s\n", errno, strerror(errno) ); // not fatal
   }
 
   return;
@@ -160,12 +160,12 @@ static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint
     if( errno == EAGAIN ){ // busy
       goto send; // retry
     }else{
-      DPAUCS_LOG( "send: error: %d %s\n", errno, strerror(errno) );
+      DPA_LOG( "send: error: %d %s\n", errno, strerror(errno) );
     }
   }else if( ret >= len ){
-    DPAUCS_LOG( "send: %lu OK\n", len );
+    DPA_LOG( "send: %lu OK\n", len );
   }else{
-    DPAUCS_LOG( "send: error: only %lu of %lu bytes sent\n", ret, len );
+    DPA_LOG( "send: error: only %lu of %lu bytes sent\n", ret, len );
   }
 
 }
@@ -174,7 +174,7 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
   (void)interface;
   long i = recv(sock, packet, maxlen, 0);
   if( i<0 && errno != EAGAIN && errno != EWOULDBLOCK )
-    DPAUCS_LOG( "recv: error: %d %s\n", errno, strerror(errno) );
+    DPA_LOG( "recv: error: %d %s\n", errno, strerror(errno) );
   return i < 0 ? 0 : i;
 }
 

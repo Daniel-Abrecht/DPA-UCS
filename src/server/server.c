@@ -39,7 +39,7 @@ static struct {
 static jmp_buf fatal_error_exitpoint;
 
 void weak DPAUCS_onfatalerror( const char* message ){
-  DPAUCS_LOG( "%s", message );
+  DPA_LOG( "%s", message );
 }
 
 noreturn void DPAUCS_fatal( const char* message ){
@@ -60,7 +60,7 @@ static void DPAUCS_init( void ){
   memset(services,0,sizeof(services));
 
   DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPAUCS_LOG("Initialize ethernet driver \"%s\"\n",it->name);
+    DPA_LOG("Initialize ethernet driver \"%s\"\n",it->name);
     (*it->driver->init)();
   }
 
@@ -73,7 +73,7 @@ static void DPAUCS_init( void ){
 static void DPAUCS_shutdown( void ){
 
   DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPAUCS_LOG("Shutdown ethernet driver \"%s\"\n",it->name);
+    DPA_LOG("Shutdown ethernet driver \"%s\"\n",it->name);
     (*it->driver->shutdown)();
   }
 
@@ -325,14 +325,14 @@ void DPAUCS_preparePacket( DPAUCS_packet_info_t* info ){
 
 void DPAUCS_sendPacket( DPAUCS_packet_info_t* info, uint16_t size ){
   if( !info->interface ){
-    DPAUCS_LOG("DPAUCS_sendPacket: Missing interface!\n");
+    DPA_LOG("DPAUCS_sendPacket: Missing interface!\n");
     return;
   }
   size += (uint8_t*)info->payload - nextPacketToSend.data.raw; // add ethernetheadersize
   nextPacketToSend.size = size;
   const DPAUCS_ethernet_driver_entry_t* driverInfo = getDriverOfInterface( info->interface );
   if(!driverInfo){
-    DPAUCS_LOG("DPAUCS_sendPacket: interface or driver unavailable\n");
+    DPA_LOG("DPAUCS_sendPacket: interface or driver unavailable\n");
     return;
   }
   (*driverInfo->driver->send)( info->interface, nextPacketToSend.data.raw, size );

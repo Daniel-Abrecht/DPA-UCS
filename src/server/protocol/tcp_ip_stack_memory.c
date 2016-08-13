@@ -24,7 +24,7 @@ static const DPAUCS_fragment_info_t*const fragmentTypeInfos[] = {
 
 
 static char buffer[STACK_BUFFER_SIZE] = {0};
-static DPAUCS_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
+static DPA_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
 
 static unsigned short packetNumberCounter = 0;
 
@@ -58,7 +58,7 @@ bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, enum DPAUCS_fragmentType new
     if(! (*beforeTakeover)( &fragment, newType ) )
       return false;
   if( fragment < fragments || fragment > fragments + DPAUCS_MAX_FRAGMANTS
-   || !DPAUCS_mempool_realloc( &mempool, (void**)fragment, tmp.size + DPAUCS_getFragmentTypeSize( newType ), true )
+   || !DPA_mempool_realloc( &mempool, (void**)fragment, tmp.size + DPAUCS_getFragmentTypeSize( newType ), true )
   ){
     void(*takeoverFailtureHandler)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->takeoverFailtureHandler;
     if(takeoverFailtureHandler)
@@ -88,7 +88,7 @@ DPAUCS_fragment_t** DPAUCS_createFragment( enum DPAUCS_fragmentType type, size_t
   if(i>=DPAUCS_MAX_FRAGMANTS)
     return 0;
   DPAUCS_fragment_t** fragment_ptr = fragments + i;
-  while( !DPAUCS_mempool_alloc(&mempool,(void**)fragment_ptr,size + fragmentTypeSize) && fragmentsUsed )
+  while( !DPA_mempool_alloc(&mempool,(void**)fragment_ptr,size + fragmentTypeSize) && fragmentsUsed )
     DPAUCS_removeOldestFragment();
   DPAUCS_fragment_t* fragment = *fragment_ptr;
   if(!fragment)
@@ -128,7 +128,7 @@ void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment ){
   void(*destructor)(DPAUCS_fragment_t**) = fragmentTypeInfos[(*fragment)->type]->destructor;
   if(destructor)
     (*destructor)(fragment);
-  DPAUCS_mempool_free(&mempool,(void**)fragment);
+  DPA_mempool_free(&mempool,(void**)fragment);
   fragmentsUsed--;
 }
 
@@ -148,5 +148,5 @@ static bool eachFragment_helper(void** mem,void* arg){
 
 void DPAUCS_eachFragment( enum DPAUCS_fragmentType type, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg ){
   struct eachFragmentArgs args = {type,handler,arg};
-  DPAUCS_mempool_each( &mempool, &eachFragment_helper, &args );
+  DPA_mempool_each( &mempool, &eachFragment_helper, &args );
 }

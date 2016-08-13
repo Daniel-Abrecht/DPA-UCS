@@ -1,5 +1,5 @@
-#ifndef DPAUCS_STREAM_H
-#define DPAUCS_STREAM_H
+#ifndef DPA_STREAM_H
+#define DPA_STREAM_H
 
 #include <stdbool.h>
 #include <DPA/UCS/ringbuffer.h>

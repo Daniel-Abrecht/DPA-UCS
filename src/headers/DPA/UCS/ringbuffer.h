@@ -1,3 +1,6 @@
+#ifndef DPA_RINGBUFFER_H
+#define DPA_RINGBUFFER_H
+
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -69,3 +72,4 @@ DPA_RINGBUFFER_TEMPLATE( char, DPA_char_ringbuffer );
 DPA_RINGBUFFER_TEMPLATE( unsigned char, DPA_uchar_ringbuffer );
 DPA_RINGBUFFER_TEMPLATE( struct DPA_bufferInfo, DPA_buffer_ringbuffer );
 
+#endif

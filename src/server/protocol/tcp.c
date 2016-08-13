@@ -76,7 +76,7 @@ static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   tcp_setState(tcb,TCP_CLOSED_STATE);
   DPAUCS_freeMixedAddress( &tcb->fromTo );
   tcb->currentId = 0;
-  DPAUCS_LOG("Connection removed.\n");
+  DPA_LOG("Connection removed.\n");
 }
 
 static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* tcb ){
@@ -98,7 +98,7 @@ static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionCo
 
 void printFrame( DPAUCS_tcp_t* tcp ){
   uint16_t flags = btoh16( tcp->flags );
-  DPAUCS_LOG( "TCP Packet:\n"
+  DPA_LOG( "TCP Packet:\n"
     "  source: " "%u" "\n"
     "  destination: " "%u" "\n"
     "  sequence: " "%u" "\n"
@@ -195,7 +195,7 @@ static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DP
   if( tcb->state == state )
     return false;
   static const char* stateNames[] = {TCP_STATES(DPA_STRINGIFY)};
-  DPAUCS_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
+  DPA_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
   tcb->state = state;
   return true;
 }
@@ -217,7 +217,7 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DP
   bool result = tcp_addToCache( transmission, count, tcb, flags );
 
   if( !result )
-    DPAUCS_LOG("TCP Retransmission cache full.\n");
+    DPA_LOG("TCP Retransmission cache full.\n");
 
   DPAUCS_layer3_destroyTransmissionStream( transmission->stream );
   return result;
@@ -247,7 +247,7 @@ bool DPAUCS_tcp_transmit(
   size_t l3_max = ~0;
   DPAUCS_layer3_getPacketSizeLimit( DPAUCS_mixedPairGetType( &tcb->fromTo ), &l3_max );
 
-  DPAUCS_LOG(
+  DPA_LOG(
     "DPAUCS_tcp_transmit: send tcb | SND.WND: %lu, SND.NXT: %lu, l3_max: %lu\n",
     (unsigned long)tcb->SND.WND, (unsigned long)tcb->SND.NXT, (unsigned long)l3_max
   );
@@ -273,7 +273,7 @@ bool DPAUCS_tcp_transmit(
       // acknowledged than I sent, the amount of acknowledged datas, which is SND.UNA - SEG.SEQ mod 2^32,
       // must be smaller or equal to those datas already sent. Otherwise, datas from a previous segment
       // havn't yet been acknowledged, and none of the datas of the current segment are acknowledged.
-    DPAUCS_LOG("SND.UNA: %lx, SEG.SEQ: %lx\n",tcb->SND.UNA,SEQ);
+    DPA_LOG("SND.UNA: %lx, SEG.SEQ: %lx\n",tcb->SND.UNA,SEQ);
     uint32_t alreadyAcknowledged = tcb->SND.UNA - SEQ;
     if( alreadyAcknowledged > alreadySent )
       alreadyAcknowledged = 0;
@@ -328,7 +328,7 @@ bool DPAUCS_tcp_transmit(
     tcp_calculateChecksum( tcb, tcp, stream, packet_length );
     dataEntry->range.offset = dataEntryOffset;
     DPAUCS_layer3_transmit( stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
-    DPAUCS_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
+    DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
     DPA_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
     size_t segSize = size + tcp_flaglength(flags);
@@ -475,7 +475,7 @@ static bool tcp_processPacket(
   }
 
   if( tcb->state == TCP_TIME_WAIT_STATE ){
-    DPAUCS_LOG("Ignored possible retransmission in TCP_TIME_WAIT_STATE\n");
+    DPA_LOG("Ignored possible retransmission in TCP_TIME_WAIT_STATE\n");
     return false;
   }
 
@@ -503,7 +503,7 @@ static bool tcp_processPacket(
   if( SEG.flags & TCP_FLAG_ACK ){
     uint32_t ackrel = ACK - tcb->SND.UNA;
     uint32_t ackwnd = tcb->SND.NXT - tcb->SND.UNA;
-    DPAUCS_LOG( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
+    DPA_LOG( "ackrel: %u ackwnd: %u\n", (unsigned)ackrel, (unsigned)ackwnd );
     if( ackrel > ackwnd )
       return false;
   }
@@ -515,7 +515,7 @@ static bool tcp_processPacket(
   {
     unsigned long RCV_NXT_old = tcb->RCV.NXT;
     tcb->RCV.NXT = SEG.SEQ + SEG.LEN;
-    DPAUCS_LOG(
+    DPA_LOG(
       "n: %lu, tcb->RCV.NXT: %lu => %lu\n",
       (unsigned long)n,
       (unsigned long)RCV_NXT_old,
@@ -526,7 +526,7 @@ static bool tcp_processPacket(
   if( SEG.flags & TCP_FLAG_ACK ){
     tcp_una_change_handler( tcb, btoh32( tcp->acknowledgment ) );
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
-      DPAUCS_LOG("TCP Keep-Alive\n");
+      DPA_LOG("TCP Keep-Alive\n");
       tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_ACK });
     }else switch( tcb->state ){
       case TCP_SYN_RCVD_STATE  : tcp_setState( tcb, TCP_ESTAB_STATE      ); break;
@@ -645,7 +645,7 @@ static bool tcp_processHeader(
 
   if( SEG.flags & TCP_FLAG_SYN ){
     if( stcb ){
-      DPAUCS_LOG( "Dublicate SYN or already opened connection detected.\n" );
+      DPA_LOG( "Dublicate SYN or already opened connection detected.\n" );
       return false;
     }
     tcb.state = TCP_SYN_RCVD_STATE;
@@ -657,13 +657,13 @@ static bool tcp_processHeader(
     tcb.RCV.NXT = SEG.SEQ + 1;
     stcb = addTemporaryTCB( &tcb );
     if(!stcb){
-      DPAUCS_LOG("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
+      DPA_LOG("0/%d TCBs left. To many opened connections.\n",TRANSMISSION_CONTROL_BLOCK_COUNT);
       return false;
     }
     if(stcb->service->onopen){
       if(!(*stcb->service->onopen)(stcb)){
         tcp_sendNoData( 1, &stcb, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_RST });
-        DPAUCS_LOG( "tcb->service->onopen: connection rejected\n" );
+        DPA_LOG( "tcb->service->onopen: connection rejected\n" );
         removeTCB(stcb);
         return false;
       }
@@ -673,7 +673,7 @@ static bool tcp_processHeader(
     tcp_sendNoData( 1, &stcb, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_SYN });
     return last;
   }else if( !stcb ){
-    DPAUCS_LOG( "Connection unavaiable.\n" );
+    DPA_LOG( "Connection unavaiable.\n" );
     tcb.SND.NXT = ACK;
     tcb.SND.UNA = ACK;
     tcp_sendNoData( 1, (DPAUCS_transmissionControlBlock_t*[]){&tcb}, (uint16_t[]){ TCP_FLAG_RST });
@@ -733,9 +733,9 @@ static bool tcp_receiveHandler(
     tmp_ch += (uint16_t)~tcp_pseudoHeaderChecksum( tcb_ptr, tcp, tcb_ptr->next_length + length );
     uint16_t ch = (uint16_t)~( (uint16_t)tmp_ch + (uint16_t)( tmp_ch >> 16 ) );
     if(!ch){
-      DPAUCS_LOG("checksum OK\n");
+      DPA_LOG("checksum OK\n");
     }else{
-      DPAUCS_LOG("bad checksum (%.4x)\n",(int)ch);
+      DPA_LOG("bad checksum (%.4x)\n",(int)ch);
       return false;
     }
   }
@@ -804,7 +804,7 @@ void DPAUCS_tcp_close( void* cid ){
 
 static void tcp_receiveFailtureHandler( void* id ){
   (void)id;
-  DPAUCS_LOG("-- tcp_reciveFailtureHandler | id: %p --\n",id);
+  DPA_LOG("-- tcp_reciveFailtureHandler | id: %p --\n",id);
 }
 
 static DPAUCS_layer3_protocolHandler_t tcp_handler = {

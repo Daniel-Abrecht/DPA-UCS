@@ -1,5 +1,5 @@
-#ifndef DPAUCS_UTILS_H
-#define DPAUCS_UTILS_H
+#ifndef DPA_UTILS_H
+#define DPA_UTILS_H
 
 #include <stddef.h>
 #include <stdbool.h>

@@ -166,18 +166,18 @@ bool DPAUCS_IPv4_transmit(
   static uint16_t id = 0;
 
   if(!dst){
-    DPAUCS_LOG( "DPAUCS_IPv4_transmit: destination address incomplete\n" );
+    DPA_LOG( "DPAUCS_IPv4_transmit: destination address incomplete\n" );
     return false;
   }
   const DPAUCS_logicAddress_t* laddr = src ? &src->address.logicAddress
                                            : DPAUCS_mixedPairComponentToLogicAddress( fromTo, true );
   if(!laddr){
-    DPAUCS_LOG("DPAUCS_IPv4_transmit: Can't convert source address\n");
+    DPA_LOG("DPAUCS_IPv4_transmit: Can't convert source address\n");
     return false;
   }
   const DPAUCS_interface_t* interface = DPAUCS_getInterface( laddr );
   if( !interface ){
-    DPAUCS_LOG("DPAUCS_IPv4_transmit: Can't find source interface\n");
+    DPA_LOG("DPAUCS_IPv4_transmit: Can't find source interface\n");
     return false;
   }
   if(!src){
@@ -229,7 +229,7 @@ bool DPAUCS_IPv4_transmit(
 
     // send packet
     DPAUCS_sendPacket( &p, hl * 4 + s );
-    DPAUCS_LOG(
+    DPA_LOG(
       "IPv4: Sent fragment offset %lu, payload size %lu\n",
       offset, s
     );

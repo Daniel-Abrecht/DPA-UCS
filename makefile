@@ -86,7 +86,6 @@ endif
 MAIN_FILE = main.o
 
 FILES += server/server.o
-FILES += server/logger.o
 FILES += server/utils.o
 FILES += server/ringbuffer.o
 FILES += server/stream.o
@@ -114,11 +113,11 @@ LINUX_LIBRARY   = $(BIN)/lib$(LINUX_NAME).a
 LINUX_GENERATED = $(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 
 LINUX_OPTIONS  += -I${TEMP_LINUX}
-LINUX_OPTIONS  += -DDPAUCS_LOG_TO_STDOUT
 
 LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
 LINUX_FILES_TMP += server/drivers/adelay_clock.o
+LINUX_FILES_TMP += server/logger.o
 
 LINUX_FILES = $(shell \
   for file in ${LINUX_FILES_TMP}; \

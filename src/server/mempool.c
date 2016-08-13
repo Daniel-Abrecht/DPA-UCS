@@ -2,21 +2,21 @@
 #include <string.h>
 #include <DPA/UCS/mempool.h>
 
-static inline void* getEntryEnd(DPAUCS_mempoolEntry_t* entry){
+static inline void* getEntryEnd(DPA_mempoolEntry_t* entry){
   return ((uint8_t*)entry) + DPAUCS_MEMPOOL_ENTRY_SIZE + entry->size;
 }
 
-static inline void* getEntryDatas(DPAUCS_mempoolEntry_t* entry){
+static inline void* getEntryDatas(DPA_mempoolEntry_t* entry){
   return ((uint8_t*)entry) + DPAUCS_MEMPOOL_ENTRY_SIZE;
 }
 
-bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size_t size ){
+bool DPA_mempool_alloc( DPA_mempool_t*const mempool, void**const ptr, size_t size ){
   if(!size){
     *ptr = 0;
     return true;
   }
 
-  // Add padding to ensure proper alignement of DPAUCS_mempoolEntry elements
+  // Add padding to ensure proper alignement of DPA_mempoolEntry elements
   size += DPAUCS_CALC_PADDING(size);
 
   const size_t entrySize = size + DPAUCS_MEMPOOL_ENTRY_SIZE;
@@ -24,16 +24,16 @@ bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size
   if( mempool->freeMemory < entrySize )
     return false;
   if( mempool->largestContiguousFreeMemorySize < entrySize )
-    DPAUCS_mempool_defragment(mempool);
+    DPA_mempool_defragment(mempool);
 
   size_t areaSize = mempool->largestContiguousFreeMemorySize;
   void* secondLargestContiguousFreeMemoryBegin = 0;
   size_t secondLargestContiguousFreeMemorySize = 0;
   void* result = 0;
-  DPAUCS_mempoolEntry_t* lastEntry = 0;
+  DPA_mempoolEntry_t* lastEntry = 0;
 
   for(
-    DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry; // dummyentry with mempool->firstEntry->size=0
+    DPA_mempoolEntry_t* iterator = mempool->firstEntry; // dummyentry with mempool->firstEntry->size=0
     iterator;
     iterator = iterator->nextEntry
   ){
@@ -60,7 +60,7 @@ bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size
   if(!result) // shouldn't happen
     return false;
 
-  DPAUCS_mempoolEntry_t* newEntry = result;
+  DPA_mempoolEntry_t* newEntry = result;
 
   newEntry->size = size;
   newEntry->reference = ptr;
@@ -88,14 +88,14 @@ bool DPAUCS_mempool_alloc( DPAUCS_mempool_t*const mempool, void**const ptr, size
   return true;
 }
 
-bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory, size_t size, bool preserveContentEnd ){
+bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_t size, bool preserveContentEnd ){
 
   if(!size){
-    DPAUCS_mempool_free( mempool, memory );
+    DPA_mempool_free( mempool, memory );
     return true;
   }
 
-  DPAUCS_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
+  DPA_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
   size += DPAUCS_CALC_PADDING(size);
 
   if( entry->reference != memory ) // invalid entry
@@ -106,7 +106,7 @@ bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory,
   if( !diff )
     return true;
 
-  DPAUCS_mempoolEntry_t* previous = entry->lastEntry;
+  DPA_mempoolEntry_t* previous = entry->lastEntry;
   if( !previous )
     return false;
 
@@ -123,7 +123,7 @@ bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory,
       goto defragmentMoveResize;
     if( mempool->largestContiguousFreeMemoryBegin == freeSpaceBegin )
       mempool->largestContiguousFreeMemorySize += diff;
-    DPAUCS_mempoolEntry_t* newEntry = (void*)((char*)entry - diff);
+    DPA_mempoolEntry_t* newEntry = (void*)((char*)entry - diff);
     memmove( newEntry, entry, sizeof(*entry) );
     previous->nextEntry = entry = newEntry;
     if( entry->nextEntry )
@@ -151,7 +151,7 @@ bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory,
 
   defragmentMoveResize: {
 
-    DPAUCS_mempoolEntry_t* iterator;
+    DPA_mempoolEntry_t* iterator;
     for(
       iterator = mempool->firstEntry; // dummyentry with mempool->firstEntry->size=0
       iterator->nextEntry != entry;
@@ -168,7 +168,7 @@ bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory,
     char* srcStart = getEntryDatas( entry );
     size_t size = entry->size;
 
-    DPAUCS_mempoolEntry_t* newEntry = getEntryEnd( iterator );
+    DPA_mempoolEntry_t* newEntry = getEntryEnd( iterator );
     memmove( newEntry, entry, sizeof(*entry) );
     iterator->nextEntry = entry = newEntry;
     entry->lastEntry = iterator;
@@ -196,7 +196,7 @@ bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory,
           break;
       }
 
-      DPAUCS_mempoolEntry_t* tmp = iterator;
+      DPA_mempoolEntry_t* tmp = iterator;
       size_t move = s - reqSize;
       for(;
         iterator->lastEntry != entry;
@@ -240,8 +240,8 @@ bool DPAUCS_mempool_realloc( DPAUCS_mempool_t*const mempool, void**const memory,
   return true;
 }
 
-void DPAUCS_mempool_defragment( DPAUCS_mempool_t*const mempool ){
-  DPAUCS_mempoolEntry_t* iterator;
+void DPA_mempool_defragment( DPA_mempool_t*const mempool ){
+  DPA_mempoolEntry_t* iterator;
   for(
     iterator = mempool->firstEntry; // dummyentry with mempool->firstEntry->size=0
     iterator->nextEntry;
@@ -258,10 +258,10 @@ void DPAUCS_mempool_defragment( DPAUCS_mempool_t*const mempool ){
   mempool->largestContiguousFreeMemorySize = (uintptr_t)mempool->firstEntry + (uintptr_t)mempool->size - (uintptr_t)mempool->largestContiguousFreeMemoryBegin;
 }
 
-bool DPAUCS_mempool_free( DPAUCS_mempool_t*const mempool, void**const memory ){
-  DPAUCS_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
+bool DPA_mempool_free( DPA_mempool_t*const mempool, void**const memory ){
+  DPA_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
 
-  DPAUCS_mempoolEntry_t* previous = entry->lastEntry;
+  DPA_mempoolEntry_t* previous = entry->lastEntry;
   if( !previous || entry->reference != memory ) // invalid entry
     return false;
 
@@ -288,8 +288,8 @@ bool DPAUCS_mempool_free( DPAUCS_mempool_t*const mempool, void**const memory ){
   return true;
 }
 
-void DPAUCS_mempool_each( DPAUCS_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg ){
-  DPAUCS_mempoolEntry_t* iterator = mempool->firstEntry->nextEntry;
+void DPA_mempool_each( DPA_mempool_t*const mempool, bool(*handler)(void**,void*), void* arg ){
+  DPA_mempoolEntry_t* iterator = mempool->firstEntry->nextEntry;
   if(!iterator)
     return;
   while(iterator){
@@ -297,6 +297,6 @@ void DPAUCS_mempool_each( DPAUCS_mempool_t*const mempool, bool(*handler)(void**,
     (*handler)(iterator->reference,arg);
     if(!reference)
       break;
-    iterator = (DPAUCS_mempoolEntry_t*)((uint8_t*)(*reference) - DPAUCS_MEMPOOL_ENTRY_SIZE);
+    iterator = (DPA_mempoolEntry_t*)((uint8_t*)(*reference) - DPAUCS_MEMPOOL_ENTRY_SIZE);
   };
 }

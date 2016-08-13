@@ -265,7 +265,7 @@ static HTTP_Connections_t* getConnection( void* cid ){
 }
 
 static bool onopen( void* cid ){
-  DPAUCS_LOG("http_service->onopen\n");
+  DPA_LOG("http_service->onopen\n");
   HTTP_Connections_t *it, *end;
   for( it = connections, end = it + DPAUCS_MAX_HTTP_CONNECTIONS; it < end; it++ )
     if(!it->cid) goto add_connection;
@@ -273,7 +273,7 @@ static bool onopen( void* cid ){
  add_connection:
   it->cid = cid;
   it->parseState = HTTP_PARSE_START;
-  DPAUCS_LOG("New connection added\n");
+  DPA_LOG("New connection added\n");
   return true;
 }
 
@@ -281,7 +281,7 @@ static bool onopen( void* cid ){
 #define MEMEQ( STR, MEM, N ) ( N == sizeof(STR)-1 && !memcmp( (MEM), (STR), sizeof(STR)-1 ) )
 #define S(STR) STR, sizeof(STR)-1
 static void onreceive( void* cid, void* data, size_t size ){
-  DPAUCS_LOG("http_service->onrecive: \n");
+  DPA_LOG("http_service->onrecive: \n");
 
   HTTP_Connections_t* c = getConnection(cid);
   if(!c){
@@ -467,7 +467,7 @@ static void onreceive( void* cid, void* data, size_t size ){
         }
 
 
-        DPAUCS_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
+        DPA_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
           (int)key_length,key,
           (int)value_length,value
         );
@@ -508,16 +508,16 @@ static void onreceive( void* cid, void* data, size_t size ){
 #undef MEMEQ
 
 static void oneof( void* cid ){
-  DPAUCS_LOG("http_service->oneof\n");
+  DPA_LOG("http_service->oneof\n");
   DPAUCS_tcp_close( cid );
 }
 
 static void onclose( void* cid ){
-  DPAUCS_LOG("http_service->onclose\n");
+  DPA_LOG("http_service->onclose\n");
   HTTP_Connections_t* c = getConnection(cid);
   if(!c) return;
   c->cid = 0;
-  DPAUCS_LOG("Connection closed\n");
+  DPA_LOG("Connection closed\n");
 }
 
 DPAUCS_service_t http_service = {

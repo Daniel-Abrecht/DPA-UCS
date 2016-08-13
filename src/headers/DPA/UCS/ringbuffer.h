@@ -1,18 +1,18 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define DPAUCS_TYPED_RINGBUFFER_MEMBER_TEMPLATE(T) \
+#define DPA_TYPED_RINGBUFFER_MEMBER_TEMPLATE(T) \
   const size_t size; \
-  DPAUCS_buffer_range_t range; \
+  DPA_buffer_range_t range; \
   bool inverse; \
   const size_t type_size; \
   T*const buffer;
 
-#define DPAUCS_RINGBUFFER_TEMPLATE(T,NAME) \
+#define DPA_RINGBUFFER_TEMPLATE(T,NAME) \
   typedef union NAME { \
-    DPAUCS_ringbuffer_base_t super; \
+    DPA_ringbuffer_base_t super; \
     struct { \
-      DPAUCS_TYPED_RINGBUFFER_MEMBER_TEMPLATE(T) \
+      DPA_TYPED_RINGBUFFER_MEMBER_TEMPLATE(T) \
     }; \
   } NAME ## _t
 
@@ -31,41 +31,41 @@
     } \
   }
 
-#define DPAUCS_RINGBUFFER_GET(buf) (buf)->buffer[ DPAUCS_ringbuffer_increment_read(&(buf)->super) ]
-#define DPAUCS_RINGBUFFER_PUT(buf,x) ( ( DPAUCS_ringbuffer_full(&(buf)->super) ) \
-    ? false : ( ( (buf)->buffer[ DPAUCS_ringbuffer_increment_write(&(buf)->super) ] = (x) ), true ) \
+#define DPA_RINGBUFFER_GET(buf) (buf)->buffer[ DPA_ringbuffer_increment_read(&(buf)->super) ]
+#define DPA_RINGBUFFER_PUT(buf,x) ( ( DPA_ringbuffer_full(&(buf)->super) ) \
+    ? false : ( ( (buf)->buffer[ DPA_ringbuffer_increment_write(&(buf)->super) ] = (x) ), true ) \
   )
 
-#define DPAUCS_ringbuffer_eof(buf) ( !(buf)->range.size )
-#define DPAUCS_ringbuffer_size(buf) ( (buf)->range.size )
-#define DPAUCS_ringbuffer_full(buf) ( (buf)->range.size == (buf)->size )
-#define DPAUCS_ringbuffer_begin(buf) (&(buf)->buffer[ (buf)->range.offset - (buf)->inverse ])
-#define DPAUCS_ringbuffer_remaining(buf) ( (buf)->size - (buf)->range.size )
+#define DPA_ringbuffer_eof(buf) ( !(buf)->range.size )
+#define DPA_ringbuffer_size(buf) ( (buf)->range.size )
+#define DPA_ringbuffer_full(buf) ( (buf)->range.size == (buf)->size )
+#define DPA_ringbuffer_begin(buf) (&(buf)->buffer[ (buf)->range.offset - (buf)->inverse ])
+#define DPA_ringbuffer_remaining(buf) ( (buf)->size - (buf)->range.size )
 
-typedef struct DPAUCS_buffer_range {
+typedef struct DPA_buffer_range {
   size_t offset;
   size_t size;
-} DPAUCS_buffer_range_t;
+} DPA_buffer_range_t;
 
-typedef struct DPAUCS_ringbuffer_base {
-  DPAUCS_TYPED_RINGBUFFER_MEMBER_TEMPLATE(void)
-} DPAUCS_ringbuffer_base_t;
+typedef struct DPA_ringbuffer_base {
+  DPA_TYPED_RINGBUFFER_MEMBER_TEMPLATE(void)
+} DPA_ringbuffer_base_t;
 
-void DPAUCS_ringbuffer_reset( DPAUCS_ringbuffer_base_t* ringbuffer );
-size_t DPAUCS_ringbuffer_copy( DPAUCS_ringbuffer_base_t* destination, DPAUCS_ringbuffer_base_t* source, size_t size );
-size_t DPAUCS_ringbuffer_read( DPAUCS_ringbuffer_base_t* ringbuffer, void* destination, size_t size );
-size_t DPAUCS_ringbuffer_write( DPAUCS_ringbuffer_base_t* ringbuffer, const void* source, size_t size );
-void DPAUCS_ringbuffer_reverse( DPAUCS_ringbuffer_base_t* ringbuffer );
-size_t DPAUCS_ringbuffer_skip_read( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size );
-size_t DPAUCS_ringbuffer_skip_write( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size );
-size_t DPAUCS_ringbuffer_rewind_read( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size );
-size_t DPAUCS_ringbuffer_rewind_write( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size );
-size_t DPAUCS_ringbuffer_increment_read( DPAUCS_ringbuffer_base_t* ringbuffer ); // post increment
-size_t DPAUCS_ringbuffer_increment_write( DPAUCS_ringbuffer_base_t* ringbuffer ); // post increment
-size_t DPAUCS_ringbuffer_decrement_read( DPAUCS_ringbuffer_base_t* ringbuffer ); // pre decrement
-size_t DPAUCS_ringbuffer_decrement_write( DPAUCS_ringbuffer_base_t* ringbuffer ); // post decrement
+void DPA_ringbuffer_reset( DPA_ringbuffer_base_t* ringbuffer );
+size_t DPA_ringbuffer_copy( DPA_ringbuffer_base_t* destination, DPA_ringbuffer_base_t* source, size_t size );
+size_t DPA_ringbuffer_read( DPA_ringbuffer_base_t* ringbuffer, void* destination, size_t size );
+size_t DPA_ringbuffer_write( DPA_ringbuffer_base_t* ringbuffer, const void* source, size_t size );
+void DPA_ringbuffer_reverse( DPA_ringbuffer_base_t* ringbuffer );
+size_t DPA_ringbuffer_skip_read( DPA_ringbuffer_base_t* ringbuffer, size_t size );
+size_t DPA_ringbuffer_skip_write( DPA_ringbuffer_base_t* ringbuffer, size_t size );
+size_t DPA_ringbuffer_rewind_read( DPA_ringbuffer_base_t* ringbuffer, size_t size );
+size_t DPA_ringbuffer_rewind_write( DPA_ringbuffer_base_t* ringbuffer, size_t size );
+size_t DPA_ringbuffer_increment_read( DPA_ringbuffer_base_t* ringbuffer ); // post increment
+size_t DPA_ringbuffer_increment_write( DPA_ringbuffer_base_t* ringbuffer ); // post increment
+size_t DPA_ringbuffer_decrement_read( DPA_ringbuffer_base_t* ringbuffer ); // pre decrement
+size_t DPA_ringbuffer_decrement_write( DPA_ringbuffer_base_t* ringbuffer ); // post decrement
 
-DPAUCS_RINGBUFFER_TEMPLATE( char, DPAUCS_char_ringbuffer );
-DPAUCS_RINGBUFFER_TEMPLATE( unsigned char, DPAUCS_uchar_ringbuffer );
-DPAUCS_RINGBUFFER_TEMPLATE( struct DPAUCS_bufferInfo, DPAUCS_buffer_ringbuffer );
+DPA_RINGBUFFER_TEMPLATE( char, DPA_char_ringbuffer );
+DPA_RINGBUFFER_TEMPLATE( unsigned char, DPA_uchar_ringbuffer );
+DPA_RINGBUFFER_TEMPLATE( struct DPA_bufferInfo, DPA_buffer_ringbuffer );
 

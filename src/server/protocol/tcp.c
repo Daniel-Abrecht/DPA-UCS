@@ -30,7 +30,7 @@ static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlB
 static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* );
 static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb );
 void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG );
-void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length );
+void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t length );
 static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
 static bool tcp_connectionUnstable( DPAUCS_transmissionControlBlock_t* stcb );
@@ -170,9 +170,9 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
   return 0;
 }
 
-void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPAUCS_stream_t* stream, uint16_t length ){
-  DPAUCS_stream_offsetStorage_t sros;
-  DPAUCS_stream_saveReadOffset( &sros, stream );
+void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t length ){
+  DPA_stream_offsetStorage_t sros;
+  DPA_stream_saveReadOffset( &sros, stream );
 
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
   uint16_t data_checksum = ~checksumOfStream( stream, length );
@@ -182,7 +182,7 @@ void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t
 
   tcp->checksum = checksum;
 
-  DPAUCS_stream_restoreReadOffset( stream, &sros );
+  DPA_stream_restoreReadOffset( stream, &sros );
 }
 
 static DPAUCS_tcp_transmission_t tcp_begin( void ){
@@ -225,7 +225,7 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DP
 }
 
 bool DPAUCS_tcp_transmit(
-  DPAUCS_stream_t* stream,
+  DPA_stream_t* stream,
   DPAUCS_tcp_t* tcp,
   DPAUCS_transmissionControlBlock_t* tcb,
   uint16_t flags,
@@ -234,14 +234,14 @@ bool DPAUCS_tcp_transmit(
 ){
 
   // get pointer to entry in stream which represents tcp header
-  DPAUCS_streamEntry_t* tcpHeaderEntry = DPAUCS_stream_getEntry( stream );
-  DPAUCS_stream_nextEntry( stream ); // Skip tcp header
+  DPA_streamEntry_t* tcpHeaderEntry = DPA_stream_getEntry( stream );
+  DPA_stream_nextEntry( stream ); // Skip tcp header
 
   size_t headersize = tcpHeaderEntry->range.size; // get size of TCP Header
 
   // save start of datas of stream
-  DPAUCS_stream_offsetStorage_t sros;
-  DPAUCS_stream_saveReadOffset( &sros, stream );
+  DPA_stream_offsetStorage_t sros;
+  DPA_stream_saveReadOffset( &sros, stream );
 
   // Get maximum size of payload the underlaying protocol can handle
   size_t l3_max = ~0;
@@ -318,18 +318,18 @@ bool DPAUCS_tcp_transmit(
     };
     tcp_from_tcb( tcp, tcb, &tmp_segment );
     if( !offset )
-      DPAUCS_stream_seek( stream, off );
-    DPAUCS_streamEntry_t* dataEntry = DPAUCS_stream_getEntry( stream );
+      DPA_stream_seek( stream, off );
+    DPA_streamEntry_t* dataEntry = DPA_stream_getEntry( stream );
     size_t dataEntryOffset = dataEntry->range.offset;
-    DPAUCS_stream_previousEntry( stream );
-    DPAUCS_streamEntry_t* entryBeforeData = DPAUCS_stream_getEntry( stream );
-    DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
+    DPA_stream_previousEntry( stream );
+    DPA_streamEntry_t* entryBeforeData = DPA_stream_getEntry( stream );
+    DPA_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
     dataEntry->range.offset = dataEntryOffset;
     tcp_calculateChecksum( tcb, tcp, stream, packet_length );
     dataEntry->range.offset = dataEntryOffset;
     DPAUCS_layer3_transmit( stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
     DPAUCS_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
-    DPAUCS_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
+    DPA_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
     size_t segSize = size + tcp_flaglength(flags);
     offset += segSize;
@@ -339,7 +339,7 @@ bool DPAUCS_tcp_transmit(
 
   } while( size < off );
 
-  DPAUCS_stream_restoreReadOffset( stream, &sros );
+  DPA_stream_restoreReadOffset( stream, &sros );
 
   return true;
 }
@@ -765,7 +765,7 @@ static bool tcp_receiveHandler(
   return ret;
 }
 
-bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t*, void* ), void** cids, size_t count, void* ptr ){
+bool DPAUCS_tcp_send( bool(*func)( DPA_stream_t*, void* ), void** cids, size_t count, void* ptr ){
   if( count > TRANSMISSION_CONTROL_BLOCK_COUNT )
     return false;
   {

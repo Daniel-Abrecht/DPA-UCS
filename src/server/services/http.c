@@ -157,7 +157,7 @@ struct writeErrorPageParams {
 };
 
 #define S(STR) STR, sizeof(STR)-1
-static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
+static bool writeErrorPage( DPA_stream_t* stream, void* ptr ){
 
   struct writeErrorPageParams* params = ptr;
   const HTTP_error_t* error = 0;
@@ -168,7 +168,7 @@ static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
     break;
   }
 
-  DPAUCS_stream_referenceWrite( stream, S("HTTP/1.0 ") );
+  DPA_stream_referenceWrite( stream, S("HTTP/1.0 ") );
   char code_buf[7];
   char* code_string = code_buf + sizeof(code_buf);
   *--code_string = 0;
@@ -178,10 +178,10 @@ static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
     do *--code_string = c % 10 + '0'; while( c /= 10 );
   }
 
-  DPAUCS_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
-  if(error) DPAUCS_stream_referenceWrite( stream, error->message, error->length );
+  DPA_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
+  if(error) DPA_stream_referenceWrite( stream, error->message, error->length );
 
-  DPAUCS_stream_referenceWrite( stream, S( "\r\n"
+  DPA_stream_referenceWrite( stream, S( "\r\n"
     "Connection: Close" "\r\n"
     "Content-Type: text/plain" "\r\n"
     "\r\n"
@@ -190,8 +190,8 @@ static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
   if( params->headOnly )
     return true;
 
-  DPAUCS_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
-  if(error) DPAUCS_stream_referenceWrite( stream, error->message, error->length );
+  DPA_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
+  if(error) DPA_stream_referenceWrite( stream, error->message, error->length );
 
   return true;
 
@@ -199,7 +199,7 @@ static bool writeErrorPage( DPAUCS_stream_t* stream, void* ptr ){
 #undef S
 
 #define S(STR) STR, sizeof(STR)-1
-static bool writeRessource( DPAUCS_stream_t* stream, void* ptr ){
+static bool writeRessource( DPA_stream_t* stream, void* ptr ){
 
   HTTP_Connections_t* c = ptr;
 
@@ -211,7 +211,7 @@ static bool writeRessource( DPAUCS_stream_t* stream, void* ptr ){
     break;
   }
 
-  DPAUCS_stream_referenceWrite( stream, S("HTTP/1.0 ") );
+  DPA_stream_referenceWrite( stream, S("HTTP/1.0 ") );
   char code_buf[7];
   char* code_string = code_buf + sizeof(code_buf);
   *--code_string = 0;
@@ -221,10 +221,10 @@ static bool writeRessource( DPAUCS_stream_t* stream, void* ptr ){
     do *--code_string = s % 10 + '0'; while( s /= 10 );
   }
 
-  DPAUCS_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
-  if(code) DPAUCS_stream_referenceWrite( stream, code->message, code->length );
+  DPA_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
+  if(code) DPA_stream_referenceWrite( stream, code->message, code->length );
 
-  DPAUCS_stream_referenceWrite( stream, S( "\r\n"
+  DPA_stream_referenceWrite( stream, S( "\r\n"
     "Connection: Close" "\r\n"
   ));
 
@@ -232,12 +232,12 @@ static bool writeRessource( DPAUCS_stream_t* stream, void* ptr ){
     case HTTP_METHOD_GET:
     case HTTP_METHOD_HEAD: {
       DPAUCS_writeRessourceHeaders( stream, c->ressource );
-      DPAUCS_stream_referenceWrite( stream, S("\r\n") );
+      DPA_stream_referenceWrite( stream, S("\r\n") );
     } if( c->method == HTTP_METHOD_GET ) {
       DPAUCS_writeRessource( stream, c->ressource );
     } break;
     default: {
-      DPAUCS_stream_referenceWrite( stream, S("\r\n") );
+      DPA_stream_referenceWrite( stream, S("\r\n") );
     } break;
   }
 

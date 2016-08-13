@@ -23,13 +23,13 @@ uint16_t checksum( void* p, size_t l ){
   return ~checksum;
 }
 
-uint16_t checksumOfStream( DPAUCS_stream_t* stream, size_t max_len ){
+uint16_t checksumOfStream( DPA_stream_t* stream, size_t max_len ){
   uint32_t checksum = 0;
-  while( !DPAUCS_stream_eof(stream) && max_len ){
+  while( !DPA_stream_eof(stream) && max_len ){
     uint16_t num = 0;
     size_t s = DPAUCS_MIN( sizeof(num), max_len );
     max_len -= s;
-    DPAUCS_stream_read( stream, &num, s );
+    DPA_stream_read( stream, &num, s );
     checksum += num;
     checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
   }

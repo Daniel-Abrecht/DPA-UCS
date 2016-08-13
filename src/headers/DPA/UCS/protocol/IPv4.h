@@ -21,7 +21,7 @@
 
 
 struct DPAUCS_packet_info;
-struct DPAUCS_stream;
+struct DPA_stream;
 
 enum DPAUCS_IPv4_flags {
   IPv4_FLAG_MORE_FRAGMENTS = 1<<0,
@@ -75,7 +75,7 @@ bool DPAUCS_areFragmentsFromSameIPv4Packet(
 );
 
 bool DPAUCS_IPv4_transmit(
-  struct DPAUCS_stream* inputStream,
+  struct DPA_stream* inputStream,
   const struct DPAUCS_mixedAddress_pair* fromTo,
   uint8_t type,
   size_t max_size

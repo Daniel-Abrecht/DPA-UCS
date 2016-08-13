@@ -152,7 +152,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
 }
 
 bool DPAUCS_IPv4_transmit(
-  DPAUCS_stream_t* inputStream,
+  DPA_stream_t* inputStream,
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
   size_t max_size_arg
@@ -190,7 +190,7 @@ bool DPAUCS_IPv4_transmit(
 
   size_t offset = 0;
 
-  while( !DPAUCS_stream_eof(inputStream) && offset < max_size ){
+  while( !DPA_stream_eof(inputStream) && offset < max_size ){
 
     // prepare next packet
     DPAUCS_packet_info_t p;
@@ -212,12 +212,12 @@ bool DPAUCS_IPv4_transmit(
 
     // create content
     size_t msize = DPAUCS_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
-    size_t s = DPAUCS_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
+    size_t s = DPA_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
 
     // complete ip header
     uint8_t flags = 0;
 
-    if( !DPAUCS_stream_eof(inputStream) && (uint32_t)(offset+s) < max_size )
+    if( !DPA_stream_eof(inputStream) && (uint32_t)(offset+s) < max_size )
       flags |= IPv4_FLAG_MORE_FRAGMENTS;
 
     ip->length = htob16( p.size + hl * 4 + s );

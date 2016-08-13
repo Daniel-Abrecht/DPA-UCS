@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-struct DPAUCS_stream;
+struct DPA_stream;
 
 uint16_t checksum( void*, size_t );
-uint16_t checksumOfStream( struct DPAUCS_stream*, size_t );
+uint16_t checksumOfStream( struct DPA_stream*, size_t );
 
 #endif

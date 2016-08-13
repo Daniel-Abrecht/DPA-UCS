@@ -26,9 +26,9 @@ typedef struct DPAUCS_ressource_entry {
 
 const DPAUCS_ressource_entry_t* defaultRessourceGetter( const char* path, unsigned length );
 const DPAUCS_ressource_entry_t* weak getRessource( const char* path, unsigned length );
-bool DPAUCS_defaultWriteRessourceHeaders( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
-bool weak DPAUCS_writeRessourceHeaders( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
-bool DPAUCS_defaultWriteRessource( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
-bool weak DPAUCS_writeRessource( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
+bool DPAUCS_defaultWriteRessourceHeaders( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
+bool weak DPAUCS_writeRessourceHeaders( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
+bool DPAUCS_defaultWriteRessource( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
+bool weak DPAUCS_writeRessource( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
 
 #endif

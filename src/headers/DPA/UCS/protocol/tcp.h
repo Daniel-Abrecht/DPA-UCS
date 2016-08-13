@@ -123,7 +123,7 @@ typedef struct DPAUCS_tcp_segment {
 } DPAUCS_tcp_segment_t;
 
 typedef struct DPAUCS_tcp_transmission {
-  struct DPAUCS_stream* stream;
+  struct DPA_stream* stream;
 } DPAUCS_tcp_transmission_t;
 
 
@@ -141,12 +141,12 @@ void W tcp_do_next_task( void );
 
 #undef W
 
-bool DPAUCS_tcp_send( bool(*func)( DPAUCS_stream_t* stream, void* ptr ), void** cids, size_t count, void* ptr );
+bool DPAUCS_tcp_send( bool(*func)( DPA_stream_t* stream, void* ptr ), void** cids, size_t count, void* ptr );
 void DPAUCS_tcp_close( void* cid );
 void DPAUCS_tcp_abord( void* cid );
 
 bool DPAUCS_tcp_transmit(
-  DPAUCS_stream_t* stream,
+  DPA_stream_t* stream,
   DPAUCS_tcp_t* tcp,
   DPAUCS_transmissionControlBlock_t* tcb,
   uint16_t flags,

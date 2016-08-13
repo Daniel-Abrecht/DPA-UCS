@@ -22,12 +22,12 @@ const DPAUCS_ressource_file_t* getFileRessource( const char* path, unsigned leng
   return 0;
 }
 
-bool DPAUCS_writeFileRessourceHeader( DPAUCS_stream_t* stream, const DPAUCS_ressource_file_t* file ){
+bool DPAUCS_writeFileRessourceHeader( DPA_stream_t* stream, const DPAUCS_ressource_file_t* file ){
   (void)stream;
   (void)file;
   return true;
 }
 
-bool DPAUCS_writeFileRessource( DPAUCS_stream_t* stream, const DPAUCS_ressource_file_t* file ){
-  return DPAUCS_stream_referenceWrite( stream, file->content, file->size );
+bool DPAUCS_writeFileRessource( DPA_stream_t* stream, const DPAUCS_ressource_file_t* file ){
+  return DPA_stream_referenceWrite( stream, file->content, file->size );
 }

@@ -3,10 +3,10 @@
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-DPAUCS_DEFINE_RINGBUFFER(unsigned char,DPAUCS_uchar_ringbuffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
-DPAUCS_DEFINE_RINGBUFFER(DPAUCS_bufferInfo_t,DPAUCS_buffer_ringbuffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE,false);
+DPAUCS_DEFINE_RINGBUFFER(unsigned char,DPA_uchar_ringbuffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
+DPAUCS_DEFINE_RINGBUFFER(DPA_bufferInfo_t,DPA_buffer_ringbuffer_t,outputStreamBufferBuffer,OUTSTREAM_REFERENCE_BUFFER_SIZE,false);
 
-static DPAUCS_stream_t outputStream = {
+static DPA_stream_t outputStream = {
   &outputStreamBuffer,
   &outputStreamBufferBuffer
 };
@@ -29,11 +29,11 @@ void DPAUCS_layer3_removeProtocolHandler(DPAUCS_layer3_protocolHandler_t* handle
     }
 }
 
-DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream( void ){
+DPA_stream_t* DPAUCS_layer3_createTransmissionStream( void ){
   return &outputStream;
 }
 
-bool DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t max_size ){
+bool DPAUCS_layer3_transmit( DPA_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t max_size ){
 
   switch( DPAUCS_mixedPairGetType( fromTo ) ){
 
@@ -64,6 +64,6 @@ bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types type, size_t* l
   return false;
 }
 
-void DPAUCS_layer3_destroyTransmissionStream( DPAUCS_stream_t* stream ){
-  DPAUCS_stream_reset( stream );
+void DPAUCS_layer3_destroyTransmissionStream( DPA_stream_t* stream ){
+  DPA_stream_reset( stream );
 }

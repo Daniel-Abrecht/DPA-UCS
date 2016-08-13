@@ -3,7 +3,7 @@
 #include <DPA/UCS/ringbuffer.h>
 #include <DPA/UCS/logger.h>
 
-size_t DPAUCS_ringbuffer_increment_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
+size_t DPA_ringbuffer_increment_read( DPA_ringbuffer_base_t* ringbuffer ){
   if(!ringbuffer->range.size)
     return ringbuffer->range.offset - ringbuffer->inverse;
   ringbuffer->range.size--;
@@ -20,7 +20,7 @@ size_t DPAUCS_ringbuffer_increment_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
   return res;
 }
 
-static inline size_t DPAUCS_ringbuffer_end( DPAUCS_ringbuffer_base_t* ringbuffer ){
+static inline size_t DPA_ringbuffer_end( DPA_ringbuffer_base_t* ringbuffer ){
   size_t offset = ringbuffer->range.offset;
   size_t size = ringbuffer->range.size;
   if( ringbuffer->inverse ){
@@ -39,13 +39,13 @@ static inline size_t DPAUCS_ringbuffer_end( DPAUCS_ringbuffer_base_t* ringbuffer
   }
 }
 
-size_t DPAUCS_ringbuffer_increment_write( DPAUCS_ringbuffer_base_t* ringbuffer ){
+size_t DPA_ringbuffer_increment_write( DPA_ringbuffer_base_t* ringbuffer ){
   if( ringbuffer->range.size != ringbuffer->size )
     ringbuffer->range.size++;
-  return DPAUCS_ringbuffer_end(ringbuffer) - !ringbuffer->inverse;
+  return DPA_ringbuffer_end(ringbuffer) - !ringbuffer->inverse;
 }
 
-size_t DPAUCS_ringbuffer_decrement_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
+size_t DPA_ringbuffer_decrement_read( DPA_ringbuffer_base_t* ringbuffer ){
   if( ringbuffer->range.size != ringbuffer->size )
     ringbuffer->range.size++;
   if( ringbuffer->inverse ){
@@ -59,15 +59,15 @@ size_t DPAUCS_ringbuffer_decrement_read( DPAUCS_ringbuffer_base_t* ringbuffer ){
   }
 }
 
-size_t DPAUCS_ringbuffer_decrement_write( DPAUCS_ringbuffer_base_t* ringbuffer ){
-  size_t res = DPAUCS_ringbuffer_end(ringbuffer) - ringbuffer->inverse;
+size_t DPA_ringbuffer_decrement_write( DPA_ringbuffer_base_t* ringbuffer ){
+  size_t res = DPA_ringbuffer_end(ringbuffer) - ringbuffer->inverse;
   if( ringbuffer->range.size )
     ringbuffer->range.size--;
   return res;
 }
 
-void DPAUCS_ringbuffer_reverse( DPAUCS_ringbuffer_base_t* ringbuffer ){
-  ringbuffer->range.offset = DPAUCS_ringbuffer_end(ringbuffer);
+void DPA_ringbuffer_reverse( DPA_ringbuffer_base_t* ringbuffer ){
+  ringbuffer->range.offset = DPA_ringbuffer_end(ringbuffer);
   if(ringbuffer->inverse){
     if( ringbuffer->range.offset == ringbuffer->size )
       ringbuffer->range.offset = 0;
@@ -78,7 +78,7 @@ void DPAUCS_ringbuffer_reverse( DPAUCS_ringbuffer_base_t* ringbuffer ){
   ringbuffer->inverse = !ringbuffer->inverse;
 }
 
-size_t DPAUCS_ringbuffer_read( DPAUCS_ringbuffer_base_t* ringbuffer, void* destination, size_t size ){
+size_t DPA_ringbuffer_read( DPA_ringbuffer_base_t* ringbuffer, void* destination, size_t size ){
   const size_t ts = ringbuffer->type_size;
   const size_t offset = ringbuffer->range.offset;
   const size_t fullsize = ringbuffer->size;
@@ -118,9 +118,9 @@ size_t DPAUCS_ringbuffer_read( DPAUCS_ringbuffer_base_t* ringbuffer, void* desti
   return size;
 }
 
-size_t DPAUCS_ringbuffer_write( DPAUCS_ringbuffer_base_t* ringbuffer, const void* source, size_t size ){
+size_t DPA_ringbuffer_write( DPA_ringbuffer_base_t* ringbuffer, const void* source, size_t size ){
   const size_t ts = ringbuffer->type_size;
-  const size_t offset = DPAUCS_ringbuffer_end(ringbuffer);
+  const size_t offset = DPA_ringbuffer_end(ringbuffer);
   const size_t fullsize = ringbuffer->size;
   const size_t count = fullsize-ringbuffer->range.size;
   if( size > count )
@@ -148,25 +148,25 @@ size_t DPAUCS_ringbuffer_write( DPAUCS_ringbuffer_base_t* ringbuffer, const void
 }
 
 /* TODO
-size_t DPAUCS_ringbuffer_skip_read( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size ){
+size_t DPA_ringbuffer_skip_read( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
   
 }
 
-size_t DPAUCS_ringbuffer_rewind_read( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size ){
+size_t DPA_ringbuffer_rewind_read( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
   
 }
 
-size_t DPAUCS_ringbuffer_skip_write( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size ){
+size_t DPA_ringbuffer_skip_write( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
   
 }
 
-size_t DPAUCS_ringbuffer_rewind_write( DPAUCS_ringbuffer_base_t* ringbuffer, size_t size ){
+size_t DPA_ringbuffer_rewind_write( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
   
 }
 
 */
 
-void DPAUCS_ringbuffer_reset( DPAUCS_ringbuffer_base_t* ringbuffer ){
+void DPA_ringbuffer_reset( DPA_ringbuffer_base_t* ringbuffer ){
   ringbuffer->range.size = 0;
   ringbuffer->range.offset = ringbuffer->inverse ? ringbuffer->size : 0;
 }

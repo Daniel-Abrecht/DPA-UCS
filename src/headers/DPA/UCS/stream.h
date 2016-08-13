@@ -4,65 +4,65 @@
 #include <stdbool.h>
 #include <DPA/UCS/ringbuffer.h>
 
-#define DPAUCS_BUFFER_BUFFER_USERDEFINED(buf) ( DPAUCS_BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
-#define DPAUCS_BUFFER_BUFFER_TYPE(buf) ( DPAUCS_BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )
-#define DPAUCS_BUFFER_BUFFER_SIZE(buf) ( DPAUCS_BUFFER_GET(buf).size )
-#define DPAUCS_BUFFER_BUFFER_PTR(buf) ( DPAUCS_BUFFER_GET(buf).ptr )
+#define DPA_BUFFER_BUFFER_USERDEFINED(buf) ( DPA_BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
+#define DPA_BUFFER_BUFFER_TYPE(buf) ( DPA_BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )
+#define DPA_BUFFER_BUFFER_SIZE(buf) ( DPA_BUFFER_GET(buf).size )
+#define DPA_BUFFER_BUFFER_PTR(buf) ( DPA_BUFFER_GET(buf).ptr )
 
-enum DPAUCS_buffer_type {
+enum DPA_buffer_type {
   BUFFER_BUFFER,
   BUFFER_ARRAY,
   BUFFER_TYPE_SIZE
 };
 
-typedef struct DPAUCS_bufferInfo {
-  enum DPAUCS_buffer_type type;
-  DPAUCS_buffer_range_t range;
+typedef struct DPA_bufferInfo {
+  enum DPA_buffer_type type;
+  DPA_buffer_range_t range;
   void* ptr;
-} DPAUCS_bufferInfo_t;
+} DPA_bufferInfo_t;
 
-typedef struct DPAUCS_stream {
-  DPAUCS_uchar_ringbuffer_t* buffer;
-  DPAUCS_buffer_ringbuffer_t* buffer_buffer;
-} DPAUCS_stream_t;
+typedef struct DPA_stream {
+  DPA_uchar_ringbuffer_t* buffer;
+  DPA_buffer_ringbuffer_t* buffer_buffer;
+} DPA_stream_t;
 
-typedef struct DPAUCS_stream_offsetStorage {
+typedef struct DPA_stream_offsetStorage {
   size_t bufferOffset;
   size_t bufferBufferSize;
   size_t bufferBufferInfoOffset;
-} DPAUCS_stream_offsetStorage_t;
+} DPA_stream_offsetStorage_t;
 
-typedef DPAUCS_bufferInfo_t DPAUCS_streamEntry_t;
+typedef DPA_bufferInfo_t DPA_streamEntry_t;
 
-typedef struct DPAUCS_stream_raw {
+typedef struct DPA_stream_raw {
   size_t bufferBufferSize, charBufferSize;
-  DPAUCS_bufferInfo_t* bufferBuffer;
+  DPA_bufferInfo_t* bufferBuffer;
   unsigned char* charBuffer;
-} DPAUCS_stream_raw_t;
+} DPA_stream_raw_t;
 
-bool DPAUCS_stream_copyWrite( DPAUCS_stream_t*, const void*, size_t );
-bool DPAUCS_stream_referenceWrite( DPAUCS_stream_t*, const void*, size_t );
-void DPAUCS_stream_reset( DPAUCS_stream_t* );
-size_t DPAUCS_stream_read( DPAUCS_stream_t*, void*, size_t );
-void DPAUCS_stream_saveReadOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream );
-void DPAUCS_stream_restoreReadOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros );
-void DPAUCS_stream_saveWriteOffset( DPAUCS_stream_offsetStorage_t* sros, const DPAUCS_stream_t* stream );
-void DPAUCS_stream_restoreWriteOffset( DPAUCS_stream_t* stream, const DPAUCS_stream_offsetStorage_t* sros );
-size_t DPAUCS_stream_getLength( const DPAUCS_stream_t* stream, size_t max_ret, bool* has_more ); // inefficient
-size_t DPAUCS_stream_raw_getLength( const DPAUCS_stream_raw_t* stream, size_t max_ret, bool* has_more ); // inefficient
-void DPAUCS_stream_seek( DPAUCS_stream_t* stream, size_t size );
+bool DPA_stream_copyWrite( DPA_stream_t*, const void*, size_t );
+bool DPA_stream_referenceWrite( DPA_stream_t*, const void*, size_t );
+void DPA_stream_reset( DPA_stream_t* );
+size_t DPA_stream_read( DPA_stream_t*, void*, size_t );
+void DPA_stream_saveReadOffset( DPA_stream_offsetStorage_t* sros, const DPA_stream_t* stream );
+void DPA_stream_restoreReadOffset( DPA_stream_t* stream, const DPA_stream_offsetStorage_t* sros );
+void DPA_stream_saveWriteOffset( DPA_stream_offsetStorage_t* sros, const DPA_stream_t* stream );
+void DPA_stream_restoreWriteOffset( DPA_stream_t* stream, const DPA_stream_offsetStorage_t* sros );
+size_t DPA_stream_getLength( const DPA_stream_t* stream, size_t max_ret, bool* has_more ); // inefficient
+size_t DPA_stream_raw_getLength( const DPA_stream_raw_t* stream, size_t max_ret, bool* has_more ); // inefficient
+void DPA_stream_seek( DPA_stream_t* stream, size_t size );
 
 /* Be careful with the following functions */
-bool DPAUCS_stream_to_raw_buffer( const DPAUCS_stream_t* stream, DPAUCS_stream_raw_t* raw );
-void DPAUCS_raw_stream_truncate( DPAUCS_stream_raw_t* raw, size_t size );
-void DPAUCS_raw_as_stream( DPAUCS_stream_raw_t* raw, void(*func)( DPAUCS_stream_t* stream, void* ptr ), void* ptr );
-void DPAUCS_stream_swapEntries( DPAUCS_streamEntry_t* a, DPAUCS_streamEntry_t* b  );
-DPAUCS_streamEntry_t* DPAUCS_stream_getEntry( DPAUCS_stream_t* stream );
-bool DPAUCS_stream_nextEntry( DPAUCS_stream_t* stream );
-bool DPAUCS_stream_previousEntry( DPAUCS_stream_t* stream );
+bool DPA_stream_to_raw_buffer( const DPA_stream_t* stream, DPA_stream_raw_t* raw );
+void DPAUCS_raw_stream_truncate( DPA_stream_raw_t* raw, size_t size );
+void DPAUCS_raw_as_stream( DPA_stream_raw_t* raw, void(*func)( DPA_stream_t* stream, void* ptr ), void* ptr );
+void DPA_stream_swapEntries( DPA_streamEntry_t* a, DPA_streamEntry_t* b  );
+DPA_streamEntry_t* DPA_stream_getEntry( DPA_stream_t* stream );
+bool DPA_stream_nextEntry( DPA_stream_t* stream );
+bool DPA_stream_previousEntry( DPA_stream_t* stream );
 /*-----------------------------------------*/
 
 
-#define DPAUCS_stream_eof(s) DPAUCS_ringbuffer_eof(&(s)->buffer_buffer->super)
+#define DPA_stream_eof(s) DPA_ringbuffer_eof(&(s)->buffer_buffer->super)
 
 #endif

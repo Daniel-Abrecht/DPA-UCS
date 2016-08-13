@@ -16,9 +16,9 @@
 
 typedef struct DPAUCS_fragment DPAUCS_fragment_t;
 
-typedef DPAUCS_stream_t*(*DPAUCS_createTransmissionStream)( void );
-typedef void(*DPAUCS_transmit)( DPAUCS_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type );
-typedef void(*DPAUCS_destroyTransmissionStream)( DPAUCS_stream_t* );
+typedef DPA_stream_t*(*DPAUCS_createTransmissionStream)( void );
+typedef void(*DPAUCS_transmit)( DPA_stream_t* stream, DPAUCS_address_pair_t* fromTo, uint8_t type );
+typedef void(*DPAUCS_destroyTransmissionStream)( DPA_stream_t* );
 typedef bool(*DPAUCS_layer3_ProtocolReciveHandler_func)(
   void* id,
   struct DPAUCS_address* from,
@@ -42,9 +42,9 @@ extern DPAUCS_layer3_protocolHandler_t* layer3_protocolHandlers[MAX_LAYER3_PROTO
 void DPAUCS_layer3_addProtocolHandler( DPAUCS_layer3_protocolHandler_t* handler );
 void DPAUCS_layer3_removeProtocolHandler( DPAUCS_layer3_protocolHandler_t* handler );
 
-DPAUCS_stream_t* DPAUCS_layer3_createTransmissionStream( void );
+DPA_stream_t* DPAUCS_layer3_createTransmissionStream( void );
 bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types, size_t* limit );
-bool DPAUCS_layer3_transmit( DPAUCS_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t );
-void DPAUCS_layer3_destroyTransmissionStream( DPAUCS_stream_t* x );
+bool DPAUCS_layer3_transmit( DPA_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t );
+void DPAUCS_layer3_destroyTransmissionStream( DPA_stream_t* x );
 
 #endif

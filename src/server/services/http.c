@@ -337,15 +337,15 @@ static void onreceive( void* cid, void* data, size_t size ){
       case HTTP_PARSE_PATH: {
 
         size_t lineEndPos;
-        if( !mempos( &lineEndPos, it, n, S("\r\n") ) ){
+        if( !DPA_mempos( &lineEndPos, it, n, S("\r\n") ) ){
           c->status = 400;
           c->parseState = HTTP_PARSER_ERROR;
           break;
         }
 
         size_t urlEnd;
-        if( !memrcharpos( &urlEnd, lineEndPos, it, '/' )
-         || !memrcharpos( &urlEnd, urlEnd,     it, ' ' )
+        if( !DPA_memrcharpos( &urlEnd, lineEndPos, it, '/' )
+         || !DPA_memrcharpos( &urlEnd, urlEnd,     it, ' ' )
         ){
           c->status = 400;
           c->parseState = HTTP_PARSER_ERROR;
@@ -369,9 +369,9 @@ static void onreceive( void* cid, void* data, size_t size ){
         size_t lineEndPos = 0;
         size_t protocolEndPos = 0;
 
-        mempos( &lineEndPos, it, n, S("\r\n") );
-        memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
-        if( !streq_nocase( "HTTP", it, protocolEndPos ) )
+        DPA_mempos( &lineEndPos, it, n, S("\r\n") );
+        DPA_memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
+        if( !DPA_streq_nocase( "HTTP", it, protocolEndPos ) )
           c->status = 480;
 
         c->parseState = HTTP_PARSE_VERSION;
@@ -385,7 +385,7 @@ static void onreceive( void* cid, void* data, size_t size ){
       case HTTP_PARSE_VERSION: {
 
         size_t lineEndPos = 0;
-        mempos( &lineEndPos, it, n, S("\r\n") );
+        DPA_mempos( &lineEndPos, it, n, S("\r\n") );
         if(!memchr(it,'.',lineEndPos)){
           c->status = 400;
           c->parseState = HTTP_PARSER_ERROR;
@@ -422,7 +422,7 @@ static void onreceive( void* cid, void* data, size_t size ){
       }
       case HTTP_PARSE_SKIP_HEADER_FIELD: {
         size_t lineEndPos = 0;
-        if(!mempos( &lineEndPos, it, n, S("\r\n") ))
+        if(!DPA_mempos( &lineEndPos, it, n, S("\r\n") ))
           break;
         n  -= lineEndPos + 2;
         it += lineEndPos + 2;
@@ -440,8 +440,8 @@ static void onreceive( void* cid, void* data, size_t size ){
         }
 
         size_t key_length=0, lineEndPos=0;
-        if( !mempos( &lineEndPos, it, n, S("\r\n") )
-         || !mempos( &key_length, it, lineEndPos, S(":") )
+        if( !DPA_mempos( &lineEndPos, it, n, S("\r\n") )
+         || !DPA_mempos( &key_length, it, lineEndPos, S(":") )
         ){
           if( it[n-1] == '\r' ){
             c->parseState = HTTP_PARSE_SKIP_HEADER_FIELD_NEWLINE;
@@ -454,15 +454,15 @@ static void onreceive( void* cid, void* data, size_t size ){
         const char* key = it;
         const char* value = it + key_length + 1;
         size_t value_length = lineEndPos - key_length - 1;
-        memtrim( &value, &value_length, ' ' );
+        DPA_memtrim( &value, &value_length, ' ' );
 
-        if( streq_nocase( "Connection", key, key_length ) ){
+        if( DPA_streq_nocase( "Connection", key, key_length ) ){
           enum HTTP_ConnectionAction ca;
           for( ca=0; ca<HTTP_CONNECTION_ACTION_COUNT; ca++ )
-            if( streq_nocase( HTTP_ConnectionActions[ca], value, value_length ) )
+            if( DPA_streq_nocase( HTTP_ConnectionActions[ca], value, value_length ) )
               break;
           c->connectionAction = ca;
-        }else if( streq_nocase( "Upgrade", key, key_length ) ){
+        }else if( DPA_streq_nocase( "Upgrade", key, key_length ) ){
           
         }
 

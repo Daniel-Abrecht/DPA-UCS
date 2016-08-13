@@ -91,14 +91,14 @@ size_t DPAUCS_ringbuffer_read( DPAUCS_ringbuffer_base_t* ringbuffer, void* desti
       n = offset;
       size_t s = size-offset;
       size_t newoff = fullsize-s;
-      memrcpy( ts, ((char*)destination)+offset*ts, ((char*)ringbuffer->buffer)+newoff*ts, s );
+      DPA_memrcpy( ts, ((char*)destination)+offset*ts, ((char*)ringbuffer->buffer)+newoff*ts, s );
       ringbuffer->range.offset = newoff;
     }else{
       ringbuffer->range.offset -= size;
       if( ringbuffer->range.offset == 0 )
         ringbuffer->range.offset = fullsize;
     }
-    memrcpy( ts, destination, ((char*)ringbuffer->buffer)+(offset-n)*ts, n );
+    DPA_memrcpy( ts, destination, ((char*)ringbuffer->buffer)+(offset-n)*ts, n );
   }else{
     size_t remaining = fullsize - offset;
     size_t n = size;
@@ -130,9 +130,9 @@ size_t DPAUCS_ringbuffer_write( DPAUCS_ringbuffer_base_t* ringbuffer, const void
     if( offset < size ){
       n = offset;
       size_t s = size-offset;
-      memrcpy( ts, ((char*)ringbuffer->buffer)+(fullsize-s)*ts, ((const char*)source)+offset*ts, s );
+      DPA_memrcpy( ts, ((char*)ringbuffer->buffer)+(fullsize-s)*ts, ((const char*)source)+offset*ts, s );
     }
-    memrcpy( ts, ((char*)ringbuffer->buffer)+(offset-n)*ts, source, n );
+    DPA_memrcpy( ts, ((char*)ringbuffer->buffer)+(offset-n)*ts, source, n );
   }else{
     size_t remaining = fullsize - offset;
     size_t n = size;

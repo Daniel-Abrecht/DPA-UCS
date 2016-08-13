@@ -1,7 +1,7 @@
 #include <string.h>
 #include <DPA/UCS/utils.h>
 
-bool mempos( size_t* position, void* haystack, size_t haystack_size, void* needle, size_t needle_size ){
+bool DPA_mempos( size_t* position, void* haystack, size_t haystack_size, void* needle, size_t needle_size ){
 
   if( needle_size == 0 )
     return false;
@@ -24,7 +24,7 @@ bool mempos( size_t* position, void* haystack, size_t haystack_size, void* needl
   return true;
 }
 
-bool memrcharpos( size_t* position, size_t size, void* haystack, char needle ){
+bool DPA_memrcharpos( size_t* position, size_t size, void* haystack, char needle ){
   char* ch = (char*)haystack + size;
   while( size-- )
   if( *--ch == needle ){
@@ -34,14 +34,14 @@ bool memrcharpos( size_t* position, size_t size, void* haystack, char needle ){
   return false;
 }
 
-void memtrim( const char**restrict mem, size_t*restrict size, char c ){
+void DPA_memtrim( const char**restrict mem, size_t*restrict size, char c ){
   while( *size && **mem == c )
     (*mem)++, (*size)--;
   while( (*size) && (*mem)[(*size)-1] == c )
     (*size)--;
 }
 
-bool streq_nocase( const char* str, const char* mem, size_t size ){
+bool DPA_streq_nocase( const char* str, const char* mem, size_t size ){
   while( size-- ){
     char a = *str++;
     char b = *mem++;
@@ -51,7 +51,7 @@ bool streq_nocase( const char* str, const char* mem, size_t size ){
   return true;
 }
 
-void memrcpy( size_t size, void*restrict dest, const void*restrict src, size_t count ){
+void DPA_memrcpy( size_t size, void*restrict dest, const void*restrict src, size_t count ){
   char* d = dest;
   const char* s = src;
   s += size * count;

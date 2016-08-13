@@ -10,6 +10,20 @@ Test(utils,DPA_memrcpy){
   cr_assert_arr_eq( res, ((int[]){4,3,2,1}), 4 );
 }
 
+Test(utils,DPA_htob16){
+  uint16_t in = 0x1234u;
+  char out[] =  "\x12\x34";
+  uint16_t res = DPA_htob16(in);
+  cr_assert_arr_eq((char*)&res,out,2);
+}
+
+Test(utils,DPA_htob32){
+  uint32_t in = 0x12345678u;
+  char out[] =  "\x12\x34\x56\x78";
+  uint32_t res = DPA_htob32(in);
+  cr_assert_arr_eq((char*)&res,out,4);
+}
+
 Test(utils,DPA_mempos_check_has_result){
   size_t position;
   char haystack[] = "__test__test__";

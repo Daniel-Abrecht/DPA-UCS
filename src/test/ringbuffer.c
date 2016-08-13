@@ -1,13 +1,13 @@
 #include <criterion/criterion.h>
 #include <DPA/utils/ringbuffer.h>
 
-// TEST FOR: server/ringbuffer
+// TEST FOR: utils/ringbuffer
 
 #define FTest(...) Test(__VA_ARGS__, .init = setup_normal)
 #define RTest(...) Test(__VA_ARGS__, .init = setup_reverse)
 
 DPA_RINGBUFFER_TEMPLATE( int, DPAUCS_test_ringbuffer );
-DPAUCS_DEFINE_RINGBUFFER( int, DPAUCS_test_ringbuffer_t, rb, 4, false );
+DPA_DEFINE_RINGBUFFER( int, DPAUCS_test_ringbuffer_t, rb, 4, false );
 
 /* setup */
 

@@ -19,7 +19,7 @@
     }; \
   } NAME ## _t
 
-#define DPAUCS_DEFINE_RINGBUFFER(B,T,name,S,I) \
+#define DPA_DEFINE_RINGBUFFER(B,T,name,S,I) \
   static B name ## _buffer[S]; \
   T name = { \
     .super = { \

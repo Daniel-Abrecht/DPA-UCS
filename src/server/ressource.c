@@ -1,6 +1,6 @@
 #include <DPA/UCS/ressource.h>
 
-DPAUCS_MODUL( ressource ){}
+DPA_MODULE( ressource ){}
 
 const DPAUCS_ressource_entry_t* defaultRessourceGetter( const char* path, unsigned length ){
 
@@ -25,7 +25,7 @@ const DPAUCS_ressource_entry_t* defaultRessourceGetter( const char* path, unsign
 }
 
 
-const DPAUCS_ressource_entry_t* WEAK getRessource( const char* path, unsigned length ){
+const DPAUCS_ressource_entry_t* weak getRessource( const char* path, unsigned length ){
   return defaultRessourceGetter( path, length );
 }
 
@@ -47,11 +47,11 @@ switch( ressource->type ){
   return true;
 }
 
-bool WEAK DPAUCS_writeRessourceHeaders( DPAUCS_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
+bool weak DPAUCS_writeRessourceHeaders( DPAUCS_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
   return DPAUCS_defaultWriteRessourceHeaders( stream, ressource );
 }
 
-bool WEAK DPAUCS_defaultWriteRessource( DPAUCS_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
+bool weak DPAUCS_defaultWriteRessource( DPAUCS_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
 #ifdef RESSOURCE_GETTER
 #define X( RG ) bool DPAUCS_write ## RG(DPAUCS_stream_t*,const DPAUCS_ressource_entry_t*);
   RESSOURCE_GETTER
@@ -69,7 +69,7 @@ switch( ressource->type ){
   return true;
 }
 
-bool WEAK DPAUCS_writeRessource( DPAUCS_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
+bool weak DPAUCS_writeRessource( DPAUCS_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
   return DPAUCS_defaultWriteRessource( stream, ressource );
 }
 

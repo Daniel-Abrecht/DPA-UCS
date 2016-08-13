@@ -15,7 +15,7 @@ struct DPAUCS_logicAddress;
 #endif
 
 
-typedef PACKED1 struct PACKED2 {
+typedef struct packed {
   uint16_t htype; // Hardware type
   uint16_t ptype; // Protocol type
   uint8_t hlen; // Hardware address length

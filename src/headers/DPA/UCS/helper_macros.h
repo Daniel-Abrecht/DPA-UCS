@@ -1,5 +1,5 @@
-#ifndef DPAUCS_HELPER_MACROS_H
-#define DPAUCS_HELPER_MACROS_H
+#ifndef DPA_HELPER_MACROS_H
+#define DPA_HELPER_MACROS_H
 
 #if __STDC_VERSION__ < 201112L
 #pragma anon_unions
@@ -12,20 +12,21 @@
 
 #if __alignof_is_defined
 #include <stdalign.h>
-#define DPAUCS_ALIGNOF(T) alignof(T)
+#define DPA_ALIGNOF(T) alignof(T)
 #else
 #include <stddef.h>
-#define DPAUCS_ALIGNOF(T) offsetof(struct{char x;T y;},y)
+#define DPA_ALIGNOF(T) offsetof(struct{char x;T y;},y)
 #endif
 
-#define PACKED1
-#define PACKED2 __attribute__ ((__packed__))
+#ifndef packed
+#define packed __attribute__ ((__packed__))
+#endif
+#ifndef weak
+#define weak __attribute__((weak))
+#endif
 
-#define WEAK __attribute__((weak))
-#define NORETURN noreturn
-
-#define DPAUCS_MODUL( name ) void modul_ ## name( void )
-#define DPAUCS_DEPENDENCY( name ) modul_ ## name()
+#define DPA_MODULE( name ) void modul_ ## name( void )
+#define DPA_DEPENDENCY( name ) modul_ ## name()
 
 // workarround for gcc bug 50925 in gcc < 4.9
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=50925#c19
@@ -35,20 +36,22 @@
 #define GCC_BUGFIX_50925
 #endif
 
+#ifndef flash
 #ifdef __FLASH
-#define DP_FLASH //__flash
+#define flash //__flash
 #else
-#define DP_FLASH
+#define flash
+#endif
 #endif
 
-#define DPAUCS_CALC_PREV_ALIGN_OFFSET( x, T ) \
-  ( (size_t)( x ) & (size_t)~( DPAUCS_ALIGNOF(T) - 1 ) )
+#define DPA_CALC_PREV_ALIGN_OFFSET( x, T ) \
+  ( (size_t)( x ) & (size_t)~( DPA_ALIGNOF(T) - 1 ) )
 
-#define DPAUCS_CALC_ALIGN_OFFSET( x, T ) \
-  DPAUCS_CALC_PREV_ALIGN_OFFSET( (size_t)(x) + DPAUCS_ALIGNOF(T) - 1, T )
+#define DPA_CALC_ALIGN_OFFSET( x, T ) \
+  DPA_CALC_PREV_ALIGN_OFFSET( (size_t)(x) + DPA_ALIGNOF(T) - 1, T )
 
-#define DPAUCS_STRINGIFY(x) #x
-#define DPAUCS_TOSTRING(x) DPAUCS_STRINGIFY(x)
+#define DPA_STRINGIFY(x) #x
+#define DPA_TOSTRING(x) DPA_STRINGIFY(x)
 
 #define DPA_FOR_SECTION_LIST_HACK(TYPE,NAME,ITERATOR) \
   extern TYPE __start_ ## NAME ## _section_list_hack[]; \
@@ -64,6 +67,6 @@
 
 #define DPA_SECTION_LIST_ENTRY_HACK(TYPE,NAME,SYMBOL) \
   extern TYPE SYMBOL; TYPE SYMBOL \
-  __attribute__ ((section ( DPAUCS_TOSTRING( NAME ## _section_list_hack ) ))) =
+  __attribute__ ((section ( DPA_TOSTRING( NAME ## _section_list_hack ) ))) =
 
 #endif

@@ -4,7 +4,7 @@
 #include <DPA/UCS/helper_macros.h>
 
 
-DPAUCS_MODUL( file_ressource );
+DPA_MODULE( file_ressource );
 
 
 const DPAUCS_ressource_file_t* getFileRessource( const char* path, unsigned length );

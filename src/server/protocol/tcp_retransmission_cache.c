@@ -29,9 +29,9 @@ static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, vo
   char* emem = (char*)off;
   DPAUCS_tcp_cacheEntry_t* entry = (DPAUCS_tcp_cacheEntry_t*)( emem + *(size_t*)off );
   size_t count = entry->count;
-  size_t offset = DPAUCS_CALC_PREV_ALIGN_OFFSET( *(size_t*)off - entry->bufferBufferSize * sizeof( DPAUCS_bufferInfo_t ), DPAUCS_bufferInfo_t );
+  size_t offset = DPA_CALC_PREV_ALIGN_OFFSET( *(size_t*)off - entry->bufferBufferSize * sizeof( DPAUCS_bufferInfo_t ), DPAUCS_bufferInfo_t );
   res->bufferBuffer = (void*)( emem + offset );
-  offset  = DPAUCS_CALC_ALIGN_OFFSET( sizeof(*entry) + *(size_t*)off, tcp_cache_entry_tcb_entry_t );
+  offset  = DPA_CALC_ALIGN_OFFSET( sizeof(*entry) + *(size_t*)off, tcp_cache_entry_tcb_entry_t );
   res->tcb_list = (void*)( emem + offset );
   offset += count * sizeof( tcp_cache_entry_tcb_entry_t );
   res->charBuffer = (void*)( emem + offset );
@@ -61,11 +61,11 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
   if( e.streamRealLength ){
 
     size_t                             fullSize  = sizeof( size_t );
-    const size_t bufferBuffer_offset = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, DPAUCS_bufferInfo_t );
+    const size_t bufferBuffer_offset = fullSize  = DPA_CALC_ALIGN_OFFSET( fullSize, DPAUCS_bufferInfo_t );
                                        fullSize += e.bufferBufferSize * sizeof( DPAUCS_bufferInfo_t );
-    const size_t entry_offset        = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, DPAUCS_tcp_cacheEntry_t );
+    const size_t entry_offset        = fullSize  = DPA_CALC_ALIGN_OFFSET( fullSize, DPAUCS_tcp_cacheEntry_t );
                                        fullSize += sizeof( DPAUCS_tcp_cacheEntry_t );
-    const size_t tcb_list_offset     = fullSize  = DPAUCS_CALC_ALIGN_OFFSET( fullSize, tcp_cache_entry_tcb_entry_t );
+    const size_t tcb_list_offset     = fullSize  = DPA_CALC_ALIGN_OFFSET( fullSize, tcp_cache_entry_tcb_entry_t );
     const size_t charBuffer_offset   = fullSize += count * sizeof( DPAUCS_transmissionControlBlock_t* );
                                        fullSize += e.charBufferSize;
 

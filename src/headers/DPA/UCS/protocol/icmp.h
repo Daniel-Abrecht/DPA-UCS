@@ -5,12 +5,12 @@
 
 #include <DPA/UCS/helper_macros.h>
 
-DPAUCS_MODUL( icmp );
+DPA_MODULE( icmp );
 
 #ifdef DPAUCS_ICMP_C
 #define W
 #else
-#define W WEAK
+#define W weak
 #endif
 
 void W DPAUCS_icmpInit( void );

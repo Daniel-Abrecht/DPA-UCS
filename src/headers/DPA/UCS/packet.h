@@ -11,19 +11,19 @@
 #define PACKET_MAX_PAYLOAD 1500
 #define IEEE_802_1Q_TPID_CONST 0x8100
 
-typedef PACKED1 struct PACKED2 DPAUCS_LLC {
+typedef struct packed DPAUCS_LLC {
   uint8_t dsap; // ???
   uint8_t ssap; // ???
-  PACKED1 union PACKED2 {
-    PACKED1 struct PACKED2 {
+  packed union  {
+    struct packed {
       uint8_t control; // ???
       uint8_t payload[PACKET_MAX_PAYLOAD];
     } control;
-    PACKED1 struct PACKED2 {
+    struct packed {
       uint16_t control;
-      PACKED1 union PACKED2 {
-        PACKED1 struct PACKED2 {
-          PACKED1 union PACKED2 {
+      packed union  {
+        struct packed {
+          packed union  {
             uint8_t oui_bytes[3];
           };
           uint16_t type; // Should contain ethernet type filed value
@@ -38,32 +38,32 @@ typedef struct DPAUCS_packet { // Ethernet frame
   uint16_t size;
   union {
     uint8_t raw[PACKET_SIZE_WITH_CHECKSUM];
-    PACKED1 struct PACKED2 {
+    struct packed {
       DPAUCS_mac_t dest; // MAC destination
       DPAUCS_mac_t src; // MAC source
-      PACKED1 union PACKED2 {
-        PACKED1 struct PACKED2 { // IEEE_802_1Q
+      packed union  {
+        struct packed { // IEEE_802_1Q
           uint16_t tpid; // Tag protocol identifier: 0x8100
           // Priority code point 
           // Drop eligible indicator
           // VLAN identifier
           uint16_t pcp_dei_vid; // 3 1 12
-          PACKED1 union PACKED2 {
+          packed union  {
             uint16_t type; // greater or equal to 1536
             uint16_t length; // smaller or equal to 1500
           };
-          PACKED1 union PACKED2 {
+          packed union  {
             uint8_t payload[PACKET_MAX_PAYLOAD]; // type was specified before
             DPAUCS_LLC_t llc; // length was specified before
           };
         } vlan; // IEEE_802_1Q
-        PACKED1 struct PACKED2 {
-          PACKED1 union PACKED2 {
+        struct packed {
+          packed union  {
             uint16_t tpid; // Tag protocol identifier: 0x8100
             uint16_t type; // greater or equal to 1536
             uint16_t length; // smaller or equal to 1500
           };
-          PACKED1 union PACKED2 {
+          packed union  {
             uint8_t payload[PACKET_MAX_PAYLOAD]; // type was specified before
             DPAUCS_LLC_t llc; // length was specified before
           };

@@ -6,9 +6,9 @@
 
 typedef struct DPAUCS_ressource_file {
   DPAUCS_ressource_entry_t entry;
-  const DP_FLASH char* mime;
+  const flash char* mime;
   size_t size;
-  const DP_FLASH char* content;
+  const flash char* content;
 } DPAUCS_ressource_file_t;
 
 #endif

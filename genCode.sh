@@ -26,7 +26,7 @@ function createFileIncludeCode {
 #include \"$headerfile\"
 #define $basemacroname $(escape "$baseurl")
 
-const DP_FLASH DPAUCS_ressource_file_t $varname[] = {
+const flash DPAUCS_ressource_file_t $varname[] = {
   " | head -c -1
   find -type f | sort | while IFS= read file; do
 
@@ -75,7 +75,7 @@ function createFileIncludeHeader {
 #include <DPA/UCS/files.h>
 
 extern const size_t ${varname}_size;
-extern const DP_FLASH DPAUCS_ressource_file_t $varname[];
+extern const flash DPAUCS_ressource_file_t $varname[];
 
 #endif
 "

@@ -19,9 +19,9 @@
 #define DPAUCS_MAX_HTTP_CONNECTIONS TRANSMISSION_CONTROL_BLOCK_COUNT
 #endif
 
-DPAUCS_MODUL( http ){
-  DPAUCS_DEPENDENCY( tcp );
-  DPAUCS_DEPENDENCY( ressource );
+DPA_MODULE( http ){
+  DPA_DEPENDENCY( tcp );
+  DPA_DEPENDENCY( ressource );
 }
 
 #define HTTP_METHODS(X) \
@@ -78,7 +78,7 @@ const char* HTTP_ConnectionActions[] = {
 
 typedef struct HTTP_Connection {
   void* cid;
-  const DP_FLASH DPAUCS_ressource_entry_t* ressource;
+  const flash DPAUCS_ressource_entry_t* ressource;
   uint16_t status;
   struct {
     uint8_t major, minor;

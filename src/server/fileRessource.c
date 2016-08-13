@@ -8,13 +8,13 @@
 #define N files_size
 #define F files
 
-DPAUCS_MODUL( file_ressource ){
-  DPAUCS_DEPENDENCY( ressource );
+DPA_MODULE( file_ressource ){
+  DPA_DEPENDENCY( ressource );
 }
 
 
 const DPAUCS_ressource_file_t* getFileRessource( const char* path, unsigned length ){
-  const DP_FLASH DPAUCS_ressource_file_t *it, *end;
+  const flash DPAUCS_ressource_file_t *it, *end;
   for( it=F, end=F+N; it<end; it++ )
     if( length == it->entry.path_length
      && !memcmp( path, it->entry.path, length )

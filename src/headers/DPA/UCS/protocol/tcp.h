@@ -9,7 +9,7 @@
 #include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-DPAUCS_MODUL( tcp );
+DPA_MODULE( tcp );
 
 #ifndef TRANSMISSION_CONTROL_BLOCK_COUNT
 #define TRANSMISSION_CONTROL_BLOCK_COUNT (1<<5)
@@ -21,7 +21,7 @@ DPAUCS_MODUL( tcp );
 
 #define DPAUCS_DEFAULT_RECIVE_WINDOW_SIZE 1460
 
-typedef PACKED1 struct PACKED2 DPAUCS_tcp {
+typedef struct packed DPAUCS_tcp {
   uint16_t source;
   uint16_t destination;
   uint32_t sequence;
@@ -132,7 +132,7 @@ extern DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANS
 #ifdef DPAUCS_TCP_C
 #define W
 #else
-#define W WEAK
+#define W weak
 #endif
 
 void W DPAUCS_tcpInit();

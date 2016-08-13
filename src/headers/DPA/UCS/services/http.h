@@ -3,15 +3,15 @@
 
 #include <DPA/UCS/service.h>
 
-DPAUCS_MODUL( http );
+DPA_MODULE( http );
 
 #ifdef HTTP_C
 #define W
 #else
-#define W WEAK
+#define W weak
 #endif
 
-extern DPAUCS_service_t WEAK http_service;
+extern DPAUCS_service_t weak http_service;
 
 #undef W
 

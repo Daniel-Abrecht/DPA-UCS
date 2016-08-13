@@ -18,8 +18,8 @@
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 #include <DPA/UCS/protocol/tcp_retransmission_cache.h>
 
-DPAUCS_MODUL( tcp ){
-  DPAUCS_DEPENDENCY( adelay_driver );
+DPA_MODULE( tcp ){
+  DPA_DEPENDENCY( adelay_driver );
 }
 
 DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
@@ -140,7 +140,7 @@ void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DP
 
 #ifdef USE_IPv4
 static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
-  PACKED1 struct PACKED2 pseudoHeader {
+  struct packed pseudoHeader {
     uint32_t src, dst;
     uint8_t padding, protocol;
     uint16_t length;
@@ -194,7 +194,7 @@ static DPAUCS_tcp_transmission_t tcp_begin( void ){
 static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DPAUCS_TCP_state state ){
   if( tcb->state == state )
     return false;
-  static const char* stateNames[] = {TCP_STATES(DPAUCS_STRINGIFY)};
+  static const char* stateNames[] = {TCP_STATES(DPA_STRINGIFY)};
   DPAUCS_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
   tcb->state = state;
   return true;

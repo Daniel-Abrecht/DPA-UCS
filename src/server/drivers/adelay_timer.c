@@ -7,7 +7,7 @@
 #define PRESCALER_BITS   (1<<CS00)|(1<<CS02)
 #define COUNTER_BITS        8
 
-DPAUCS_MODUL( adelay_driver ){}
+DPA_MODULE( adelay_driver ){}
 
 static uint16_t time;
 

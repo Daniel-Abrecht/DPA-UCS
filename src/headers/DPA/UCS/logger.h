@@ -8,7 +8,7 @@
 
 #define DPAUCS_LOG( ... ) do { \
   if( DPAUCS_log_func ) \
-    (*DPAUCS_log_func)( __FILE__ ":" DPAUCS_TOSTRING(__LINE__) " | " __VA_ARGS__ ); \
+    (*DPAUCS_log_func)( __FILE__ ":" DPA_TOSTRING(__LINE__) " | " __VA_ARGS__ ); \
   } while(0)
 
 

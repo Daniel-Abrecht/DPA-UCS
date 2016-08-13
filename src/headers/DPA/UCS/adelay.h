@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <DPA/UCS/helper_macros.h>
 
-DPAUCS_MODUL( adelay_driver );
+DPA_MODULE( adelay_driver );
 
 #define AD_SEC ((adelay_duration_t)100)
 
@@ -17,6 +17,6 @@ void adelay_start( adelay_t* ); // starts the delay
 bool adelay_done( adelay_t*, adelay_duration_t );
 void adelay_update_time( unsigned long current, unsigned long max_mask, unsigned long ticks_per_sec );
 
-void WEAK adelay_update( void );
+void weak adelay_update( void );
 
 #endif

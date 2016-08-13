@@ -6,9 +6,9 @@
 #include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-DPAUCS_MODUL( icmp ){}
+DPA_MODULE( icmp ){}
 
-typedef PACKED1 struct PACKED2 {
+typedef struct packed {
   uint8_t type;
   uint8_t code;
   uint16_t checksum;

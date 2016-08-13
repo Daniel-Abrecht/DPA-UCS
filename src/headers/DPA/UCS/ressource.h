@@ -6,7 +6,7 @@
 #include <DPA/UCS/helper_macros.h>
 
 
-DPAUCS_MODUL( ressource );
+DPA_MODULE( ressource );
 
 
 enum DPAUCS_ressource_entry_type {
@@ -25,10 +25,10 @@ typedef struct DPAUCS_ressource_entry {
 } DPAUCS_ressource_entry_t;
 
 const DPAUCS_ressource_entry_t* defaultRessourceGetter( const char* path, unsigned length );
-const DPAUCS_ressource_entry_t* WEAK getRessource( const char* path, unsigned length );
+const DPAUCS_ressource_entry_t* weak getRessource( const char* path, unsigned length );
 bool DPAUCS_defaultWriteRessourceHeaders( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
-bool WEAK DPAUCS_writeRessourceHeaders( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
+bool weak DPAUCS_writeRessourceHeaders( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
 bool DPAUCS_defaultWriteRessource( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
-bool WEAK DPAUCS_writeRessource( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
+bool weak DPAUCS_writeRessource( DPAUCS_stream_t*, const DPAUCS_ressource_entry_t* );
 
 #endif

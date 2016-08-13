@@ -28,7 +28,7 @@ enum DPAUCS_IPv4_flags {
   IPv4_FLAG_DONT_FRAGMENT  = 1<<1
 };
 
-typedef PACKED1 struct PACKED2 DPAUCS_IPv4 {
+typedef struct packed DPAUCS_IPv4 {
   uint8_t version_ihl; // 4bit version | 4bit IP Header Length
   uint8_t tos; // Type of Service
   uint16_t length; // Total Length

@@ -38,11 +38,11 @@ static struct {
 
 static jmp_buf fatal_error_exitpoint;
 
-void WEAK DPAUCS_onfatalerror( const char* message ){
+void weak DPAUCS_onfatalerror( const char* message ){
   DPAUCS_LOG( "%s", message );
 }
 
-NORETURN void DPAUCS_fatal( const char* message ){
+noreturn void DPAUCS_fatal( const char* message ){
   DPAUCS_onfatalerror( message );
   longjmp(fatal_error_exitpoint,1);
 }

@@ -23,7 +23,7 @@ struct maxAlignHelperStruct {
   int e;
   short f;
 };
-#define MAX_ALIGN DPAUCS_ALIGNOF(struct maxAlignHelperStruct)
+#define MAX_ALIGN DPA_ALIGNOF(struct maxAlignHelperStruct)
 #endif
 
 #define DPAUCS_CALC_PADDING(S) ( ( S & (MAX_ALIGN-1) ) ? MAX_ALIGN - ( S & (MAX_ALIGN-1) ) : 0 )

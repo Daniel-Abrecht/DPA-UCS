@@ -1,49 +1,43 @@
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/protocol/arp.h>
-#include <DPA/UCS/protocol/anyAddress.h>
+#include <DPA/UCS/protocol/layer3.h>
 
-bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t* address){
-  switch( address->type ){
-#ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: {
-      return !~((const DPAUCS_logicAddress_IPv4_t*)address)->address;
-    } break;
-#endif
-    case DPAUCS_AT_UNKNOWN: break;
-  }
+bool DPAUCS_withRawAsLogicAddress( uint16_t type, void* addr, size_t size, void(*func)(const DPAUCS_logicAddress_t*,void*), void* param ){
+  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( type );
+  if( handler && handler->withRawAsLogicAddress )
+    return (*handler->withRawAsLogicAddress)( type, addr, size, func, param );
+  return false;
+}
+
+bool DPAUCS_isBroadcast( const DPAUCS_logicAddress_t* address){
+  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( address->type );
+  if( handler && handler->isBroadcast )
+    return (*handler->isBroadcast)( address );
   return false;
 }
 
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t* a,const DPAUCS_logicAddress_t* b){
   if( a->type != b->type )
     return false;
-  switch(a->type){
-#ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: {
-      return ((const DPAUCS_logicAddress_IPv4_t*)a)->address == ((const DPAUCS_logicAddress_IPv4_t*)b)->address;
-    } break;
-#endif
-    case DPAUCS_AT_UNKNOWN: break;
-  }
+  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( a->type );
+  if( handler && handler->compare )
+    return (*handler->compare)( a, b );
   return false;
 }
 
 bool DPAUCS_isValidHostAddress(const DPAUCS_logicAddress_t* address){
-  return !DPAUCS_isBroadcast(address);
+  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( address->type );
+  if( handler && handler->isValid )
+    return (*handler->isValid)( address );
+  return false;
 }
 
 bool DPAUCS_copy_logicAddress( DPAUCS_logicAddress_t* dst, const DPAUCS_logicAddress_t* src ){
   if( dst->type != src->type )
     return false;
-  switch(dst->type){
-#ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: {
-      *(DPAUCS_logicAddress_IPv4_t*)dst = *(const DPAUCS_logicAddress_IPv4_t*)src;
-      return true;
-    } break;
-#endif
-    case DPAUCS_AT_UNKNOWN: break;
-  }
+  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( src->type );
+  if( handler && handler->copy )
+    return (*handler->copy)( dst, src );
   return false;
 }
 

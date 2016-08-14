@@ -244,3 +244,45 @@ bool DPAUCS_IPv4_transmit(
   id++;
   return true;
 }
+
+static bool isBroadcast( const DPAUCS_logicAddress_IPv4_t* address ){
+  return address->address == 0xFFFFFFFF;
+}
+
+static bool isValid( const DPAUCS_logicAddress_IPv4_t* address ){
+  return address->address && address->address != 0xFFFFFFFF;
+}
+
+static bool compare( const DPAUCS_logicAddress_IPv4_t* a, const DPAUCS_logicAddress_IPv4_t* b ){
+  return a->address == b->address;
+}
+
+static bool copy( DPAUCS_logicAddress_IPv4_t* dst, const DPAUCS_logicAddress_IPv4_t* src ){
+  *dst = *src;
+  return true;
+}
+
+static bool withRawAsLogicAddress( uint16_t type, void* vaddr, size_t size, void(*func)(const DPAUCS_logicAddress_IPv4_t*,void*), void* param ){
+  if( size != 4 )
+    return false;
+  uint32_t* addr = vaddr;
+  DPAUCS_logicAddress_IPv4_t laddr = {
+    .type = type,
+    .address = DPA_btoh32(*addr)
+  };
+  (*func)( &laddr, param );
+  return true;
+}
+
+DEFINE_ADDRESS_HANDLER_TYPE( IPv4 );
+
+static const DPAUCS_IPv4_addressHandler_t handler = {
+  .type = 0x0800,
+  .isBroadcast = isBroadcast,
+  .isValid = isValid,
+  .compare = compare,
+  .copy = copy,
+  .withRawAsLogicAddress = withRawAsLogicAddress
+};
+
+DPAUCS_EXPORT_ADDRESS_HANDLER( IPv4, &handler );

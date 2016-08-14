@@ -1,17 +1,12 @@
 #ifndef DPAUCS_ARP_H
 #define DPAUCS_ARP_H
 
-#include <DPA/UCS/helper_macros.h>
-
 struct DPAUCS_packet_info;
 struct DPAUCS_address;
 struct DPAUCS_logicAddress;
 
-#define ARP_REQUEST 1
-#define ARP_RESPONSE 2
-
-#ifndef ARP_ENTRY_COUNT
-#define ARP_ENTRY_COUNT 64
+#ifndef ARP_ENTRY_BUFFER_SIZE
+#define ARP_ENTRY_BUFFER_SIZE 1024
 #endif
 
 

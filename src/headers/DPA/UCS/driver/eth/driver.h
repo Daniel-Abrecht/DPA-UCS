@@ -30,5 +30,4 @@ typedef struct DPAUCS_ethernet_driver_entry {
   const struct DPAUCS_ethernet_driver* driver;
 } DPAUCS_ethernet_driver_entry_t;
 
-
 #endif

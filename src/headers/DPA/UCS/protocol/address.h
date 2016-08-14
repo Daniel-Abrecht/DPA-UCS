@@ -19,7 +19,7 @@ typedef struct DPAUCS_interface {
 
 enum DPAUCS_address_types {
 #ifdef USE_IPv4
-  DPAUCS_AT_IPv4 = 1<<0,
+  DPAUCS_AT_IPv4 = 0x0800,
 #endif
 #ifdef USE_IPv6
   DPAUCS_AT_IPv6 = 1<<1,
@@ -48,7 +48,6 @@ typedef struct DPAUCS_address_pair {
   struct DPAUCS_address* source;
   struct DPAUCS_address* destination;
 } DPAUCS_address_pair_t;
-
 
 enum DPAUCS_mixedAddress_pair_type {
   DPAUCS_AP_ADDRESS,
@@ -114,10 +113,10 @@ const DPAUCS_address_t* DPAUCS_mixedPairComponentToAddress(
   const DPAUCS_mixedAddress_pair_t* mixed,
   bool source_or_destination
 );
-
 bool DPAUCS_isBroadcast(const DPAUCS_logicAddress_t*);
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t*,const DPAUCS_logicAddress_t*);
 bool DPAUCS_isValidHostAddress(const DPAUCS_logicAddress_t*);
 bool DPAUCS_copy_logicAddress( DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
+bool DPAUCS_withRawAsLogicAddress( uint16_t, void*, size_t, void(*)(const DPAUCS_logicAddress_t*,void*), void* );
 
 #endif

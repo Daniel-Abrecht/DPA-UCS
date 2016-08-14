@@ -52,6 +52,14 @@ bool DPAUCS_layer3_transmit( DPA_stream_t* stream, const DPAUCS_mixedAddress_pai
   return false;
 }
 
+const DPAUCS_addressHandler_t* DPAUCS_getAddressHandler( uint16_t type ){
+  DPAUCS_EACH_ADDRESS_HANDLER( it ){
+    if( (*it)->type == type )
+      return *it;
+  }
+  return 0;
+}
+
 bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types type, size_t* limit ){
   switch( type ){
 

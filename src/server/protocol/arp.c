@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include <string.h>
+#include <stdbool.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
 #include <DPA/utils/utils.h>
@@ -7,37 +7,50 @@
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/ethtypes.h>
-#include <DPA/UCS/protocol/anyAddress.h>
+
+
+enum arp_operation {
+  ARP_OP_REQUEST  = 1,
+  ARP_OP_RESPONSE = 2
+};
 
 typedef struct {
-  uint8_t referenceCount;
-  // Enougth memory for any kind of address //
+  uint16_t referenceCount;
   DPAUCS_address_t address;
-  char followingAddressMemory[sizeof(DPAUCS_any_logicAddress_t)-sizeof(DPAUCS_logicAddress_t)];
-  ////
+  char followingAddressMemory[];
 } ARP_entry_t;
 
-ARP_entry_t entries[ ARP_ENTRY_COUNT ];
+
+static char entries[ ARP_ENTRY_BUFFER_SIZE ];
+static const ARP_entry_t *entries_end;
+
+
+static inline size_t getLargestAddressSize( void ){
+  static size_t size = 0;
+  return size;
+}
+
+static inline size_t getRealArpEntrySize( void ){
+  return sizeof(ARP_entry_t) - sizeof(DPAUCS_address_t) + getLargestAddressSize();
+}
+
+static inline void next_arp_entry( ARP_entry_t** entry ){
+  *(char**)entry += getRealArpEntrySize();
+}
 
 static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress_t* addr ){
-  ARP_entry_t* entry = (void*)( ((char*)addr) - offsetof(DPAUCS_address_t,logicAddress) - offsetof(ARP_entry_t,address) );
+  void* entry = ((char*)addr) - offsetof(DPAUCS_address_t,logicAddress) - offsetof(ARP_entry_t,address);
 
-  if( entry >= entries && entry < entries + ARP_ENTRY_COUNT )
+  if( entry >= (void*)entries && entry < (void*)entries_end )
     return entry;
 
-  for(
-    ARP_entry_t* it = entries;
-    it < entries + ARP_ENTRY_COUNT;
-    it++
-  ) if( 
-    DPAUCS_compare_logicAddress( 
-      &it->address.logicAddress,
-      addr
-    )
-  ) return it;
+  for( ARP_entry_t* it = (ARP_entry_t*)entries; it < entries_end; next_arp_entry(&it) )
+    if( DPAUCS_compare_logicAddress( &it->address.logicAddress, addr ) )
+      return it;
 
   return 0;
 }
+
 
 const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr ){
 
@@ -45,11 +58,8 @@ const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr )
 
   if( !entry ){
 
-    for(
-      ARP_entry_t* it = entries;
-      it < entries + ARP_ENTRY_COUNT;
-      it++
-    ) if(!it->referenceCount)
+  for( ARP_entry_t* it = (ARP_entry_t*)entries; it < entries_end; next_arp_entry(&it) )
+    if(!it->referenceCount)
       entry = it;
 
     if(!entry)
@@ -60,13 +70,14 @@ const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr )
 
   }
 
-  if( entry->referenceCount == 0xFFu )
+  if( entry->referenceCount == 0xFFFFu )
     return 0;
 
   entry->referenceCount++;
 
   return &entry->address;
 }
+
 
 bool DPAUCS_arpCache_deregister( const DPAUCS_logicAddress_t* addr ){
   ARP_entry_t* entry = arpCache_getEntryByAddress(addr);
@@ -76,6 +87,7 @@ bool DPAUCS_arpCache_deregister( const DPAUCS_logicAddress_t* addr ){
   return true;
 }
 
+
 DPAUCS_address_t* DPAUCS_arpCache_getAddress( const DPAUCS_logicAddress_t* la ){
   ARP_entry_t* entry = arpCache_getEntryByAddress( la );
   if(!entry)
@@ -83,87 +95,71 @@ DPAUCS_address_t* DPAUCS_arpCache_getAddress( const DPAUCS_logicAddress_t* la ){
   return &entry->address;
 }
 
+
+void checkIfMyAddress( const DPAUCS_logicAddress_t* address, void* param ){
+  bool* result = param;
+  *result = DPAUCS_isValidHostAddress(address)
+         && DPAUCS_has_logicAddress(address);
+}
+
+
 void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
 
   DPAUCS_arp_t* arp = info->payload;
 
-  uint8_t 
-    *sha = (uint8_t*)info->payload + sizeof(DPAUCS_arp_t), // Sender hardware address
+  char
+    *sha = (char*)info->payload + sizeof(DPAUCS_arp_t), // Sender hardware address
     *spa = sha + arp->hlen, // Sender protocol address
     *tha = spa + arp->plen, // Target hardware address
     *tpa = tha + arp->hlen  // Target protocol address
   ;
 
-  (void)sha;
-  (void)spa;
-  (void)tha;
-  (void)tpa;
-
   // handle only long enough hardware adresses
   if( arp->hlen != sizeof(DPAUCS_mac_t) )
     return;
 
-  switch( DPA_btoh16( arp->ptype ) ){
-#ifdef USE_IPv4
-    case ETH_TYPE_IP_V4: {
-      // IPv4 addresses must be 4 bytes long
-      if( arp->plen != 4 ) return;
+  bool result = false;
+  DPAUCS_withRawAsLogicAddress( arp->ptype, tpa, arp->plen, checkIfMyAddress, &result );
+  if( !result ) return;
 
-      uint32_t src_ip  = DPA_btoh32( *(uint32_t*)spa );
-      uint32_t dest_ip = DPA_btoh32( *(uint32_t*)tpa );
+  switch( (enum arp_operation)DPA_btoh16( arp->oper ) ){
+    case ARP_OP_REQUEST: { // request recived, make a response
 
-      if( dest_ip ){
-        DPAUCS_logicAddress_IPv4_t addr = {
-          DPAUCS_LA_IPv4_INIT,
-          .address = dest_ip
-        };
-        if( !DPAUCS_isValidHostAddress(&addr.logicAddress)
-         || !DPAUCS_has_logicAddress(&addr.logicAddress)
-        ) return;
-      }
+      DPAUCS_packet_info_t infReply = *info;
+      // set destination mac of ethernet frame to source mac of recived frame 
+      memcpy(infReply.destination_mac,info->source_mac,sizeof(DPAUCS_mac_t));
 
-      switch( DPA_btoh16( arp->oper ) ){
-        case ARP_REQUEST: { // request recived, make a response
+      // Fill in source mac and payload pointing to new buffer
+      // Initializes ethernet frame
+      DPAUCS_preparePacket(&infReply);
 
-          DPAUCS_packet_info_t infReply = *info;
-          // set destination mac of ethernet frame to source mac of recived frame 
-          memcpy(infReply.destination_mac,info->source_mac,sizeof(DPAUCS_mac_t));
+      DPAUCS_arp_t* rarp = infReply.payload;
+      *rarp = *arp; // preserve htype, ptype, etc.
 
-          // Fill in source mac and payload pointing to new buffer
-          // Initializes ethernet frame
-          DPAUCS_preparePacket(&infReply);
+      rarp->oper = DPA_htob16( ARP_OP_RESPONSE );
 
-          DPAUCS_arp_t* rarp = infReply.payload;
-          *rarp = *arp; // preserve htype, ptype, etc.
+      char
+        *rsha = (char*)infReply.payload + sizeof(DPAUCS_arp_t), // Sender hardware address
+        *rspa = rsha + rarp->hlen, // Sender protocol address
+        *rtha = rspa + rarp->plen, // Target hardware address
+        *rtpa = rtha + rarp->hlen  // Target protocol address
+      ;
 
-          rarp->oper = DPA_htob16( ARP_RESPONSE );
+      memcpy(rsha,info->interface->mac,sizeof(DPAUCS_mac_t)); // source is my mac
+      memcpy(rspa,spa,arp->plen); // my source mac is the previous target ip
+      memcpy(rtha,sha,sizeof(DPAUCS_mac_t)); // target mac is previous source mac
+      memcpy(rtpa,tpa,arp->plen); // target ip is previous source ip
 
-          uint8_t 
-            *rsha = (uint8_t*)infReply.payload + sizeof(DPAUCS_arp_t), // Sender hardware address
-            *rspa = rsha + rarp->hlen, // Sender protocol address
-            *rtha = rspa + rarp->plen, // Target hardware address
-            *rtpa = rtha + rarp->hlen  // Target protocol address
-          ;
-
-          memcpy(rsha,info->interface->mac,sizeof(DPAUCS_mac_t)); // source is my mac
-          *(uint32_t*)rspa = DPA_htob32(dest_ip); // my source mac is the previous target ip
-          memcpy(rtha,sha,sizeof(DPAUCS_mac_t)); // target mac is previous source mac
-          *(uint32_t*)rtpa = DPA_htob32(src_ip); // target ip is previous source ip
-
-          // send ethernet frame
-          DPAUCS_sendPacket(
-            &infReply,
-            sizeof(DPAUCS_arp_t) + 2*sizeof(DPAUCS_mac_t) + 8 // 8: 2*IPv4
-          );
-
-        } break;
-        case ARP_RESPONSE: {
-          // May be usful later
-        } break;
-      }
+      // send ethernet frame
+      DPAUCS_sendPacket(
+        &infReply,
+        sizeof(DPAUCS_arp_t) + 2*sizeof(DPAUCS_mac_t) + 8 // 8: 2*IPv4
+      );
 
     } break;
-#endif
+    case ARP_OP_RESPONSE: {
+      // May be usful later
+    } break;
   }
 
 }

@@ -49,7 +49,7 @@ static inline void tcp_una_change_handler( DPAUCS_transmissionControlBlock_t* tc
 static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
-  for( DPAUCS_transmissionControlBlock_t* it=start; it<end ;it++ )
+  for( DPAUCS_transmissionControlBlock_t* it=start; it<end ; it++ )
     if( it->state != TCP_CLOSED_STATE
      && it->srcPort == tcb->srcPort
      && it->destPort == tcb->destPort
@@ -137,35 +137,13 @@ void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DP
   tcp->flags = DPA_htob16( ( ( sizeof( *tcp ) / 4 ) << 12 ) | SEG->flags );
 }
 
-#ifdef USE_IPv4
-static uint16_t tcp_IPv4_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
-  struct packed pseudoHeader {
-    uint32_t src, dst;
-    uint8_t padding, protocol;
-    uint16_t length;
-  };
+static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
+  (void)tcp;
   DPAUCS_logicAddress_pair_t fromTo;
   DPAUCS_mixedPairToLogicAddress( &fromTo, &tcb->fromTo );
-  struct pseudoHeader pseudoHeader = {
-    .src = DPA_htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.source     )->address ),
-    .dst = DPA_htob32( ((DPAUCS_logicAddress_IPv4_t*)fromTo.destination)->address ),
-    .padding = 0,
-    .protocol = PROTOCOL_TCP,
-    .length = DPA_htob16( length )
-  };
-  (void)tcp;
-  return checksum( &pseudoHeader, sizeof(pseudoHeader) );
-}
-#endif
-
-static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
-
-  switch( DPAUCS_mixedPairGetType( &tcb->fromTo ) ){
-#ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: return tcp_IPv4_pseudoHeaderChecksum(tcb,tcp,length);
-#endif
-    case DPAUCS_AT_UNKNOWN: break;
-  }
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( &tcb->fromTo ) );
+  if( handler && handler->calculatePseudoHeaderChecksum )
+    return (*handler->calculatePseudoHeaderChecksum)( fromTo.source, fromTo.destination, PROTOCOL_TCP, length );
   return 0;
 }
 
@@ -422,7 +400,7 @@ static inline bool tcp_is_tcb_valid( DPAUCS_transmissionControlBlock_t* tcb ){
       && DPAUCS_isValidHostAddress( lap.destination );
 }
 
-static inline bool tcp_get_recivewindow_data_offset( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG, uint16_t* offset ){
+static inline bool tcp_get_receivewindow_data_offset( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG, uint16_t* offset ){
   uint32_t off = tcb->RCV.NXT - SEG->SEQ;
   *offset = off;
   return off + 1 <= tcb->RCV.WND;
@@ -494,7 +472,7 @@ static bool tcp_processPacket(
   )) return false;
 
   uint16_t offset;
-  tcp_get_recivewindow_data_offset( tcb, &SEG, &offset );
+  tcp_get_receivewindow_data_offset( tcb, &SEG, &offset );
 
   if( n < offset && !( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ) )
     return false;
@@ -635,7 +613,7 @@ static bool tcp_processHeader(
       return false;
     stcb->currentId = tcb.currentId;
     uint16_t rcv_data_offset;
-    if( tcp_get_recivewindow_data_offset( stcb, &SEG, &rcv_data_offset ) )
+    if( tcp_get_receivewindow_data_offset( stcb, &SEG, &rcv_data_offset ) )
       return false; // out of window
     // may be in window
     if(!last)
@@ -803,10 +781,10 @@ void DPAUCS_tcp_close( void* cid ){
 
 static void tcp_receiveFailtureHandler( void* id ){
   (void)id;
-  DPA_LOG("-- tcp_reciveFailtureHandler | id: %p --\n",id);
+  DPA_LOG("-- tcp_receiveFailtureHandler | id: %p --\n",id);
 }
 
-static DPAUCS_layer3_protocolHandler_t tcp_handler = {
+static DPAUCS_l4_handler_t tcp_handler = {
   .protocol = PROTOCOL_TCP,
   .onreceive = &tcp_receiveHandler,
   .onreceivefailture = &tcp_receiveFailtureHandler

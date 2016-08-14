@@ -5,8 +5,10 @@
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 
+#define DPAUCS_ETH_T_IPv4 0x0800
+
 #define DPAUCS_LA_IPv4_INIT \
-  .type = DPAUCS_AT_IPv4
+  .type = DPAUCS_ETH_T_IPv4
 
 #define DPAUCS_IPv4_INIT \
   .address = { .logicAddress = { DPAUCS_LA_IPv4_INIT } }
@@ -18,7 +20,6 @@
              | ((uint32_t)c<<8) \
              | ((uint32_t)d) \
   }
-
 
 struct DPAUCS_packet_info;
 struct DPA_stream;
@@ -50,7 +51,7 @@ typedef struct DPAUCS_IPv4_address {
 
 typedef struct DPAUCS_logicAddress_IPv4 {
   union {
-    enum DPAUCS_address_types type;
+    uint16_t type;
     DPAUCS_logicAddress_t logicAddress;
   };
   uint32_t address;
@@ -72,18 +73,6 @@ typedef struct DPAUCS_IPv4_fragment {
 bool DPAUCS_areFragmentsFromSameIPv4Packet(
   DPAUCS_IPv4_packetInfo_t*,
   DPAUCS_IPv4_packetInfo_t*
-);
-
-bool DPAUCS_IPv4_transmit(
-  struct DPA_stream* inputStream,
-  const struct DPAUCS_mixedAddress_pair* fromTo,
-  uint8_t type,
-  size_t max_size
-);
-
-void DPAUCS_IPv4_handler(
-  struct DPAUCS_packet_info* info,
-  DPAUCS_IPv4_t* ip
 );
 
 #endif

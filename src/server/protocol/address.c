@@ -1,16 +1,17 @@
 #include <DPA/UCS/server.h>
+#include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/layer3.h>
 
 bool DPAUCS_withRawAsLogicAddress( uint16_t type, void* addr, size_t size, void(*func)(const DPAUCS_logicAddress_t*,void*), void* param ){
-  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( type );
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( type );
   if( handler && handler->withRawAsLogicAddress )
     return (*handler->withRawAsLogicAddress)( type, addr, size, func, param );
   return false;
 }
 
 bool DPAUCS_isBroadcast( const DPAUCS_logicAddress_t* address){
-  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( address->type );
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( address->type );
   if( handler && handler->isBroadcast )
     return (*handler->isBroadcast)( address );
   return false;
@@ -19,14 +20,14 @@ bool DPAUCS_isBroadcast( const DPAUCS_logicAddress_t* address){
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t* a,const DPAUCS_logicAddress_t* b){
   if( a->type != b->type )
     return false;
-  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( a->type );
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( a->type );
   if( handler && handler->compare )
     return (*handler->compare)( a, b );
   return false;
 }
 
 bool DPAUCS_isValidHostAddress(const DPAUCS_logicAddress_t* address){
-  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( address->type );
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( address->type );
   if( handler && handler->isValid )
     return (*handler->isValid)( address );
   return false;
@@ -35,7 +36,7 @@ bool DPAUCS_isValidHostAddress(const DPAUCS_logicAddress_t* address){
 bool DPAUCS_copy_logicAddress( DPAUCS_logicAddress_t* dst, const DPAUCS_logicAddress_t* src ){
   if( dst->type != src->type )
     return false;
-  const DPAUCS_addressHandler_t* handler = DPAUCS_getAddressHandler( src->type );
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( src->type );
   if( handler && handler->copy )
     return (*handler->copy)( dst, src );
   return false;
@@ -163,10 +164,10 @@ bool DPAUCS_mixedPairEqual( const DPAUCS_mixedAddress_pair_t* ma, const DPAUCS_m
       && DPAUCS_compare_logicAddress( la.destination, lb.destination );
 }
 
-enum DPAUCS_address_types DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* addr ){
+uint16_t DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* addr ){
   switch( addr->type ){
     case DPAUCS_AP_ADDRESS      : return addr->address.source->type;
     case DPAUCS_AP_LOGIC_ADDRESS: return addr->logicAddress.source->type;
   }
-  return DPAUCS_AT_UNKNOWN;
+  return 0;
 }

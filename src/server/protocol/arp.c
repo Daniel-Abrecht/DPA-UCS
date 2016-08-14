@@ -5,9 +5,9 @@
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/arp.h>
+#include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/ethtypes.h>
-
 
 enum arp_operation {
   ARP_OP_REQUEST  = 1,
@@ -103,7 +103,7 @@ void checkIfMyAddress( const DPAUCS_logicAddress_t* address, void* param ){
 }
 
 
-void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
+static void packetHandler( DPAUCS_packet_info_t* info ){
 
   DPAUCS_arp_t* arp = info->payload;
 
@@ -119,14 +119,14 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
     return;
 
   bool result = false;
-  DPAUCS_withRawAsLogicAddress( arp->ptype, tpa, arp->plen, checkIfMyAddress, &result );
+  DPAUCS_withRawAsLogicAddress( DPA_btoh16( arp->ptype ), tpa, arp->plen, checkIfMyAddress, &result );
   if( !result ) return;
 
   switch( (enum arp_operation)DPA_btoh16( arp->oper ) ){
-    case ARP_OP_REQUEST: { // request recived, make a response
+    case ARP_OP_REQUEST: { // request received, make a response
 
       DPAUCS_packet_info_t infReply = *info;
-      // set destination mac of ethernet frame to source mac of recived frame 
+      // set destination mac of ethernet frame to source mac of received frame 
       memcpy(infReply.destination_mac,info->source_mac,sizeof(DPAUCS_mac_t));
 
       // Fill in source mac and payload pointing to new buffer
@@ -146,9 +146,9 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
       ;
 
       memcpy(rsha,info->interface->mac,sizeof(DPAUCS_mac_t)); // source is my mac
-      memcpy(rspa,spa,arp->plen); // my source mac is the previous target ip
+      memcpy(rspa,tpa,arp->plen); // my source mac is the previous target ip
       memcpy(rtha,sha,sizeof(DPAUCS_mac_t)); // target mac is previous source mac
-      memcpy(rtpa,tpa,arp->plen); // target ip is previous source ip
+      memcpy(rtpa,spa,arp->plen); // target ip is previous source ip
 
       // send ethernet frame
       DPAUCS_sendPacket(
@@ -163,4 +163,11 @@ void DPAUCS_arp_handler( DPAUCS_packet_info_t* info ){
   }
 
 }
+
+static const DPAUCS_l3_handler_t handler = {
+  .type = DPAUCS_ETH_T_ARP,
+  .packetHandler = &packetHandler
+};
+
+DPAUCS_EXPORT_L3_HANDLER( ARP, &handler );
 

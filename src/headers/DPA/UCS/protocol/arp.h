@@ -9,6 +9,7 @@ struct DPAUCS_logicAddress;
 #define ARP_ENTRY_BUFFER_SIZE 1024
 #endif
 
+#define DPAUCS_ETH_T_ARP 0x0806
 
 typedef struct packed {
   uint16_t htype; // Hardware type
@@ -24,7 +25,6 @@ typedef struct packed {
 
 const DPAUCS_address_t* DPAUCS_arpCache_register( const struct DPAUCS_address* );
 bool DPAUCS_arpCache_deregister( const struct DPAUCS_logicAddress* );
-void DPAUCS_arp_handler( struct DPAUCS_packet_info* info );
 DPAUCS_address_t* DPAUCS_arpCache_getAddress( const struct DPAUCS_logicAddress* );
 
 #endif

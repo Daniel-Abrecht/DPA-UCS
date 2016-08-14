@@ -44,7 +44,7 @@ void DPAUCS_onfatalerror( const char* message );
 
 void DPAUCS_add_logicAddress( const DPAUCS_interface_t*const interface, const DPAUCS_logicAddress_t*const logicAddress );
 void DPAUCS_remove_logicAddress( const struct DPAUCS_logicAddress*const logicAddress );
-void DPAUCS_each_logicAddress(enum DPAUCS_address_types, bool(*)(const struct DPAUCS_logicAddress*,void*), void*);
+void DPAUCS_each_logicAddress(uint16_t, bool(*)(const struct DPAUCS_logicAddress*,void*), void*);
 bool DPAUCS_has_logicAddress(const struct DPAUCS_logicAddress* addr);
 const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_t* addr );
 

@@ -281,7 +281,7 @@ static bool onopen( void* cid ){
 #define MEMEQ( STR, MEM, N ) ( N == sizeof(STR)-1 && !memcmp( (MEM), (STR), sizeof(STR)-1 ) )
 #define S(STR) STR, sizeof(STR)-1
 static void onreceive( void* cid, void* data, size_t size ){
-  DPA_LOG("http_service->onrecive: \n");
+  DPA_LOG("http_service->onreceive: \n");
 
   HTTP_Connections_t* c = getConnection(cid);
   if(!c){

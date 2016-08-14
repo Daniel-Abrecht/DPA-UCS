@@ -44,7 +44,7 @@ enum icmp_types {
   ICMP_PHOTURIS
 };
 
-static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, uint16_t offset, uint16_t length, DPAUCS_fragment_t** fragment, void* payload, bool last ){
+static bool icmp_receiveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, uint16_t offset, uint16_t length, DPAUCS_fragment_t** fragment, void* payload, bool last ){
   if(!last)
     return false;
   (void)offset;
@@ -71,9 +71,9 @@ static bool icmp_reciveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address
   return true;
 }
 
-static DPAUCS_layer3_protocolHandler_t icmp_handler = {
+static DPAUCS_l4_handler_t icmp_handler = {
   .protocol = PROTOCOL_ICMP,
-  .onreceive = &icmp_reciveHandler
+  .onreceive = &icmp_receiveHandler
 };
 
 static int counter = 0;

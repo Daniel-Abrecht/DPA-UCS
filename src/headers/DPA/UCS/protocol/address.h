@@ -17,24 +17,14 @@ typedef struct DPAUCS_interface {
   DPAUCS_mac_t mac;
 } DPAUCS_interface_t;
 
-enum DPAUCS_address_types {
-#ifdef USE_IPv4
-  DPAUCS_AT_IPv4 = 0x0800,
-#endif
-#ifdef USE_IPv6
-  DPAUCS_AT_IPv6 = 1<<1,
-#endif
-  DPAUCS_AT_UNKNOWN = 1<<15
-};
-
 typedef struct DPAUCS_logicAddress {
-  enum DPAUCS_address_types type;
+  uint16_t type;
 } DPAUCS_logicAddress_t;
 
 typedef struct DPAUCS_address {
   DPAUCS_mac_t mac;
   union {
-    enum DPAUCS_address_types type;
+    uint16_t type;
     DPAUCS_logicAddress_t logicAddress;
   };
 } DPAUCS_address_t;
@@ -104,7 +94,7 @@ bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DP
 bool DPAUCS_mixedPairToAddress( DPAUCS_address_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
 bool DPAUCS_mixedPairToLogicAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
 bool DPAUCS_mixedPairEqual( const DPAUCS_mixedAddress_pair_t*, const DPAUCS_mixedAddress_pair_t* );
-enum DPAUCS_address_types DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* );
+uint16_t DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* );
 const DPAUCS_logicAddress_t* DPAUCS_mixedPairComponentToLogicAddress(
   const DPAUCS_mixedAddress_pair_t* mixed,
   bool source_or_destination

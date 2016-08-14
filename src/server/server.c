@@ -7,13 +7,11 @@
 #include <DPA/UCS/service.h>
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
-#include <DPA/UCS/protocol/ip.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/tcp.h>
 #include <DPA/UCS/helper_macros.h>
 #include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/protocol/ethtypes.h>
 #include <DPA/UCS/driver/eth/driver.h>
 
 static void DPAUCS_init( void );
@@ -102,7 +100,7 @@ void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress 
   }
 }
 
-void DPAUCS_each_logicAddress(enum DPAUCS_address_types type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
+void DPAUCS_each_logicAddress(uint16_t type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
   for( int i=0; i<MAX_LOGIC_ADDRESSES; i++ )
     if( address_list[i].logicAddress->type & type )
       if( !(*func)(address_list[i].logicAddress,x) )
@@ -283,10 +281,8 @@ static void DPAUCS_receive_next(){
     return;
   }
 
-  switch(info.type){
-    case ETH_TYPE_ARP: DPAUCS_arp_handler(&info); break;
-    case ETH_TYPE_IP_V4: DPAUCS_ip_handler(&info); break;
-  }
+  DPAUCS_layer3_packetHandler(&info);
+
 }
 
 void DPAUCS_doNextTask( void ){

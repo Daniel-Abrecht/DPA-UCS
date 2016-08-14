@@ -92,7 +92,6 @@ FILES += utils/stream.o
 FILES += utils/mempool.o
 FILES += server/checksum.o
 FILES += server/protocol/arp.o
-FILES += server/protocol/ip.o
 FILES += server/protocol/layer3.o
 FILES += server/protocol/ip_stack.o
 FILES += server/protocol/address.o

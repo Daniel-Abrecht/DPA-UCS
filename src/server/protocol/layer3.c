@@ -1,6 +1,6 @@
 #include <stddef.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/protocol/IPv4.h>
+#include <DPA/UCS/packet.h>
 #include <DPA/UCS/protocol/layer3.h>
 
 DPA_DEFINE_RINGBUFFER(unsigned char,DPA_uchar_ringbuffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
@@ -11,20 +11,20 @@ static DPA_stream_t outputStream = {
   &outputStreamBufferBuffer
 };
 
-DPAUCS_layer3_protocolHandler_t* layer3_protocolHandlers[MAX_LAYER3_PROTO_HANDLERS];
+DPAUCS_l4_handler_t* l4_handlers[MAX_LAYER3_PROTO_HANDLERS];
 
-void DPAUCS_layer3_addProtocolHandler(DPAUCS_layer3_protocolHandler_t* handler){
+void DPAUCS_layer3_addProtocolHandler(DPAUCS_l4_handler_t* handler){
   for(int i=0; i<MAX_LAYER3_PROTO_HANDLERS; i++)
-    if( !layer3_protocolHandlers[i] ){
-      layer3_protocolHandlers[i] = handler;
+    if( !l4_handlers[i] ){
+      l4_handlers[i] = handler;
       break;
     }
 }
 
-void DPAUCS_layer3_removeProtocolHandler(DPAUCS_layer3_protocolHandler_t* handler){
+void DPAUCS_layer3_removeProtocolHandler(DPAUCS_l4_handler_t* handler){
   for(int i=0; i<MAX_LAYER3_PROTO_HANDLERS; i++)
-    if( layer3_protocolHandlers[i] == handler ){
-      layer3_protocolHandlers[i] = 0;
+    if( l4_handlers[i] == handler ){
+      l4_handlers[i] = 0;
       break;
     }
 }
@@ -33,26 +33,24 @@ DPA_stream_t* DPAUCS_layer3_createTransmissionStream( void ){
   return &outputStream;
 }
 
+void DPAUCS_layer3_destroyTransmissionStream( DPA_stream_t* stream ){
+  DPA_stream_reset( stream );
+}
+
 bool DPAUCS_layer3_transmit( DPA_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t max_size ){
-
-  switch( DPAUCS_mixedPairGetType( fromTo ) ){
-
-#ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: return DPAUCS_IPv4_transmit(
-      stream,
-      fromTo,
-      type,
-      max_size
-    );
-#endif
-    case DPAUCS_AT_UNKNOWN: break;
-
-  }
-
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( fromTo ) );
+  if( handler && handler->transmit )
+    return (*handler->transmit)( stream, fromTo, type, max_size );
   return false;
 }
 
-const DPAUCS_addressHandler_t* DPAUCS_getAddressHandler( uint16_t type ){
+void DPAUCS_layer3_packetHandler(  DPAUCS_packet_info_t* info ){
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( info->type );
+  if( handler && handler->packetHandler )
+    (*handler->packetHandler)( info );
+}
+
+const DPAUCS_l3_handler_t* DPAUCS_getAddressHandler( uint16_t type ){
   DPAUCS_EACH_ADDRESS_HANDLER( it ){
     if( (*it)->type == type )
       return *it;
@@ -60,18 +58,11 @@ const DPAUCS_addressHandler_t* DPAUCS_getAddressHandler( uint16_t type ){
   return 0;
 }
 
-bool DPAUCS_layer3_getPacketSizeLimit( enum DPAUCS_address_types type, size_t* limit ){
-  switch( type ){
-
-#ifdef USE_IPv4
-    case DPAUCS_AT_IPv4: *limit = 0xFFFFu; return true;
-#endif
-    case DPAUCS_AT_UNKNOWN: break;
-
+bool DPAUCS_layer3_getPacketSizeLimit( uint16_t type, size_t* limit ){
+  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( type );
+  if( handler ){
+    *limit = handler->packetSizeLimit;
+    return true;
   }
   return false;
-}
-
-void DPAUCS_layer3_destroyTransmissionStream( DPA_stream_t* stream ){
-  DPA_stream_reset( stream );
 }

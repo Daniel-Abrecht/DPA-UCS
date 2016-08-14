@@ -6,9 +6,12 @@
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
-#include <DPA/UCS/protocol/ethtypes.h>
 
-void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
+static void packetHandler( DPAUCS_packet_info_t* info ){
+  if( (*(uint8_t*)info->payload) >> 4 != 4 ) // Version must be 4
+    return;
+
+  DPAUCS_IPv4_t* ip = info->payload;
   if( DPA_btoh16(ip->length) > info->size )
     return;
 
@@ -25,12 +28,12 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
     ) return;
   }
 
-  DPAUCS_layer3_protocolHandler_t* handler = 0;
+  DPAUCS_l4_handler_t* handler = 0;
   for(int i=0; i<MAX_LAYER3_PROTO_HANDLERS; i++)
-    if( layer3_protocolHandlers[i]
-     && layer3_protocolHandlers[i]->protocol == ip->protocol
+    if( l4_handlers[i]
+     && l4_handlers[i]->protocol == ip->protocol
     ){
-      handler = layer3_protocolHandlers[i];
+      handler = l4_handlers[i];
       break;
     }
   if(!handler) return; 
@@ -49,13 +52,13 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
     },
     .src = {
       .address = {
-        .type = DPAUCS_AT_IPv4
+        .type = DPAUCS_ETH_T_IPv4
       },
       .ip = source
     },
     .dest = {
       .address = {
-        .type = DPAUCS_AT_IPv4
+        .type = DPAUCS_ETH_T_IPv4
       },
       .ip = destination
     },
@@ -150,7 +153,7 @@ void DPAUCS_IPv4_handler( DPAUCS_packet_info_t* info, DPAUCS_IPv4_t* ip ){
 
 }
 
-bool DPAUCS_IPv4_transmit(
+static bool transmit(
   DPA_stream_t* inputStream,
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
@@ -194,7 +197,7 @@ bool DPAUCS_IPv4_transmit(
     // prepare next packet
     DPAUCS_packet_info_t p;
     memset( &p, 0, sizeof(DPAUCS_packet_info_t) );
-    p.type = ETH_TYPE_IP_V4;
+    p.type = DPAUCS_ETH_T_IPv4;
     p.interface = interface;
     memcpy( p.destination_mac, dst->address.mac, sizeof(DPAUCS_mac_t) );
     memcpy( p.source_mac, src->address.mac, sizeof(DPAUCS_mac_t) );
@@ -274,15 +277,40 @@ static bool withRawAsLogicAddress( uint16_t type, void* vaddr, size_t size, void
   return true;
 }
 
+static uint16_t calculatePseudoHeaderChecksum(
+  const DPAUCS_logicAddress_IPv4_t* source,
+  const DPAUCS_logicAddress_IPv4_t* destination,
+  uint8_t protocol,
+  uint16_t length
+){
+  struct packed pseudoHeader {
+    uint32_t src, dst;
+    uint8_t padding, protocol;
+    uint16_t length;
+  };
+  struct pseudoHeader pseudoHeader = {
+    .src = DPA_htob32( source->address ),
+    .dst = DPA_htob32( destination->address ),
+    .padding = 0,
+    .protocol = protocol,
+    .length = DPA_htob16( length )
+  };
+  return checksum( &pseudoHeader, sizeof(pseudoHeader) );
+}
+
 DEFINE_ADDRESS_HANDLER_TYPE( IPv4 );
 
-static const DPAUCS_IPv4_addressHandler_t handler = {
-  .type = 0x0800,
-  .isBroadcast = isBroadcast,
-  .isValid = isValid,
-  .compare = compare,
-  .copy = copy,
-  .withRawAsLogicAddress = withRawAsLogicAddress
+static const DPAUCS_IPv4_l3_handler_t handler = {
+  .type = DPAUCS_ETH_T_IPv4,
+  .packetSizeLimit = 0xFFFFu,
+  .packetHandler = &packetHandler,
+  .transmit = &transmit,
+  .isBroadcast = &isBroadcast,
+  .isValid = &isValid,
+  .compare = &compare,
+  .copy = &copy,
+  .withRawAsLogicAddress = &withRawAsLogicAddress,
+  .calculatePseudoHeaderChecksum = &calculatePseudoHeaderChecksum
 };
 
 DPAUCS_EXPORT_ADDRESS_HANDLER( IPv4, &handler );

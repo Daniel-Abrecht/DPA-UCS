@@ -1,5 +1,4 @@
 #include <DPA/UCS/server.h>
-#include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/layer3.h>
 
@@ -46,19 +45,19 @@ bool DPAUCS_persistMixedAddress( DPAUCS_mixedAddress_pair_t* map ){
   if( map->flags & DPAUCS_F_AP_PERSISTENT
    || map->type != DPAUCS_AP_ADDRESS
   ) return false;
-  const DPAUCS_logicAddress_t* src = DPAUCS_get_logicAddress( &map->address.source->logicAddress );
+  const DPAUCS_logicAddress_t* src = DPAUCS_get_logicAddress( &map->address.source->logic );
   if( src ){
-    map->logicAddress.source = src;
+    map->logic.source = src;
   }else{
     map->flags |= DPAUCS_F_AP_SRC_SVR_OR_APC;
-    map->logicAddress.source = &DPAUCS_arpCache_register( map->address.source )->logicAddress;
+    map->logic.source = &DPAUCS_arpCache_register( map->address.source )->logic;
   }
-  const DPAUCS_logicAddress_t* dest = DPAUCS_get_logicAddress( &map->address.source->logicAddress );
+  const DPAUCS_logicAddress_t* dest = DPAUCS_get_logicAddress( &map->address.source->logic );
   if( dest ){
-    map->logicAddress.destination = dest;
+    map->logic.destination = dest;
   }else{
     map->flags |= DPAUCS_F_AP_DST_SVR_OR_APC;
-    map->logicAddress.destination = &DPAUCS_arpCache_register( map->address.destination )->logicAddress;
+    map->logic.destination = &DPAUCS_arpCache_register( map->address.destination )->logic;
   }
   map->type = DPAUCS_AP_LOGIC_ADDRESS;
   map->flags |= DPAUCS_F_AP_PERSISTENT;
@@ -70,9 +69,9 @@ bool DPAUCS_freeMixedAddress( DPAUCS_mixedAddress_pair_t* map ){
      || map->type != DPAUCS_AP_LOGIC_ADDRESS
   ) return false;
   if(!( map->flags & DPAUCS_F_AP_SRC_SVR_OR_APC ))
-    DPAUCS_arpCache_deregister( map->logicAddress.source );
+    DPAUCS_arpCache_deregister( map->logic.source );
   if(!( map->flags & DPAUCS_F_AP_DST_SVR_OR_APC ))
-    DPAUCS_arpCache_deregister( map->logicAddress.destination );
+    DPAUCS_arpCache_deregister( map->logic.destination );
   return true;
 }
 
@@ -86,7 +85,7 @@ bool DPAUCS_addressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_
 bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_logicAddress_pair_t* address ){
   mixed->flags = 0;
   mixed->type = DPAUCS_AP_LOGIC_ADDRESS;
-  mixed->logicAddress = *address;
+  mixed->logic = *address;
   return true;
 }
 
@@ -97,12 +96,12 @@ const DPAUCS_logicAddress_t* DPAUCS_mixedPairComponentToLogicAddress(
   switch( mixed->type ){
     case DPAUCS_AP_ADDRESS:
       return source_or_destination
-       ? &mixed->address.source->logicAddress
-       : &mixed->address.destination->logicAddress;
+       ? &mixed->address.source->logic
+       : &mixed->address.destination->logic;
     case DPAUCS_AP_LOGIC_ADDRESS:
       return source_or_destination
-       ? mixed->logicAddress.source
-       : mixed->logicAddress.destination;
+       ? mixed->logic.source
+       : mixed->logic.destination;
   }
   return 0;
 }
@@ -124,8 +123,8 @@ const DPAUCS_address_t* DPAUCS_mixedPairComponentToAddress(
                               : DPAUCS_F_AP_DST_SVR_OR_APC
       ))) break;
       const DPAUCS_logicAddress_t* logicAddress = source_or_destination
-                                            ? mixed->logicAddress.source
-                                            : mixed->logicAddress.destination;
+                                            ? mixed->logic.source
+                                            : mixed->logic.destination;
       return DPAUCS_arpCache_getAddress( logicAddress );
     }
   }
@@ -146,11 +145,11 @@ bool DPAUCS_mixedPairToAddress( DPAUCS_address_pair_t* address, const DPAUCS_mix
 bool DPAUCS_mixedPairToLogicAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed ){
   switch( mixed->type ){
     case DPAUCS_AP_ADDRESS: {
-      address->source = &mixed->address.source->logicAddress;
-      address->destination = &mixed->address.destination->logicAddress;
+      address->source = &mixed->address.source->logic;
+      address->destination = &mixed->address.destination->logic;
     } return true;
     case DPAUCS_AP_LOGIC_ADDRESS: {
-      *address = mixed->logicAddress;
+      *address = mixed->logic;
     } return true;
   }
   return false;
@@ -167,7 +166,7 @@ bool DPAUCS_mixedPairEqual( const DPAUCS_mixedAddress_pair_t* ma, const DPAUCS_m
 uint16_t DPAUCS_mixedPairGetType( const DPAUCS_mixedAddress_pair_t* addr ){
   switch( addr->type ){
     case DPAUCS_AP_ADDRESS      : return addr->address.source->type;
-    case DPAUCS_AP_LOGIC_ADDRESS: return addr->logicAddress.source->type;
+    case DPAUCS_AP_LOGIC_ADDRESS: return addr->logic.source->type;
   }
   return 0;
 }

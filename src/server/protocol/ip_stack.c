@@ -56,8 +56,8 @@ bool DPAUCS_areFragmentsFromSameIPv4Packet( DPAUCS_IPv4_packetInfo_t* a, DPAUCS_
   return (
       a->id == b->id
    && a->tos == b->tos
-   && a->src.ip == b->src.ip
-   && a->src.ip == b->src.ip
+   && DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&a->src.address)->ip  == DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&b->src.address)->ip
+   && DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&a->dest.address)->ip == DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&b->dest.address)->ip
    && !memcmp(a->src.address.mac,b->src.address.mac,sizeof(DPAUCS_mac_t))
    && !memcmp(a->dest.address.mac,b->dest.address.mac,sizeof(DPAUCS_mac_t))
   );

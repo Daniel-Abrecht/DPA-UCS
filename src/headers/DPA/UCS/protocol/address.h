@@ -7,9 +7,8 @@
 #include <DPA/UCS/helper_macros.h>
 
 #define DPAUCS_MAC( a,b,c,d,e,f ) {0x##a,0x##b,0x##c,0x##d,0x##e,0x##f}
-
 #define DPAUCS_ANY_ADDRESS 0
-#define DPAUCS_AT_LAYER3 ( AT_IPv4 | AT_IPv6 )
+#define DPAUCS_GET_ADDR( T, X ) ((T*)( &(X)->type ))
 
 typedef uint8_t DPAUCS_mac_t[6];
 
@@ -17,6 +16,7 @@ typedef struct DPAUCS_interface {
   DPAUCS_mac_t mac;
 } DPAUCS_interface_t;
 
+// Don't change this struct
 typedef struct DPAUCS_logicAddress {
   uint16_t type;
 } DPAUCS_logicAddress_t;
@@ -25,7 +25,7 @@ typedef struct DPAUCS_address {
   DPAUCS_mac_t mac;
   union {
     uint16_t type;
-    DPAUCS_logicAddress_t logicAddress;
+    DPAUCS_logicAddress_t logic;
   };
 } DPAUCS_address_t;
 
@@ -53,7 +53,7 @@ enum ap_flags {
 typedef struct DPAUCS_mixedAddress_pair {
   union {
     DPAUCS_address_pair_t address;
-    DPAUCS_logicAddress_pair_t logicAddress;
+    DPAUCS_logicAddress_pair_t logic;
   };
   enum DPAUCS_mixedAddress_pair_type type;
   uint8_t flags;

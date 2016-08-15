@@ -29,6 +29,8 @@ LINUX_LIBS=
 test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined
 test-% test: LINUX_LIBS += -lgcov
 
+OPTIONS        += $(O)
+
 ifdef SANITIZE
 OPTIONS        += -fsanitize=undefined
 endif

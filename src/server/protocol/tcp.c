@@ -359,7 +359,7 @@ void tcb_from_tcp(
 
   tcb->srcPort     = DPA_btoh16( tcp->destination );
   tcb->destPort    = DPA_btoh16( tcp->source );
-  tcb->service     = DPAUCS_get_service( &to->logicAddress, DPA_btoh16( tcp->destination ), PROTOCOL_TCP );
+  tcb->service     = DPAUCS_get_service( &to->logic, DPA_btoh16( tcp->destination ), PROTOCOL_TCP );
   tcb->currentId   = id;
   tcb->next_length = 0;
 

@@ -29,7 +29,7 @@ void server_main(void* arg){
   };
 
   for( unsigned i=0; i<sizeof(IPv4addrs); i++ )
-    DPAUCS_add_logicAddress( interface, &IPv4addrs[i].logicAddress );
+    DPAUCS_add_logicAddress( interface, &IPv4addrs[i].logic );
 #endif
 
   DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 80, &http_service );

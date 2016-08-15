@@ -20,7 +20,6 @@ typedef struct {
   char followingAddressMemory[];
 } ARP_entry_t;
 
-
 static char entries[ ARP_ENTRY_BUFFER_SIZE ];
 static const ARP_entry_t *entries_end;
 
@@ -39,13 +38,13 @@ static inline void next_arp_entry( ARP_entry_t** entry ){
 }
 
 static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress_t* addr ){
-  void* entry = ((char*)addr) - offsetof(DPAUCS_address_t,logicAddress) - offsetof(ARP_entry_t,address);
+  void* entry = ((char*)addr) - offsetof(DPAUCS_address_t,logic) - offsetof(ARP_entry_t,address);
 
   if( entry >= (void*)entries && entry < (void*)entries_end )
     return entry;
 
   for( ARP_entry_t* it = (ARP_entry_t*)entries; it < entries_end; next_arp_entry(&it) )
-    if( DPAUCS_compare_logicAddress( &it->address.logicAddress, addr ) )
+    if( DPAUCS_compare_logicAddress( &it->address.logic, addr ) )
       return it;
 
   return 0;
@@ -54,7 +53,7 @@ static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress
 
 const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr ){
 
-  ARP_entry_t* entry = arpCache_getEntryByAddress( &addr->logicAddress );
+  ARP_entry_t* entry = arpCache_getEntryByAddress( &addr->logic );
 
   if( !entry ){
 
@@ -66,7 +65,7 @@ const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr )
       return 0;
 
     entry->address = *addr;
-    DPAUCS_copy_logicAddress( &entry->address.logicAddress, &addr->logicAddress );
+    DPAUCS_copy_logicAddress( &entry->address.logic, &addr->logic );
 
   }
 

@@ -21,10 +21,10 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
   {
     DPAUCS_logicAddress_IPv4_t addr = {
       DPAUCS_LA_IPv4_INIT,
-      .address = destination
+      .ip = destination
     };
-    if( !DPAUCS_isValidHostAddress(&addr.logicAddress)
-     || !DPAUCS_has_logicAddress(&addr.logicAddress)
+    if( !DPAUCS_isValidHostAddress(&addr.logic)
+     || !DPAUCS_has_logicAddress(&addr.logic)
     ) return;
   }
 
@@ -54,17 +54,17 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
       .address = {
         .type = DPAUCS_ETH_T_IPv4
       },
-      .ip = source
     },
     .dest = {
       .address = {
         .type = DPAUCS_ETH_T_IPv4
       },
-      .ip = destination
     },
     .id = ip->id,
     .tos = ip->tos,
   };
+  DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&ipInfo.src.address)->ip = source;
+  DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&ipInfo.dest.address)->ip = destination;
   memcpy(ipInfo.src.address.mac,info->source_mac,sizeof(DPAUCS_mac_t));
   memcpy(ipInfo.dest.address.mac,info->destination_mac,sizeof(DPAUCS_mac_t));
 
@@ -162,28 +162,32 @@ static bool transmit(
 
   const DPAUCS_IPv4_address_t* src = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, true );
   const DPAUCS_IPv4_address_t* dst = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, false );
-  DPAUCS_IPv4_address_t tmp_IPv4Addr = { DPAUCS_IPv4_INIT };
+  DPAUCS_IPv4_address_t tmp_IPv4Addr = {
+    .address = {
+      .type = DPAUCS_ETH_T_IPv4
+    }
+  };
 
   static const uint16_t hl = 5;
   static uint16_t id = 0;
 
   if(!dst){
-    DPA_LOG( "DPAUCS_IPv4_transmit: destination address incomplete\n" );
+    DPA_LOG( "transmit: destination address incomplete\n" );
     return false;
   }
-  const DPAUCS_logicAddress_t* laddr = src ? &src->address.logicAddress
+  const DPAUCS_logicAddress_t* laddr = src ? &src->address.logic
                                            : DPAUCS_mixedPairComponentToLogicAddress( fromTo, true );
   if(!laddr){
-    DPA_LOG("DPAUCS_IPv4_transmit: Can't convert source address\n");
+    DPA_LOG("transmit: Can't convert source address\n");
     return false;
   }
   const DPAUCS_interface_t* interface = DPAUCS_getInterface( laddr );
   if( !interface ){
-    DPA_LOG("DPAUCS_IPv4_transmit: Can't find source interface\n");
+    DPA_LOG( "transmit: Can't find source interface\n" );
     return false;
   }
   if(!src){
-    DPAUCS_copy_logicAddress( &tmp_IPv4Addr.address.logicAddress, laddr );
+    DPAUCS_copy_logicAddress( &tmp_IPv4Addr.address.logic, laddr );
     memcpy( tmp_IPv4Addr.address.mac, interface->mac, sizeof(DPAUCS_mac_t) );
     src = &tmp_IPv4Addr;
   }
@@ -209,8 +213,8 @@ static bool transmit(
     ip->id = DPA_htob16( id );
     ip->ttl = DEFAULT_TTL;
     ip->protocol = type;
-    ip->source = DPA_htob32( src->ip );
-    ip->destination = DPA_htob32( dst->ip );
+    ip->source = DPA_htob32( DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&src->address)->ip );
+    ip->destination = DPA_htob32( DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&dst->address)->ip );
 
     // create content
     size_t msize = DPA_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
@@ -232,7 +236,7 @@ static bool transmit(
     // send packet
     DPAUCS_sendPacket( &p, hl * 4 + s );
     DPA_LOG(
-      "IPv4: Sent fragment offset %lu, payload size %lu\n",
+      "transmit: Sent fragment offset %lu, payload size %lu\n",
       offset, s
     );
 
@@ -249,15 +253,15 @@ static bool transmit(
 }
 
 static bool isBroadcast( const DPAUCS_logicAddress_IPv4_t* address ){
-  return address->address == 0xFFFFFFFF;
+  return address->ip == 0xFFFFFFFF;
 }
 
 static bool isValid( const DPAUCS_logicAddress_IPv4_t* address ){
-  return address->address && address->address != 0xFFFFFFFF;
+  return address->ip && address->ip != 0xFFFFFFFF;
 }
 
 static bool compare( const DPAUCS_logicAddress_IPv4_t* a, const DPAUCS_logicAddress_IPv4_t* b ){
-  return a->address == b->address;
+  return a->ip == b->ip;
 }
 
 static bool copy( DPAUCS_logicAddress_IPv4_t* dst, const DPAUCS_logicAddress_IPv4_t* src ){
@@ -271,7 +275,7 @@ static bool withRawAsLogicAddress( uint16_t type, void* vaddr, size_t size, void
   uint32_t* addr = vaddr;
   DPAUCS_logicAddress_IPv4_t laddr = {
     .type = type,
-    .address = DPA_btoh32(*addr)
+    .ip = DPA_btoh32(*addr)
   };
   (*func)( &laddr, param );
   return true;
@@ -289,8 +293,8 @@ static uint16_t calculatePseudoHeaderChecksum(
     uint16_t length;
   };
   struct pseudoHeader pseudoHeader = {
-    .src = DPA_htob32( source->address ),
-    .dst = DPA_htob32( destination->address ),
+    .src = DPA_htob32( source->ip ),
+    .dst = DPA_htob32( destination->ip ),
     .padding = 0,
     .protocol = protocol,
     .length = DPA_htob16( length )

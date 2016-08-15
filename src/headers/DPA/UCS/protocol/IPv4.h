@@ -10,15 +10,12 @@
 #define DPAUCS_LA_IPv4_INIT \
   .type = DPAUCS_ETH_T_IPv4
 
-#define DPAUCS_IPv4_INIT \
-  .address = { .logicAddress = { DPAUCS_LA_IPv4_INIT } }
-
 #define DPAUCS_LA_IPv4( a,b,c,d ) { \
     DPAUCS_LA_IPv4_INIT, \
-    .address = ((uint32_t)a<<24) \
-             | ((uint32_t)b<<16) \
-             | ((uint32_t)c<<8) \
-             | ((uint32_t)d) \
+    .ip = ((uint32_t)a<<24) \
+        | ((uint32_t)b<<16) \
+        | ((uint32_t)c<<8) \
+        | ((uint32_t)d) \
   }
 
 struct DPAUCS_packet_info;
@@ -44,18 +41,18 @@ typedef struct packed DPAUCS_IPv4 {
   uint32_t destination; // destination IP address
 } DPAUCS_IPv4_t;
 
-typedef struct DPAUCS_IPv4_address {
-  DPAUCS_address_t address;
-  uint32_t ip;
-} DPAUCS_IPv4_address_t;
-
 typedef struct DPAUCS_logicAddress_IPv4 {
   union {
     uint16_t type;
-    DPAUCS_logicAddress_t logicAddress;
+    DPAUCS_logicAddress_t logic;
   };
-  uint32_t address;
+  uint32_t ip;
 } DPAUCS_logicAddress_IPv4_t;
+
+typedef struct DPAUCS_IPv4_address {
+  DPAUCS_address_t address;
+  char logicAddressPadding[sizeof(DPAUCS_logicAddress_IPv4_t)-(sizeof(DPAUCS_address_t)-offsetof(DPAUCS_address_t,type))];
+} DPAUCS_IPv4_address_t;
 
 typedef struct DPAUCS_IPv4_packetInfo {
   DPAUCS_ip_packetInfo_t ipPacketInfo;

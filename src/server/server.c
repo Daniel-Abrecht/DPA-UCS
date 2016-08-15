@@ -211,9 +211,10 @@ typedef struct receive_driver_state {
 static receive_driver_state_t current_receive_driver_state;
 
 const DPAUCS_interface_t* DPAUCS_getInterface( const DPAUCS_logicAddress_t* logicAddress ){
-  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
-    if(DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress))
+  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
+    if( DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress) )
       return address_list[i].interface;
+  }
   return 0;
 }
 

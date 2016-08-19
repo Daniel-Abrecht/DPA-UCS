@@ -26,6 +26,8 @@ OPTIONS        += -Wall -Wextra -pedantic -Werror
 
 LINUX_LIBS=
 
+NO_TCP = 1
+
 test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined
 test-% test: LINUX_LIBS += -lgcov
 

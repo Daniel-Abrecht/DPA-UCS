@@ -18,6 +18,7 @@
   typedef struct DPAUCS ## TYPE ## l3_handler { \
     uint16_t type; \
     size_t packetSizeLimit; \
+    size_t rawAddressSize; \
     void (*packetHandler)( DPAUCS_packet_info_t* ); \
     bool (*isBroadcast)( const DPAUCS_logicAddress ## TYPE ## t* ); \
     bool (*isValid)( const DPAUCS_logicAddress ## TYPE ## t* ); \
@@ -61,7 +62,6 @@ typedef struct DPAUCS_l4_handler {
   DPAUCS_layer3_ProtocolReciveHandler_func onreceive;
   DPAUCS_layer3_ProtocolFailtureHandler_func onreceivefailture;
 } DPAUCS_l4_handler_t;
-
 
 DEFINE_ADDRESS_HANDLER_TYPE_(_);
 

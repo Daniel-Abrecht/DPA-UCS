@@ -7,6 +7,11 @@
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 
+
+DEFINE_ADDRESS_HANDLER_TYPE( IPv4 );
+
+static DPAUCS_fragmentHandler_t fragment_handler;
+
 static void packetHandler( DPAUCS_packet_info_t* info ){
   if( (*(uint8_t*)info->payload) >> 4 != 4 ) // Version must be 4
     return;
@@ -45,7 +50,7 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
 
   DPAUCS_IPv4_packetInfo_t ipInfo = {
     .ipPacketInfo = {
-      .type = DPAUCS_FRAGMENT_TYPE_IPv4,
+      .handler = &fragment_handler,
       .valid = true,
       .onremove = handler->onreceivefailture,
       .offset = 0
@@ -302,10 +307,57 @@ static uint16_t calculatePseudoHeaderChecksum(
   return checksum( &pseudoHeader, sizeof(pseudoHeader) );
 }
 
-DEFINE_ADDRESS_HANDLER_TYPE( IPv4 );
 
-static const DPAUCS_IPv4_l3_handler_t handler = {
+static bool isSamePacket( DPAUCS_ip_packetInfo_t* ta, DPAUCS_ip_packetInfo_t* tb ){
+  DPAUCS_IPv4_packetInfo_t* a = (DPAUCS_IPv4_packetInfo_t*)ta;
+  DPAUCS_IPv4_packetInfo_t* b = (DPAUCS_IPv4_packetInfo_t*)tb;
+  return (
+      a->id == b->id
+   && a->tos == b->tos
+   && DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&a->src.address)->ip  == DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&b->src.address)->ip
+   && DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&a->dest.address)->ip == DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&b->dest.address)->ip
+   && !memcmp(a->src.address.mac,b->src.address.mac,sizeof(DPAUCS_mac_t))
+   && !memcmp(a->dest.address.mac,b->dest.address.mac,sizeof(DPAUCS_mac_t))
+  );
+}
+
+static void fragmentDestructor(DPAUCS_fragment_t** f){
+  DPAUCS_layer3_removePacket(((DPAUCS_ip_fragment_t*)*f)->info);
+}
+
+static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, DPAUCS_fragmentHandler_t* newHandler ){
+  DPAUCS_ip_fragment_t** ipf = (DPAUCS_ip_fragment_t**)*f;
+  DPAUCS_ip_packetInfo_t* ipfi = (*ipf)->info;
+  if( !ipfi->valid )
+    return false;
+  if( (*ipf)->datas ){
+    DPAUCS_fragment_t** result = DPAUCS_createFragment( newHandler, (*ipf)->length );
+    if(!result)
+      return false;
+    *f = result;
+    memcpy( DPAUCS_getFragmentData( *result ), (*ipf)->datas,(*ipf)->length );
+  }
+  ipfi->valid = false;
+  return true;
+}
+
+static void takeoverFailtureHandler(DPAUCS_fragment_t** f){
+  ((DPAUCS_ip_fragment_t*)*f)->info->valid = true;
+  DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f);
+}
+
+static DPAUCS_fragmentHandler_t fragment_handler = {
+  .packetInfo_size = sizeof(DPAUCS_IPv4_packetInfo_t),
+  .fragmentInfo_size = sizeof(DPAUCS_IPv4_fragment_t),
+  .isSamePacket = &isSamePacket,
+  .destructor = &fragmentDestructor,
+  .beforeTakeover = &fragmentBeforeTakeover,
+  .takeoverFailtureHandler = &takeoverFailtureHandler
+};
+
+static const DPAUCS_IPv4_l3_handler_t l3_handler = {
   .type = DPAUCS_ETH_T_IPv4,
+  .rawAddressSize = 4,
   .packetSizeLimit = 0xFFFFu,
   .packetHandler = &packetHandler,
   .transmit = &transmit,
@@ -317,4 +369,6 @@ static const DPAUCS_IPv4_l3_handler_t handler = {
   .calculatePseudoHeaderChecksum = &calculatePseudoHeaderChecksum
 };
 
-DPAUCS_EXPORT_ADDRESS_HANDLER( IPv4, &handler );
+
+DPAUCS_EXPORT_FRAGMENT_HANDLER( IPv4, &fragment_handler );
+DPAUCS_EXPORT_ADDRESS_HANDLER( IPv4, &l3_handler );

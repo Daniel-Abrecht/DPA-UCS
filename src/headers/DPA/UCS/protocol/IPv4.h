@@ -1,4 +1,4 @@
-#if !defined( IPv4_H ) && defined( USE_IPv4 )
+#ifndef DPAUCS_IPv4_H
 #define DPAUCS_IPv4_H
 
 #include <DPA/UCS/helper_macros.h>
@@ -51,7 +51,7 @@ typedef struct DPAUCS_logicAddress_IPv4 {
 
 typedef struct DPAUCS_IPv4_address {
   DPAUCS_address_t address;
-  char logicAddressPadding[sizeof(DPAUCS_logicAddress_IPv4_t)-(sizeof(DPAUCS_address_t)-offsetof(DPAUCS_address_t,type))];
+  char rawAddrMem[4]; // ensure enough space for IPv4 address
 } DPAUCS_IPv4_address_t;
 
 typedef struct DPAUCS_IPv4_packetInfo {

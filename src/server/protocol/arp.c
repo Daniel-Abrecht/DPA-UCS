@@ -26,11 +26,18 @@ static const ARP_entry_t *entries_end;
 
 static inline size_t getLargestAddressSize( void ){
   static size_t size = 0;
+  if( !size ){
+    DPAUCS_EACH_ADDRESS_HANDLER( it ){
+      size_t s = (*it)->rawAddressSize;
+      if( size < s )
+        size = s;
+    }
+  }
   return size;
 }
 
 static inline size_t getRealArpEntrySize( void ){
-  return sizeof(ARP_entry_t) - sizeof(DPAUCS_address_t) + getLargestAddressSize();
+  return sizeof(ARP_entry_t) - getLargestAddressSize();
 }
 
 static inline void next_arp_entry( ARP_entry_t** entry ){

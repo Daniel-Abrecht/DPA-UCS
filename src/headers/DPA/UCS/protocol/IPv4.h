@@ -12,10 +12,7 @@
 
 #define DPAUCS_LA_IPv4( a,b,c,d ) { \
     DPAUCS_LA_IPv4_INIT, \
-    .ip = ((uint32_t)a<<24) \
-        | ((uint32_t)b<<16) \
-        | ((uint32_t)c<<8) \
-        | ((uint32_t)d) \
+    .ip = {a,b,c,d} \
   }
 
 struct DPAUCS_packet_info;
@@ -37,16 +34,17 @@ typedef struct packed DPAUCS_IPv4 {
   // Protocol: http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
   uint8_t protocol;
   uint16_t checksum;
-  uint32_t source; // source IP address
-  uint32_t destination; // destination IP address
+  unsigned char source[4]; // source IP address
+  unsigned char destination[4]; // destination IP address
 } DPAUCS_IPv4_t;
 
+// Don't change the following struct, it would break everything!
 typedef struct DPAUCS_logicAddress_IPv4 {
   union {
     uint16_t type;
     DPAUCS_logicAddress_t logic;
   };
-  uint32_t ip;
+  unsigned char ip[4];
 } DPAUCS_logicAddress_IPv4_t;
 
 typedef struct DPAUCS_IPv4_address {

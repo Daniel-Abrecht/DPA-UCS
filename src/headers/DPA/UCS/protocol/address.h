@@ -8,7 +8,7 @@
 
 #define DPAUCS_MAC( a,b,c,d,e,f ) {0x##a,0x##b,0x##c,0x##d,0x##e,0x##f}
 #define DPAUCS_ANY_ADDRESS 0
-#define DPAUCS_GET_ADDR( T, X ) ((T*)( &(X)->type ))
+#define DPAUCS_GET_ADDR( X ) ((char*)( &(X)->type + 1 ))
 
 typedef uint8_t DPAUCS_mac_t[6];
 

@@ -7,9 +7,6 @@
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 
-
-DEFINE_ADDRESS_HANDLER_TYPE( IPv4 );
-
 static DPAUCS_fragmentHandler_t fragment_handler;
 
 static void packetHandler( DPAUCS_packet_info_t* info ){
@@ -20,14 +17,17 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
   if( DPA_btoh16(ip->length) > info->size )
     return;
 
-  uint32_t source = DPA_btoh32(ip->source);
-  uint32_t destination = DPA_btoh32(ip->destination);
+  char source[4];
+  char destination[4];
+
+  memcpy(source,ip->source,4);
+  memcpy(destination,ip->destination,4);
 
   {
     DPAUCS_logicAddress_IPv4_t addr = {
-      DPAUCS_LA_IPv4_INIT,
-      .ip = destination
+      DPAUCS_LA_IPv4_INIT
     };
+    memcpy(addr.ip,destination,4);
     if( !DPAUCS_isValidHostAddress(&addr.logic)
      || !DPAUCS_has_logicAddress(&addr.logic)
     ) return;
@@ -68,10 +68,11 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
     .id = ip->id,
     .tos = ip->tos,
   };
-  DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&ipInfo.src.address)->ip = source;
-  DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&ipInfo.dest.address)->ip = destination;
-  memcpy(ipInfo.src.address.mac,info->source_mac,sizeof(DPAUCS_mac_t));
-  memcpy(ipInfo.dest.address.mac,info->destination_mac,sizeof(DPAUCS_mac_t));
+
+  memcpy( DPAUCS_GET_ADDR( &ipInfo.src.address ), source, 4 );
+  memcpy( DPAUCS_GET_ADDR( &ipInfo.dest.address ), destination, 4 );
+  memcpy( ipInfo.src.address.mac,info->source_mac, sizeof(DPAUCS_mac_t) );
+  memcpy( ipInfo.dest.address.mac,info->destination_mac, sizeof(DPAUCS_mac_t) );
 
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
@@ -165,8 +166,8 @@ static bool transmit(
   size_t max_size_arg
 ){
 
-  const DPAUCS_IPv4_address_t* src = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, true );
-  const DPAUCS_IPv4_address_t* dst = (const DPAUCS_IPv4_address_t*)DPAUCS_mixedPairComponentToAddress( fromTo, false );
+  const DPAUCS_address_t* src = DPAUCS_mixedPairComponentToAddress( fromTo, true );
+  const DPAUCS_address_t* dst = DPAUCS_mixedPairComponentToAddress( fromTo, false );
   DPAUCS_IPv4_address_t tmp_IPv4Addr = {
     .address = {
       .type = DPAUCS_ETH_T_IPv4
@@ -180,7 +181,7 @@ static bool transmit(
     DPA_LOG( "transmit: destination address incomplete\n" );
     return false;
   }
-  const DPAUCS_logicAddress_t* laddr = src ? &src->address.logic
+  const DPAUCS_logicAddress_t* laddr = src ? &src->logic
                                            : DPAUCS_mixedPairComponentToLogicAddress( fromTo, true );
   if(!laddr){
     DPA_LOG("transmit: Can't convert source address\n");
@@ -194,7 +195,7 @@ static bool transmit(
   if(!src){
     DPAUCS_copy_logicAddress( &tmp_IPv4Addr.address.logic, laddr );
     memcpy( tmp_IPv4Addr.address.mac, interface->mac, sizeof(DPAUCS_mac_t) );
-    src = &tmp_IPv4Addr;
+    src = &tmp_IPv4Addr.address;
   }
 
   uint16_t max_size = DPA_MIN(max_size_arg,(uint16_t)~0);
@@ -208,8 +209,8 @@ static bool transmit(
     memset( &p, 0, sizeof(DPAUCS_packet_info_t) );
     p.type = DPAUCS_ETH_T_IPv4;
     p.interface = interface;
-    memcpy( p.destination_mac, dst->address.mac, sizeof(DPAUCS_mac_t) );
-    memcpy( p.source_mac, src->address.mac, sizeof(DPAUCS_mac_t) );
+    memcpy( p.destination_mac, dst->mac, sizeof(DPAUCS_mac_t) );
+    memcpy( p.source_mac, src->mac, sizeof(DPAUCS_mac_t) );
     DPAUCS_preparePacket( &p );
 
     // create ip header
@@ -218,8 +219,8 @@ static bool transmit(
     ip->id = DPA_htob16( id );
     ip->ttl = DEFAULT_TTL;
     ip->protocol = type;
-    ip->source = DPA_htob32( DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&src->address)->ip );
-    ip->destination = DPA_htob32( DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&dst->address)->ip );
+    memcpy( ip->source, DPAUCS_GET_ADDR(src), 4 );
+    memcpy( ip->destination, DPAUCS_GET_ADDR(dst), 4 );
 
     // create content
     size_t msize = DPA_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
@@ -257,53 +258,53 @@ static bool transmit(
   return true;
 }
 
-static bool isBroadcast( const DPAUCS_logicAddress_IPv4_t* address ){
-  return address->ip == 0xFFFFFFFF;
+static bool isBroadcast( const DPAUCS_logicAddress_t* address ){
+  return !memcmp(DPAUCS_GET_ADDR(address),"\xFF\xFF\xFF\xFF",4);
 }
 
-static bool isValid( const DPAUCS_logicAddress_IPv4_t* address ){
-  return address->ip && address->ip != 0xFFFFFFFF;
+static bool isValid( const DPAUCS_logicAddress_t* address ){
+  return memcmp(DPAUCS_GET_ADDR(address),"\x0\x0\x0",4)
+      && memcmp(DPAUCS_GET_ADDR(address),"\xFF\xFF\xFF\xFF",4);
 }
 
-static bool compare( const DPAUCS_logicAddress_IPv4_t* a, const DPAUCS_logicAddress_IPv4_t* b ){
-  return a->ip == b->ip;
+static bool compare( const DPAUCS_logicAddress_t* a, const DPAUCS_logicAddress_t* b ){
+  return !memcmp(DPAUCS_GET_ADDR(a),DPAUCS_GET_ADDR(b),4);
 }
 
-static bool copy( DPAUCS_logicAddress_IPv4_t* dst, const DPAUCS_logicAddress_IPv4_t* src ){
-  *dst = *src;
+static bool copy( DPAUCS_logicAddress_t* dst, const DPAUCS_logicAddress_t* src ){
+  memcpy(DPAUCS_GET_ADDR(dst),DPAUCS_GET_ADDR(src),4);
   return true;
 }
 
-static bool withRawAsLogicAddress( uint16_t type, void* vaddr, size_t size, void(*func)(const DPAUCS_logicAddress_IPv4_t*,void*), void* param ){
+static bool withRawAsLogicAddress( uint16_t type, void* addr, size_t size, void(*func)(const DPAUCS_logicAddress_t*,void*), void* param ){
   if( size != 4 )
     return false;
-  uint32_t* addr = vaddr;
   DPAUCS_logicAddress_IPv4_t laddr = {
     .type = type,
-    .ip = DPA_btoh32(*addr)
   };
-  (*func)( &laddr, param );
+  memcpy( DPAUCS_GET_ADDR( &laddr ), addr, 4 );
+  (*func)( &laddr.logic, param );
   return true;
 }
 
 static uint16_t calculatePseudoHeaderChecksum(
-  const DPAUCS_logicAddress_IPv4_t* source,
-  const DPAUCS_logicAddress_IPv4_t* destination,
+  const DPAUCS_logicAddress_t* source,
+  const DPAUCS_logicAddress_t* destination,
   uint8_t protocol,
   uint16_t length
 ){
   struct packed pseudoHeader {
-    uint32_t src, dst;
+    unsigned char src[4], dst[4];
     uint8_t padding, protocol;
     uint16_t length;
   };
   struct pseudoHeader pseudoHeader = {
-    .src = DPA_htob32( source->ip ),
-    .dst = DPA_htob32( destination->ip ),
     .padding = 0,
     .protocol = protocol,
     .length = DPA_htob16( length )
   };
+  memcpy( pseudoHeader.src, DPAUCS_GET_ADDR(source), 4 );
+  memcpy( pseudoHeader.dst, DPAUCS_GET_ADDR(destination), 4 );
   return checksum( &pseudoHeader, sizeof(pseudoHeader) );
 }
 
@@ -314,10 +315,10 @@ static bool isSamePacket( DPAUCS_ip_packetInfo_t* ta, DPAUCS_ip_packetInfo_t* tb
   return (
       a->id == b->id
    && a->tos == b->tos
-   && DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&a->src.address)->ip  == DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&b->src.address)->ip
-   && DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&a->dest.address)->ip == DPAUCS_GET_ADDR(DPAUCS_logicAddress_IPv4_t,&b->dest.address)->ip
-   && !memcmp(a->src.address.mac,b->src.address.mac,sizeof(DPAUCS_mac_t))
-   && !memcmp(a->dest.address.mac,b->dest.address.mac,sizeof(DPAUCS_mac_t))
+   && !memcmp( DPAUCS_GET_ADDR(&a->src.address), DPAUCS_GET_ADDR(&b->src.address), 4 )
+   && !memcmp( DPAUCS_GET_ADDR(&a->dest.address), DPAUCS_GET_ADDR(&b->dest.address), 4 )
+   && !memcmp( a->src.address.mac, b->src.address.mac, sizeof(DPAUCS_mac_t) )
+   && !memcmp( a->dest.address.mac, b->dest.address.mac, sizeof(DPAUCS_mac_t) )
   );
 }
 
@@ -355,7 +356,7 @@ static DPAUCS_fragmentHandler_t fragment_handler = {
   .takeoverFailtureHandler = &takeoverFailtureHandler
 };
 
-static const DPAUCS_IPv4_l3_handler_t l3_handler = {
+static const DPAUCS_l3_handler_t l3_handler = {
   .type = DPAUCS_ETH_T_IPv4,
   .rawAddressSize = 4,
   .packetSizeLimit = 0xFFFFu,
@@ -371,4 +372,4 @@ static const DPAUCS_IPv4_l3_handler_t l3_handler = {
 
 
 DPAUCS_EXPORT_FRAGMENT_HANDLER( IPv4, &fragment_handler );
-DPAUCS_EXPORT_ADDRESS_HANDLER( IPv4, &l3_handler );
+DPAUCS_EXPORT_L3_HANDLER( IPv4, &l3_handler );

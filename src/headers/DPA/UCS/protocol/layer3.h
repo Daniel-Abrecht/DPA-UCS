@@ -14,27 +14,8 @@
 #define OUTSTREAM_REFERENCE_BUFFER_SIZE 16
 #endif
 
-#define DEFINE_ADDRESS_HANDLER_TYPE_( TYPE ) \
-  typedef struct DPAUCS ## TYPE ## l3_handler { \
-    uint16_t type; \
-    size_t packetSizeLimit; \
-    size_t rawAddressSize; \
-    void (*packetHandler)( DPAUCS_packet_info_t* ); \
-    bool (*isBroadcast)( const DPAUCS_logicAddress ## TYPE ## t* ); \
-    bool (*isValid)( const DPAUCS_logicAddress ## TYPE ## t* ); \
-    bool (*compare)( const DPAUCS_logicAddress ## TYPE ## t*, const DPAUCS_logicAddress ## TYPE ## t* ); \
-    bool (*copy)( DPAUCS_logicAddress ## TYPE ## t*, const DPAUCS_logicAddress ## TYPE ## t* ); \
-    bool (*withRawAsLogicAddress)( uint16_t, void*, size_t, void(*)(const DPAUCS_logicAddress ## TYPE ## t*,void*), void*); \
-    bool (*transmit)( DPA_stream_t*, const DPAUCS_mixedAddress_pair_t*, uint8_t, size_t ); \
-    uint16_t (*calculatePseudoHeaderChecksum)( const DPAUCS_logicAddress ## TYPE ## t*, const DPAUCS_logicAddress ## TYPE ## t*, uint8_t, uint16_t ); \
-  } DPAUCS ## TYPE ## l3_handler_t
-
-#define DPAUCS_EXPORT_ADDRESS_HANDLER_( NAME, ID, HANDLER ) \
-  DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS ## NAME ## l3_handler*, DPAUCS_l3_handler, ID ) HANDLER
-
-#define DEFINE_ADDRESS_HANDLER_TYPE( TYPE ) DEFINE_ADDRESS_HANDLER_TYPE_( _ ## TYPE ## _ )
-#define DPAUCS_EXPORT_ADDRESS_HANDLER( NAME, HANDLER ) DPAUCS_EXPORT_ADDRESS_HANDLER_( _ ## NAME ## _, DPAUCS_ ## NAME ## _l3_handler, HANDLER )
-#define DPAUCS_EXPORT_L3_HANDLER( NAME, HANDLER ) DPAUCS_EXPORT_ADDRESS_HANDLER_( _, DPAUCS_ ## NAME ## _l3_handler, HANDLER )
+#define DPAUCS_EXPORT_L3_HANDLER( NAME, HANDLER ) \
+  DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS_l3_handler*, DPAUCS_l3_handler, DPAUCS_ ## NAME ## _l3_handler ) HANDLER
 
 #define DPAUCS_EACH_ADDRESS_HANDLER( ITERATOR ) \
   DPA_FOR_SECTION_LIST_HACK( const struct DPAUCS_l3_handler*, DPAUCS_l3_handler, ITERATOR )
@@ -63,7 +44,19 @@ typedef struct DPAUCS_l4_handler {
   DPAUCS_layer3_ProtocolFailtureHandler_func onreceivefailture;
 } DPAUCS_l4_handler_t;
 
-DEFINE_ADDRESS_HANDLER_TYPE_(_);
+typedef struct DPAUCS_l3_handler {
+  uint16_t type;
+  size_t packetSizeLimit;
+  size_t rawAddressSize;
+  void (*packetHandler)( DPAUCS_packet_info_t* );
+  bool (*isBroadcast)( const DPAUCS_logicAddress_t* );
+  bool (*isValid)( const DPAUCS_logicAddress_t* );
+  bool (*compare)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
+  bool (*copy)( DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
+  bool (*withRawAsLogicAddress)( uint16_t, void*, size_t, void(*)(const DPAUCS_logicAddress_t*,void*), void*);
+  bool (*transmit)( DPA_stream_t*, const DPAUCS_mixedAddress_pair_t*, uint8_t, size_t );
+  uint16_t (*calculatePseudoHeaderChecksum)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t*, uint8_t, uint16_t );
+} DPAUCS_l3_handler_t;
 
 extern DPAUCS_l4_handler_t* l4_handlers[MAX_LAYER3_PROTO_HANDLERS];
 

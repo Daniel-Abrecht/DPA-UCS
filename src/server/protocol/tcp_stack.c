@@ -1,8 +1,11 @@
 #include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/tcp_stack.h>
 
+static DPAUCS_fragmentHandler_t fragment_handler;
+
 bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, DPAUCS_transmissionControlBlock_t* tcb ){
-  if(! DPAUCS_takeover( fragment, DPAUCS_FRAGMENT_TYPE_TCP ) )
+  if(! DPAUCS_takeover( fragment, &fragment_handler ) )
     return false;
   (void)tcb;
   DPAUCS_tcp_fragment_t** tf = (DPAUCS_tcp_fragment_t**)fragment;
@@ -16,7 +19,7 @@ bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, DPAUCS_transmissionCont
 }
 
 void DPAUCS_tcp_cache_remove( DPAUCS_transmissionControlBlock_t* tcb ){
-  for(DPAUCS_tcp_fragment_t** it=tcb->fragments.first;it;it=(*it)->next)
+  for( DPAUCS_tcp_fragment_t** it = tcb->fragments.first; it; it=(*it)->next )
     DPAUCS_removeFragment( (DPAUCS_fragment_t**)it );
   tcb->fragments.first = 0;
   tcb->fragments.last  = 0;
@@ -28,10 +31,10 @@ static void fragmentDestructor(DPAUCS_fragment_t** f){
   // TODO
 }
 
-static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, enum DPAUCS_fragmentType newType ){
+static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, DPAUCS_fragmentHandler_t* newHandler ){
   DPAUCS_tcp_fragment_t** tcpf = (DPAUCS_tcp_fragment_t**)*f;
   (void)tcpf;
-  (void)newType;
+  (void)newHandler;
   // TODO
   return true;
 }
@@ -43,9 +46,11 @@ static void takeoverFailtureHandler(DPAUCS_fragment_t** f){
 }
 
 
-extern const DPAUCS_fragment_info_t DPAUCS_tcp_fragment_info;
-const DPAUCS_fragment_info_t DPAUCS_tcp_fragment_info = {
+static DPAUCS_fragmentHandler_t fragment_handler = {
+  .fragmentInfo_size = sizeof(DPAUCS_tcp_fragment_t),
   .destructor = &fragmentDestructor,
   .beforeTakeover = &fragmentBeforeTakeover,
   .takeoverFailtureHandler = &takeoverFailtureHandler
 };
+
+DPAUCS_EXPORT_FRAGMENT_HANDLER( TCP, &fragment_handler );

@@ -9,6 +9,7 @@
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 
+DPA_MODULE( IPv4 ){}
 
 struct DPAUCS_packet_info;
 struct DPA_stream;

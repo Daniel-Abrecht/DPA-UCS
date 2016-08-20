@@ -10,6 +10,26 @@
 #define DPAUCS_ANY_ADDRESS 0
 #define DPAUCS_GET_ADDR( X ) ((char*)( &(X)->type + 1 ))
 
+#define DPAUCS_LA( TYPE, SIZE, ADDRESS ) \
+  (DPAUCS_logicAddress_t*)((struct packed { \
+    uint16_t type; \
+    unsigned char address[SIZE]; \
+  }[]){{ \
+    .type = TYPE, \
+    .address = { DPA_UNPACK ADDRESS } \
+  }})
+
+#define DPAUCS_ADDR( TYPE, SIZE ) \
+  (DPAUCS_address_t*)((struct packed { \
+    unsigned char mac[6]; \
+    uint16_t type; \
+    unsigned char address[SIZE]; \
+  }[]){{ \
+    .mac = { 0 }, \
+    .type = TYPE, \
+    .address = { 0 } \
+  }})
+
 typedef uint8_t DPAUCS_mac_t[6];
 
 typedef struct DPAUCS_interface {

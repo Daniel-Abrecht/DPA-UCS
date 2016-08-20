@@ -112,9 +112,11 @@ bool DPAUCS_has_logicAddress(const DPAUCS_logicAddress_t* logicAddress){
 }
 
 const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_t* logicAddress ){
-  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++)
-    if(DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress))
-      return address_list[i].logicAddress;
+  for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
+    if( address_list[i].logicAddress
+     && DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress)
+    ) return address_list[i].logicAddress;
+  }
   return 0;
 }
 

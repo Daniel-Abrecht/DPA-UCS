@@ -1,10 +1,11 @@
 #include <string.h>
+#include <DPA/UCS/server.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 
 // Should be initialized with zeros
 static char incompletePackageInfos[DPA_MAX_PACKET_INFO_BUFFER_SIZE];
-DPAUCS_ip_packetInfo_t* incompletePackageInfos_end;
+static DPAUCS_ip_packetInfo_t* incompletePackageInfos_end;
 
 bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS_ip_packetInfo_t* b ){
   if( a == b )
@@ -43,6 +44,10 @@ static inline DPAUCS_ip_packetInfo_t* getNextIncompletePacket( void ){
   if( it > incompletePackageInfos_end )
     it = (DPAUCS_ip_packetInfo_t*)incompletePackageInfos;
   return it;
+}
+
+DPAUCS_INIT( ip_stack ){
+  incompletePackageInfos_end = (DPAUCS_ip_packetInfo_t*)( incompletePackageInfos + ( DPA_MAX_PACKET_INFO_BUFFER_SIZE % getRealPacketInfoSize() ) );
 }
 
 DPAUCS_ip_fragment_t** DPAUCS_layer3_allocFragment( DPAUCS_ip_packetInfo_t* packet, uint16_t size ){

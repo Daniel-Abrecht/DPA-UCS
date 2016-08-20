@@ -5,7 +5,7 @@
 bool DPAUCS_withRawAsLogicAddress( uint16_t type, void* addr, size_t size, void(*func)(const DPAUCS_logicAddress_t*,void*), void* param ){
   const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( type );
   if( handler && handler->withRawAsLogicAddress )
-    return (*handler->withRawAsLogicAddress)( type, addr, size, func, param );
+    return (*handler->withRawAsLogicAddress)( addr, size, func, param );
   return false;
 }
 

@@ -20,17 +20,8 @@ void server_main(void* arg){
 
   const DPAUCS_interface_t* interface = getFirstInterface();
 
-#ifdef USE_IPv4
-  static const DPAUCS_logicAddress_IPv4_t IPv4addrs[] = {
-    DPAUCS_LA_IPv4(192,168,1,29),
-    DPAUCS_LA_IPv4(192,168,1,39),
-    DPAUCS_LA_IPv4(192,168,43,29),
-    DPAUCS_LA_IPv4(192,168,8,29)
-  };
-
-  for( unsigned i=0; i<sizeof(IPv4addrs); i++ )
-    DPAUCS_add_logicAddress( interface, &IPv4addrs[i].logic );
-#endif
+  DPAUCS_add_logicAddress( interface, DPAUCS_LA_IPv4(192,168,1,29) );
+  DPAUCS_add_logicAddress( interface, DPAUCS_LA_IPv4(192,168,8,29) );
 
   DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 80, &http_service );
 

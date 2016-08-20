@@ -23,7 +23,6 @@ typedef struct {
 static char entries[ ARP_ENTRY_BUFFER_SIZE ];
 static const ARP_entry_t *entries_end;
 
-
 static inline size_t getLargestAddressSize( void ){
   static size_t size = 0;
   if( !size ){
@@ -57,6 +56,9 @@ static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress
   return 0;
 }
 
+DPAUCS_INIT( ARP ){
+  entries_end = (ARP_entry_t*)( entries + ( ARP_ENTRY_BUFFER_SIZE % getRealArpEntrySize() ) );
+}
 
 const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr ){
 
@@ -176,4 +178,3 @@ static const DPAUCS_l3_handler_t handler = {
 };
 
 DPAUCS_EXPORT_L3_HANDLER( ARP, &handler );
-

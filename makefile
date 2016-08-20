@@ -53,9 +53,6 @@ PROJECT_DIR=$(PWD)
 GEN_DEST = FilesAsCArrays
 URL_FILE_BASE   = 
 
-USE_IPv4=true
-#USE_IPv6=true
-
 OPTIONAL_FILES  += server/protocol/icmp.o
 OPTIONAL_FILES  += server/adelay.o
 OPTIONAL_FILES  += server/ressource.o
@@ -79,13 +76,7 @@ ifdef RESSOURCE_GETTER
 OPTIONS += -DRESSOURCE_GETTER="$(RESSOURCE_GETTER)"
 endif
 
-ifdef USE_IPv4
 OPTIONAL_FILES += server/protocol/IPv4.o
-OPTIONS        += -DUSE_IPv4
-endif
-ifdef USE_IPv6
-OPTIONS        += -DUSE_IPv6
-endif
 
 MAIN_FILE = main.o
 

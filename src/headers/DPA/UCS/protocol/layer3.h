@@ -53,7 +53,7 @@ typedef struct DPAUCS_l3_handler {
   bool (*isValid)( const DPAUCS_logicAddress_t* );
   bool (*compare)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
   bool (*copy)( DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
-  bool (*withRawAsLogicAddress)( uint16_t, void*, size_t, void(*)(const DPAUCS_logicAddress_t*,void*), void*);
+  bool (*withRawAsLogicAddress)( void*, size_t, void(*)(const DPAUCS_logicAddress_t*,void*), void*);
   bool (*transmit)( DPA_stream_t*, const DPAUCS_mixedAddress_pair_t*, uint8_t, size_t );
   uint16_t (*calculatePseudoHeaderChecksum)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t*, uint8_t, uint16_t );
 } DPAUCS_l3_handler_t;

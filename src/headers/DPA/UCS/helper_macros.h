@@ -44,6 +44,8 @@
 #endif
 #endif
 
+#define DPA_UNPACK( ... ) __VA_ARGS__
+
 #define DPA_CALC_PREV_ALIGN_OFFSET( x, T ) \
   ( (size_t)( x ) & (size_t)~( DPA_ALIGNOF(T) - 1 ) )
 

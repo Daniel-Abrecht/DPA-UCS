@@ -30,6 +30,8 @@ const DPAUCS_ressource_entry_t* weak getRessource( const char* path, unsigned le
 }
 
 bool DPAUCS_defaultWriteRessourceHeaders( DPA_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
+  (void)ressource;
+  (void)stream;
 #ifdef RESSOURCE_GETTER
 #define X( RG ) bool DPAUCS_write ## RG ## Header(DPA_stream_t*,const DPAUCS_ressource_entry_t*);
   RESSOURCE_GETTER
@@ -52,6 +54,8 @@ bool weak DPAUCS_writeRessourceHeaders( DPA_stream_t* stream, const DPAUCS_resso
 }
 
 bool weak DPAUCS_defaultWriteRessource( DPA_stream_t* stream, const DPAUCS_ressource_entry_t* ressource ){
+  (void)ressource;
+  (void)stream;
 #ifdef RESSOURCE_GETTER
 #define X( RG ) bool DPAUCS_write ## RG(DPA_stream_t*,const DPAUCS_ressource_entry_t*);
   RESSOURCE_GETTER

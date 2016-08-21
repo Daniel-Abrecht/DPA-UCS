@@ -1,11 +1,15 @@
 #include <string.h>
 #include <DPA/utils/utils.h>
 #include <DPA/utils/ringbuffer.h>
-#include <DPA/utils/logger.h>
 
 size_t DPA_ringbuffer_increment_read( DPA_ringbuffer_base_t* ringbuffer ){
-  if(!ringbuffer->range.size)
-    return ringbuffer->range.offset - ringbuffer->inverse;
+  if(!ringbuffer->range.size){
+    if(ringbuffer->inverse){
+      return ringbuffer->range.offset == ringbuffer->size ? 0 : ringbuffer->range.offset - 1;
+    }else{
+      return ringbuffer->range.offset ? ringbuffer->range.offset : ringbuffer->size - 1;
+    }
+  }
   ringbuffer->range.size--;
   size_t res;
   if(ringbuffer->inverse){
@@ -46,8 +50,9 @@ size_t DPA_ringbuffer_increment_write( DPA_ringbuffer_base_t* ringbuffer ){
 }
 
 size_t DPA_ringbuffer_decrement_read( DPA_ringbuffer_base_t* ringbuffer ){
-  if( ringbuffer->range.size != ringbuffer->size )
-    ringbuffer->range.size++;
+  if( ringbuffer->range.size == ringbuffer->size )
+    return ringbuffer->range.offset - ringbuffer->inverse;
+  ringbuffer->range.size++;
   if( ringbuffer->inverse ){
     if( ringbuffer->range.offset >= ringbuffer->range.size )
       ringbuffer->range.offset = 0;
@@ -60,10 +65,9 @@ size_t DPA_ringbuffer_decrement_read( DPA_ringbuffer_base_t* ringbuffer ){
 }
 
 size_t DPA_ringbuffer_decrement_write( DPA_ringbuffer_base_t* ringbuffer ){
-  size_t res = DPA_ringbuffer_end(ringbuffer) - ringbuffer->inverse;
   if( ringbuffer->range.size )
     ringbuffer->range.size--;
-  return res;
+  return DPA_ringbuffer_end(ringbuffer) - ringbuffer->inverse;
 }
 
 void DPA_ringbuffer_reverse( DPA_ringbuffer_base_t* ringbuffer ){

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <DPA/utils/stream.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 
 
 DPA_MODULE( ressource );

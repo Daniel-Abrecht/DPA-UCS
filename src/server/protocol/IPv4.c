@@ -4,7 +4,7 @@
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/checksum.h>
 #include <DPA/utils/logger.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/ip_stack.h>

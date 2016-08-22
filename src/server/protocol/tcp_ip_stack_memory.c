@@ -2,7 +2,7 @@
 #include <DPA/utils/mempool.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/ip_stack.h>
-#include <DPA/UCS/protocol/tcp_stack.h>
+#include <DPA/UCS/protocol/tcp/tcp_stack.h>
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 
 static char buffer[STACK_BUFFER_SIZE] = {0};

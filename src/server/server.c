@@ -8,8 +8,8 @@
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/arp.h>
-#include <DPA/UCS/protocol/tcp.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/UCS/protocol/tcp/tcp.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/driver/eth/driver.h>

@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 
 #ifndef UINTPTR_MAX
 #define UINTPTR_MAX (~(size_t)0)

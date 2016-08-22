@@ -2,7 +2,7 @@
 #define DPAUCS_SERVER_H
 
 #include <stdint.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/address.h>
 
 #ifndef MAX_LOGIC_ADDRESSES

@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 
 #define DPAUCS_MAC( a,b,c,d,e,f ) {0x##a,0x##b,0x##c,0x##d,0x##e,0x##f}
 #define DPAUCS_ANY_ADDRESS 0

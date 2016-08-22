@@ -1,7 +1,7 @@
 #ifndef DPAUCS_FILE_RESSOURCE_H
 #define DPAUCS_FILE_RESSOURCE_H
 
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 
 
 DPA_MODULE( file_ressource );

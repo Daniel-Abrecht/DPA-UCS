@@ -1,6 +1,6 @@
-#include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/ip_stack.h>
-#include <DPA/UCS/protocol/tcp_stack.h>
+#include <DPA/UCS/protocol/tcp/tcp_stack.h>
 
 static DPAUCS_fragmentHandler_t fragment_handler;
 

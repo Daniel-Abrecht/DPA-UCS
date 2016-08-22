@@ -8,7 +8,7 @@
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/ressource.h>
-#include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/services/http.h>
 
 #if DPA_MAX_HTTP_CONNECTIONS > TRANSMISSION_CONTROL_BLOCK_COUNT

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <DPA/UCS/adelay.h>
 #include <DPA/UCS/service.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/layer3.h>
 
 DPA_MODULE( tcp );

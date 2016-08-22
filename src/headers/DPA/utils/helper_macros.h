@@ -56,14 +56,14 @@
 #define DPA_TOSTRING(x) DPA_STRINGIFY(x)
 
 #define DPA_FOR_SECTION_LIST_HACK(TYPE,NAME,ITERATOR) \
-  extern TYPE __start_ ## NAME ## _section_list_hack[]; \
-  extern TYPE __stop_ ## NAME ## _section_list_hack[]; \
+  extern TYPE weak __start_ ## NAME ## _section_list_hack[]; \
+  extern TYPE weak __stop_ ## NAME ## _section_list_hack[]; \
   for( TYPE* ITERATOR = __start_ ## NAME ## _section_list_hack; \
        ITERATOR < __stop_ ## NAME ## _section_list_hack; ITERATOR++ )
 
 #define DPA_FOR_SECTION_GET_LIST(TYPE,NAME,START,END) \
-  extern TYPE __start_ ## NAME ## _section_list_hack[]; \
-  extern TYPE __stop_ ## NAME ## _section_list_hack[]; \
+  extern TYPE weak __start_ ## NAME ## _section_list_hack[]; \
+  extern TYPE weak __stop_ ## NAME ## _section_list_hack[]; \
   static TYPE* START = __start_ ## NAME ## _section_list_hack; \
   static TYPE* END = __stop_ ## NAME ## _section_list_hack;
 

@@ -1,7 +1,7 @@
 #ifndef DPA_LOGGER_H
 #define DPA_LOGGER_H
 
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 
 #ifdef DPA_LOGGER_C
 #define DPA_WEAK_LOGGER

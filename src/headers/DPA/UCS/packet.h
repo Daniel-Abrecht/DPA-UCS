@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/address.h>
 
 #define PACKET_SIZE 1518

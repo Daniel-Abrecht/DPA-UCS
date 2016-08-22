@@ -9,13 +9,13 @@
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/checksum.h>
-#include <DPA/UCS/protocol/tcp.h>
+#include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
-#include <DPA/UCS/protocol/tcp_stack.h>
+#include <DPA/UCS/protocol/tcp/tcp_stack.h>
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
-#include <DPA/UCS/protocol/tcp_retransmission_cache.h>
+#include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 
 DPA_MODULE( tcp ){
   DPA_DEPENDENCY( adelay_driver );
@@ -210,9 +210,9 @@ bool DPAUCS_tcp_transmit(
   uint32_t SEQ
 ){
 
-  // get pointer to entry in stream which represents tcp header
+  // get pointer to entry in stream which represents tcp/tcp.header
   DPA_streamEntry_t* tcpHeaderEntry = DPA_stream_getEntry( stream );
-  DPA_stream_nextEntry( stream ); // Skip tcp header
+  DPA_stream_nextEntry( stream ); // Skip tcp/tcp.header
 
   size_t headersize = tcpHeaderEntry->range.size; // get size of TCP Header
 
@@ -784,7 +784,7 @@ static void tcp_receiveFailtureHandler( void* id ){
   DPA_LOG("-- tcp_receiveFailtureHandler | id: %p --\n",id);
 }
 
-static DPAUCS_l4_handler_t tcp_handler = {
+static DPAUCS_l4_handler_t tcpHandler = {
   .protocol = PROTOCOL_TCP,
   .onreceive = &tcp_receiveHandler,
   .onreceivefailture = &tcp_receiveFailtureHandler
@@ -794,12 +794,12 @@ static int counter = 0;
 
 DPAUCS_INIT( tcp ){
   if(counter++) return;
-  DPAUCS_layer3_addProtocolHandler(&tcp_handler);
+  DPAUCS_layer3_addProtocolHandler(&tcpHandler);
 }
 
 DPAUCS_SHUTDOWN( tcp ){
   if(--counter) return;
-  DPAUCS_layer3_removeProtocolHandler(&tcp_handler);
+  DPAUCS_layer3_removeProtocolHandler(&tcpHandler);
 }
 
 void tcp_do_next_task( void ){

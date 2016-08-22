@@ -1,7 +1,7 @@
 #include <DPA/UCS/driver/eth/driver.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/services/http.h>
-#include <DPA/UCS/helper_macros.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/address.h>
 

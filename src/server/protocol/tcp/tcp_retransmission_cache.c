@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <DPA/utils/logger.h>
 #include <DPA/utils/mempool.h>
-#include <DPA/UCS/protocol/tcp.h>
-#include <DPA/UCS/protocol/tcp_retransmission_cache.h>
+#include <DPA/UCS/protocol/tcp/tcp.h>
+#include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 
 static char buffer[TCP_RETRANSMISSION_CACHE_SIZE] = {0};
 static DPA_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));

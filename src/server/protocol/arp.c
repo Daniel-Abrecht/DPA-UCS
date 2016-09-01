@@ -3,11 +3,9 @@
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
 #include <DPA/utils/utils.h>
-#include <DPA/utils/logger.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/protocol/ethtypes.h>
 
 enum arp_operation {
   ARP_OP_REQUEST  = 1,

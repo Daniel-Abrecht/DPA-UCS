@@ -69,6 +69,6 @@
 
 #define DPA_SECTION_LIST_ENTRY_HACK(TYPE,NAME,SYMBOL) \
   extern TYPE SYMBOL; TYPE SYMBOL \
-  __attribute__ ((section ( DPA_TOSTRING( NAME ## _section_list_hack ) ))) =
+  __attribute__ ((section ( DPA_TOSTRING( NAME ## _section_list_hack )),used)) =
 
 #endif

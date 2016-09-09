@@ -14,17 +14,20 @@ LIB=lib
 
 SYSTEM_CC=gcc
 LINUX_CC=gcc
-LINUX_AR=ar
+LINUX_AR=gcc-ar
 AVR_CC=avr-gcc
 AVR_AR=avr-ar
 AVR_MCU=atmega16
 AVR_F_CPU = 3686400UL
 
-OPTIONS        += -std=c11 #--short-enums
+OPTIONS        += -std=c11 #-flto
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 
 LINUX_LIBS=
+
+linux: OPTIONS += --short-enums
+avr:   OPTIONS += --short-enums
 
 test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined
 test-% test: LINUX_LIBS += -lgcov
@@ -41,7 +44,7 @@ ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
 ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
 OPTIONS        += -Og -g -DDEBUG
 else
-OPTIONS        += -Os #-flto
+OPTIONS        += -Os
 OPTIONS        += -ffast-math
 OPTIONS        += -s -ffunction-sections -fdata-sections
 endif

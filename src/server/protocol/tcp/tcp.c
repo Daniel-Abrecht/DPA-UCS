@@ -139,7 +139,7 @@ void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DP
 
 static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, uint16_t length ){
   (void)tcp;
-  DPAUCS_logicAddress_pair_t fromTo;
+  DPAUCS_logicAddress_pair_t fromTo = {0};
   DPAUCS_mixedPairToLogicAddress( &fromTo, &tcb->fromTo );
   const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( &tcb->fromTo ) );
   if( handler && handler->calculatePseudoHeaderChecksum )

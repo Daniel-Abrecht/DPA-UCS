@@ -3,6 +3,7 @@
 *.gcov
 *.gcda
 *.gcno
+.kateproject*
 bin/*
 tmp/*
 2cstr

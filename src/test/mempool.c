@@ -20,7 +20,8 @@ void setup( void ){
   mempool.largestContiguousFreeMemoryBegin = tmp.largestContiguousFreeMemoryBegin;
 }
 
-MTest(mempool,alloc){
+
+MTest(mempool,DPA_mempool_alloc){
   int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 5;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char* ptr[5] = {"a","b","c","d","e"};
@@ -42,6 +43,30 @@ MTest(mempool,alloc){
   cr_assert( ptr[3], "ptr[3] was null" );
 }
 
+#define reallocTestCase(X,Y) \
+MTest(mempool,Y){ \
+  int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 5; \
+  cr_assert_gt(rems,0,"Not enougth buffer size"); \
+  void* ptr[5] = {0}; \
+  cr_assert(  DPA_mempool_realloc( &mempool, ptr+0, rems / 4, X ), "Allocation 0 failed" ); \
+  cr_assert(  DPA_mempool_realloc( &mempool, ptr+1, rems / 4, X ), "Allocation 1 failed" ); \
+  cr_assert(  DPA_mempool_realloc( &mempool, ptr+2, rems / 4, X ), "Allocation 2 failed" ); \
+  cr_assert(  DPA_mempool_realloc( &mempool, ptr+3, rems / 4, X ), "Allocation 3 failed" ); \
+  cr_assert( !DPA_mempool_realloc( &mempool, ptr+4, rems / 4, X ), "Allocation 4 didn't fail" ); \
+  cr_assert( ptr[0], "ptr[0] was null" ); \
+  cr_assert( ptr[1], "ptr[1] was null" ); \
+  cr_assert( ptr[2], "ptr[2] was null" ); \
+  cr_assert( ptr[3], "ptr[3] was null" ); \
+  cr_assert( !ptr[4], "ptr[4] wasn't null" ); \
+}
+
+#define DPA_mempool_realloc_LP_TRUE(A,B,C) DPA_mempool_realloc(A,B,C,true)
+#define DPA_mempool_realloc_LP_FALSE(A,B,C) DPA_mempool_realloc(A,B,C,false)
+
+reallocTestCase( true, alloc_using_realloc_lp_true )
+reallocTestCase( false, alloc_using_realloc_lp_false )
+
+#undef reallocTestCase
 
 MTest(mempool,alloc_defragment){
   int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 5;
@@ -68,4 +93,101 @@ MTest(mempool,alloc_defragment){
   cr_assert( !ptr[1], "ptr[1] wasn't null" );
   cr_assert( ptr[2], "ptr[2] was null" );
   cr_assert( ptr[3], "ptr[3] was null" );
+}
+
+MTest(mempool,free){
+  void* ptr = 0;
+  cr_assert( !DPA_mempool_free( &mempool, 0 ), "Free 0 succeded" );
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr, 1 ), "Allocation failed" );
+  cr_assert( ptr, "ptr was null" );
+  cr_assert( DPA_mempool_free( &mempool, &ptr ), "Free 1 failed" );
+  cr_assert( !ptr, "ptr was not null" );
+  cr_assert( DPA_mempool_free( &mempool, &ptr ), "Free 2 failed" );
+}
+
+MTest(mempool,DPA_mempool_realloc_check_no_space_fail){
+  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  cr_assert_gt(rems,0,"Not enougth buffer size");
+  char memory[2][rems];
+  for( char *it = *memory, *end = it+rems*2; it < end; it++ )
+    *it = rand();
+  void* ptr[2] = {0};
+  void* orig[2];
+  cr_assert( DPA_mempool_alloc( &mempool, ptr+0, rems ), "Allocation 0 failed" );
+  cr_assert( DPA_mempool_alloc( &mempool, ptr+1, rems ), "Allocation 1 failed" );
+  cr_assert( ptr[0], "ptr[0] was null" );
+  cr_assert( ptr[1], "ptr[1] was null" );
+  memcpy(orig,ptr,2*sizeof(void*));
+  memcpy(ptr[0],memory[0],rems);
+  memcpy(ptr[1],memory[1],rems);
+  cr_assert( !DPA_mempool_realloc( &mempool, ptr+0, rems*2, false ), "Reallocation 0 didn't fail" );
+  cr_assert_eq( ptr[0], orig[0], "ptr[0] has changed" );
+  cr_assert_eq( ptr[1], orig[1], "ptr[1] has changed" );
+  cr_assert( !memcmp(ptr[0],memory[0],rems), "Memory area 0 changed" );
+  cr_assert( !memcmp(ptr[1],memory[1],rems), "Memory area 1 changed" );
+}
+
+MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end){
+  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  cr_assert_gt(rems,0,"Not enougth buffer size");
+  char memory[rems];
+  for( char *it = memory, *end = it+rems; it < end; it++ )
+    *it = rand();
+  void *ptr,*orig;
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr, rems ), "Allocation 0 failed" );
+  cr_assert( ptr, "ptr was null" );
+  orig = ptr;
+  memcpy(ptr,memory,rems);
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems*2, true ), "Reallocation 0 failed" );
+  cr_assert_eq( ptr, orig, "ptr has changed" );
+  cr_assert( !memcmp((char*)ptr+rems,memory,rems), "Memory changed" );
+}
+
+MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin){
+  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  cr_assert_gt(rems,0,"Not enougth buffer size");
+  char memory[rems];
+  for( char *it = memory, *end = it+rems; it < end; it++ )
+    *it = rand();
+  void *ptr,*orig;
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr, rems ), "Allocation 0 failed" );
+  cr_assert( ptr, "ptr was null" );
+  orig = ptr;
+  memcpy(ptr,memory,rems);
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems*2, false ), "Reallocation 0 failed" );
+  cr_assert_eq( ptr, orig, "ptr has changed" );
+  cr_assert( !memcmp(ptr,memory,rems), "Memory changed" );
+}
+
+MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_end){
+  const int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
+  cr_assert_gt(rems,1,"Not enougth buffer size");
+  char memory[rems];
+  for( char *it = memory, *end = it+rems; it < end; it++ )
+    *it = rand();
+  void *ptr,*orig;
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr, rems ), "Allocation 0 failed" );
+  cr_assert( ptr, "ptr was null" );
+  orig = ptr;
+  memcpy(ptr,memory,rems);
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems/2, true ), "Reallocation 0 failed" );
+  cr_assert_neq( ptr, orig, "ptr hasn't changed" );
+  cr_assert( !memcmp(ptr,memory+rems/2,rems/2), "Memory changed" );
+}
+
+
+MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_begin){
+  const int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
+  cr_assert_gt(rems,1,"Not enougth buffer size");
+  char memory[rems];
+  for( char *it = memory, *end = it+rems; it < end; it++ )
+    *it = rand();
+  void *ptr,*orig;
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr, rems ), "Allocation 0 failed" );
+  cr_assert( ptr, "ptr was null" );
+  orig = ptr;
+  memcpy(ptr,memory,rems);
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems/2, false ), "Reallocation 0 failed" );
+  cr_assert_eq( ptr, orig, "ptr has changed" );
+  cr_assert( !memcmp(ptr,memory,rems/2), "Memory changed" );
 }

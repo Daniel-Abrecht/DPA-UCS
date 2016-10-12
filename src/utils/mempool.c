@@ -89,11 +89,12 @@ bool DPA_mempool_alloc( DPA_mempool_t*const mempool, void**const ptr, size_t siz
 }
 
 bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_t size, bool preserveContentEnd ){
-
-  if(!size){
-    DPA_mempool_free( mempool, memory );
-    return true;
-  }
+  if( !memory )
+    return false;
+  if(!size)
+    return DPA_mempool_free( mempool, memory );
+  if( !*memory )
+    return DPA_mempool_alloc(mempool,memory,size);
 
   DPA_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
   size += DPAUCS_CALC_PADDING(size);
@@ -259,6 +260,11 @@ void DPA_mempool_defragment( DPA_mempool_t*const mempool ){
 }
 
 bool DPA_mempool_free( DPA_mempool_t*const mempool, void**const memory ){
+  if( !memory )
+    return false;
+  if( !*memory )
+    return true;
+
   DPA_mempoolEntry_t* entry = DPAUCS_GET_MEMPOOL_ENTRY( *memory );
 
   DPA_mempoolEntry_t* previous = entry->lastEntry;

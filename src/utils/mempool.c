@@ -135,7 +135,8 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
   }else{ // end
 
     void* freeSpaceBegin = getEntryEnd(entry);
-    size_t freeSpaceSize = (uintptr_t)entry->nextEntry - (uintptr_t)freeSpaceBegin;
+    void* freeSpaceEnd = entry->nextEntry ? entry->nextEntry : mempool->firstEntry + mempool->size;
+    size_t freeSpaceSize = (uintptr_t)freeSpaceEnd - (uintptr_t)freeSpaceBegin;
     if( (long long)freeSpaceSize < diff )
       goto defragmentMoveResize;
     if( mempool->largestContiguousFreeMemoryBegin == freeSpaceBegin ){
@@ -152,6 +153,8 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
 
   defragmentMoveResize: {
 
+    // Move all entries before entry entry to the end of the previous entry
+    // This removes the unused space before each entry
     DPA_mempoolEntry_t* iterator;
     for(
       iterator = mempool->firstEntry; // dummyentry with mempool->firstEntry->size=0
@@ -165,30 +168,35 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
       iterator->nextEntry->lastEntry = iterator;
       *iterator->nextEntry->reference = getEntryDatas(iterator->nextEntry);
     }
+    ////
 
+    // Save data start & size
     char* srcStart = getEntryDatas( entry );
-    size_t size = entry->size;
+    size_t old_size = entry->size;
 
+    // Move entry header to start of previous entry
     DPA_mempoolEntry_t* newEntry = getEntryEnd( iterator );
     memmove( newEntry, entry, sizeof(*entry) );
     iterator->nextEntry = entry = newEntry;
     entry->lastEntry = iterator;
+    ////
+
+    // Set future data start & size
     *entry->reference = getEntryDatas( entry );
+    entry->size = size;
 
-    entry->size += diff;
-
+    // Get end of future entry
     char* dstEnd = getEntryEnd( entry );
-    char* dstStart = preserveContentEnd ? dstEnd - entry->size : getEntryDatas( entry );
+    // Calculate offset to copy entry datas in futur entry
+    char* dstStart = preserveContentEnd ? dstEnd - old_size : getEntryDatas( entry );
 
-    if( dstEnd > (char*)entry->nextEntry ){ // move following overlapping memory away
+    // move following overlapping memory away, if there is any
+    if( entry->nextEntry && dstEnd > (char*)entry->nextEntry ){
 
-      size_t reqSize = (uintptr_t)dstEnd - (uintptr_t)srcStart + size;
+      // Find last entry to be moved right and posible free space following future entry
+      size_t reqSize = (uintptr_t)dstEnd - (uintptr_t)srcStart + ( dstEnd - (char*)entry->nextEntry );
       size_t s = 0;
-      for(
-        iterator = entry;
-        iterator->nextEntry;
-        iterator = iterator->nextEntry
-      ){
+      for( iterator = entry->nextEntry; iterator; iterator = iterator->nextEntry ){
         void* freeSpaceEnd = iterator->nextEntry;
         if(!freeSpaceEnd)
           freeSpaceEnd = (uint8_t*)mempool->firstEntry + mempool->size;
@@ -196,9 +204,11 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
         if( s >= reqSize )
           break;
       }
+      ////
 
+      // Move entries to the right
       DPA_mempoolEntry_t* tmp = iterator;
-      size_t move = s - reqSize;
+      size_t keep = s - reqSize;
       for(;
         iterator->lastEntry != entry;
         iterator = iterator->lastEntry
@@ -206,9 +216,9 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
         void* freeSpaceEnd = iterator->nextEntry;
         if(!freeSpaceEnd)
           freeSpaceEnd = (uint8_t*)mempool->firstEntry + mempool->size;
-        void* dst = (char*)iterator->nextEntry - move - iterator->size - DPAUCS_MEMPOOL_ENTRY_SIZE;
-        move = 0;
-        memmove( dst, iterator, iterator->nextEntry->size + DPAUCS_MEMPOOL_ENTRY_SIZE );
+        void* dst = (char*)freeSpaceEnd - keep - iterator->size - DPAUCS_MEMPOOL_ENTRY_SIZE;
+        keep = 0;
+        memmove( dst, iterator, iterator->size + DPAUCS_MEMPOOL_ENTRY_SIZE );
         iterator = dst;
         iterator->lastEntry->nextEntry = iterator;
         if( iterator->nextEntry )
@@ -217,14 +227,14 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
       }
       iterator = tmp;
     }
+    ////
 
-    memmove( dstStart, srcStart, size );
+    // Move datas of entry to final location
+    memmove( dstStart, srcStart, old_size );
 
-    for(
-      iterator = entry; // dummyentry with mempool->firstEntry->size=0
-      iterator->nextEntry != entry;
-      iterator = iterator->nextEntry
-    ){
+    // Move following entries to the left, if there is unused space
+    // complete defragmentation
+    for( iterator = entry; iterator->nextEntry; iterator = iterator->nextEntry ){
       if( iterator->nextEntry == getEntryEnd(iterator) )
         continue;
       memmove( getEntryEnd(iterator), iterator->nextEntry, iterator->nextEntry->size + DPAUCS_MEMPOOL_ENTRY_SIZE );

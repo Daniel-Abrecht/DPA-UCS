@@ -1,5 +1,6 @@
-#include <stdio.h>
 #include <criterion/criterion.h>
+#include <stdlib.h>
+#include <string.h>
 #include <DPA/utils/mempool.h>
 
 #define MTest(...) Test(__VA_ARGS__, .init = setup)
@@ -59,9 +60,6 @@ MTest(mempool,Y){ \
   cr_assert( ptr[3], "ptr[3] was null" ); \
   cr_assert( !ptr[4], "ptr[4] wasn't null" ); \
 }
-
-#define DPA_mempool_realloc_LP_TRUE(A,B,C) DPA_mempool_realloc(A,B,C,true)
-#define DPA_mempool_realloc_LP_FALSE(A,B,C) DPA_mempool_realloc(A,B,C,false)
 
 reallocTestCase( true, alloc_using_realloc_lp_true )
 reallocTestCase( false, alloc_using_realloc_lp_false )
@@ -139,6 +137,7 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end){
   orig = ptr;
   memcpy(ptr,memory,rems);
   cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems*2, true ), "Reallocation 0 failed" );
+  cr_assert( ptr, "ptr is null" );
   cr_assert_eq( ptr, orig, "ptr has changed" );
   cr_assert( !memcmp((char*)ptr+rems,memory,rems), "Memory changed" );
 }
@@ -155,6 +154,7 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin){
   orig = ptr;
   memcpy(ptr,memory,rems);
   cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems*2, false ), "Reallocation 0 failed" );
+  cr_assert( ptr, "ptr is null" );
   cr_assert_eq( ptr, orig, "ptr has changed" );
   cr_assert( !memcmp(ptr,memory,rems), "Memory changed" );
 }
@@ -171,6 +171,7 @@ MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_end){
   orig = ptr;
   memcpy(ptr,memory,rems);
   cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems/2, true ), "Reallocation 0 failed" );
+  cr_assert( ptr, "ptr is null" );
   cr_assert_neq( ptr, orig, "ptr hasn't changed" );
   cr_assert( !memcmp(ptr,memory+rems/2,rems/2), "Memory changed" );
 }
@@ -188,6 +189,7 @@ MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_begin){
   orig = ptr;
   memcpy(ptr,memory,rems);
   cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems/2, false ), "Reallocation 0 failed" );
+  cr_assert( ptr, "ptr is null" );
   cr_assert_eq( ptr, orig, "ptr has changed" );
   cr_assert( !memcmp(ptr,memory,rems/2), "Memory changed" );
 }

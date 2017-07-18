@@ -124,6 +124,18 @@ FTest(ringbuffer,read_full){
   cr_assert_eq(rb.range.offset,0,"Check if offset is correct");
 }
 
+FTest(ringbuffer,read_too_much){
+  int destination[] = {0,0,0,0,10};
+  int expected[] = {256,257,258,259,10};
+  memcpy( rb.buffer, expected, 4*sizeof(int) );
+  rb.range.size = 4;
+  size_t ret = DPA_ringbuffer_read( &rb.super, destination, 5 );
+  cr_assert_eq(ret,4,"wrong amount read");
+  cr_assert_arr_eq( destination, expected, 5*sizeof(int) );
+  cr_assert_eq(rb.range.size,0,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,0,"Check if offset is correct");
+}
+
 RTest(ringbuffer_reverse,read_full){
   int destination[] = {0,0,0,0,10};
   memcpy( rb.buffer, (int[]){256,257,258,259}, 4*sizeof(int) );

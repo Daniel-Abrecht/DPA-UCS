@@ -241,6 +241,13 @@ struct testsub_DPA_mempool_each_params {
   int i;
 };
 
+bool testsub_0_DPA_mempool_each( void** entry, void* param ){
+  (void)entry;
+  (void)param;
+  cr_assert( false, "Shouldn't have been called" );
+  return false;
+}
+
 bool testsub_1_DPA_mempool_each( void** entry, void* param ){
   struct testsub_DPA_mempool_each_params* p = param;
   cr_assert( p->i < 2, "Only 2 entries available, but called for a 3rd entry" );
@@ -261,6 +268,8 @@ MTest(mempool,DPA_mempool_each){
   const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   struct testsub_DPA_mempool_each_params helper;
+  helper.i = 0;
+  DPA_mempool_each( &mempool, &testsub_0_DPA_mempool_each, &helper );
   cr_assert( DPA_mempool_alloc( &mempool, &helper.ptr[0], rems ), "Allocation 0 failed" );
   cr_assert( helper.ptr[0], "ptr[0] is null" );
   cr_assert( DPA_mempool_alloc( &mempool, &helper.ptr[1], rems ), "Allocation 1 failed" );

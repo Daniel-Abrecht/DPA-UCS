@@ -310,7 +310,8 @@ void DPA_mempool_each( DPA_mempool_t*const mempool, bool(*handler)(void**,void*)
     return;
   while(iterator){
     void** reference = iterator->nextEntry ? iterator->nextEntry->reference : 0;
-    (*handler)(iterator->reference,arg);
+    if(! (*handler)(iterator->reference,arg) )
+      break;
     if(!reference)
       break;
     iterator = (DPA_mempoolEntry_t*)((uint8_t*)(*reference) - DPAUCS_MEMPOOL_ENTRY_SIZE);

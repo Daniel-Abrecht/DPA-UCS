@@ -7,7 +7,7 @@
 
 // TEST FOR: utils/mempool
 
-static char buffer[1024+DPAUCS_MEMPOOL_ENTRY_SIZE];
+static char buffer[1024*1024+DPAUCS_MEMPOOL_ENTRY_SIZE];
 static DPA_mempool_t mempool = {
   .size = sizeof(buffer)
 };
@@ -140,7 +140,7 @@ MTest(mempool,free_using_realloc){
 }
 
 MTest(mempool,DPA_mempool_realloc_check_no_space_fail){
-  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[2][rems];
   for( char *it = *memory, *end = it+rems*2; it < end; it++ )
@@ -162,7 +162,7 @@ MTest(mempool,DPA_mempool_realloc_check_no_space_fail){
 }
 
 MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_move){
-  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[rems];
   for( char *it = memory, *end = it+rems; it < end; it++ )
@@ -179,7 +179,7 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_move){
 }
 
 MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_normal){
-  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[rems];
   for( char *it = memory, *end = it+rems; it < end; it++ )
@@ -200,7 +200,7 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_normal){
 }
 
 MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin_move){
-  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[rems];
   for( char *it = memory, *end = it+rems; it < end; it++ )
@@ -216,12 +216,51 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin_move){
   memcpy(ptr,memory,rems);
   cr_assert( DPA_mempool_realloc( &mempool, &ptr, rems*2, false ), "Reallocation 0 failed" );
   cr_assert( ptr, "ptr is null" );
-  cr_assert_eq( ptr, orig, "ptr has changed" );
+  cr_assert_neq( ptr, orig, "ptr hasn't changed" );
   cr_assert( !memcmp(ptr,memory,rems), "Memory changed" );
 }
 
+MTest(mempool,DPA_mempool_realloc_defragment_preceeding){
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 5 ) / 4;
+  cr_assert_gt(rems,0,"Not enougth buffer size");
+  char memory[rems][3];
+  for( char *it = (char*)memory, *end = it+rems*3; it < end; it++ )
+    *it = rand();
+  void *ptr[3],*tmp,*orig[3];
+  cr_assert( DPA_mempool_alloc( &mempool, &tmp, rems ), "Allocation 0 failed" );
+  cr_assert( tmp, "tmp is null" );
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr[0], rems ), "Allocation 1 failed" );
+  cr_assert( ptr[0], "ptr[0] is null" );
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr[1], rems ), "Allocation 2 failed" );
+  cr_assert( ptr[1], "ptr[1] is null" );
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr[2], rems ), "Allocation 3 failed" );
+  cr_assert( ptr[2], "ptr[2] is null" );
+  cr_assert( tmp < ptr[0], "tmp should be smaller than ptr[0]" );
+  cr_assert( ptr[0] < ptr[1], "ptr[0] should be smaller than ptr[1]" );
+  cr_assert( ptr[1] < ptr[2], "ptr[1] should be smaller than ptr[2]" );
+  memcpy(orig,ptr,sizeof(void*[3]));
+  cr_assert( DPA_mempool_free( &mempool, &tmp ), "Couldn't free memory" );
+  cr_assert( !tmp, "tmp isn't null" );
+  cr_assert_eq( ptr[0], orig[0], "ptr[0] has changed" );
+  cr_assert_eq( ptr[1], orig[1], "ptr[1] has changed" );
+  cr_assert_eq( ptr[2], orig[2], "ptr[2] has changed" );
+  memcpy(ptr[0],memory[0],rems);
+  memcpy(ptr[1],memory[1],rems);
+  memcpy(ptr[2],memory[2],rems);
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr[2], rems*2, false ), "Reallocation 0 failed" );
+  cr_assert( ptr[2], "ptr is null" );
+  cr_assert_neq( ptr[2], orig[2], "ptr[2] hasn't changed" );
+  cr_assert_neq( ptr[1], orig[1], "ptr[1] hasn't changed" );
+  cr_assert_neq( ptr[0], orig[0], "ptr[0] hasn't changed" );
+  cr_assert( ptr[0] < ptr[1], "ptr[0] should be smaller than ptr[1]" );
+  cr_assert( ptr[1] < ptr[2], "ptr[1] should be smaller than ptr[2]" );
+  cr_assert( !memcmp(ptr[2],memory[2],rems), "Memory changed" );
+  cr_assert( !memcmp(ptr[1],memory[1],rems), "Memory changed" );
+  cr_assert( !memcmp(ptr[0],memory[0],rems), "Memory changed" );
+}
+
 MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin){
-  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[rems];
   for( char *it = memory, *end = it+rems; it < end; it++ )
@@ -238,7 +277,7 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin){
 }
 
 MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_end){
-  const int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
+  const size_t rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
   cr_assert_gt(rems,1,"Not enougth buffer size");
   char memory[rems];
   for( char *it = memory, *end = it+rems; it < end; it++ )
@@ -256,7 +295,7 @@ MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_end){
 
 
 MTest(mempool,DPA_mempool_realloc_check_shrink_simple_preserve_begin){
-  const int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
+  const size_t rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
   cr_assert_gt(rems,1,"Not enougth buffer size");
   char memory[rems];
   for( char *it = memory, *end = it+rems; it < end; it++ )
@@ -301,7 +340,7 @@ bool testsub_2_DPA_mempool_each( void** entry, void* param ){
 }
 
 MTest(mempool,DPA_mempool_each){
-  const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
+  const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   struct testsub_DPA_mempool_each_params helper;
   helper.i = 0;

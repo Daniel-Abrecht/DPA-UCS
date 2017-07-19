@@ -37,11 +37,37 @@ MTest(mempool,DPA_mempool_alloc){
   cr_assert_neq( ptr[1], orig[1], "ptr[1] hasn't changed" );
   cr_assert_neq( ptr[2], orig[2], "ptr[2] hasn't changed" );
   cr_assert_neq( ptr[3], orig[3], "ptr[3] hasn't changed" );
+  cr_assert( ptr[0] < ptr[1], "ptr[0] should be before ptr[1]" );
+  cr_assert( ptr[1] < ptr[2], "ptr[1] should be before ptr[2]" );
+  cr_assert( ptr[2] < ptr[3], "ptr[2] should be before ptr[3]" );
   cr_assert_eq( ptr[4], orig[4], "ptr[4] has changed" );
+  cr_assert( DPA_mempool_alloc( &mempool, (void**)ptr+4, 0 ), "Allocation 5 failed" );
   cr_assert( ptr[0], "ptr[0] was null" );
   cr_assert( ptr[1], "ptr[1] was null" );
   cr_assert( ptr[2], "ptr[2] was null" );
   cr_assert( ptr[3], "ptr[3] was null" );
+  cr_assert( !ptr[4], "ptr[4] wasn't null" );
+}
+
+MTest(mempool,DPA_mempool_alloc_use_free_space_fragment){
+  int rems = sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3;
+  char* ptr[2] = {"a","b"};
+  char* orig[2];
+  memcpy(orig,ptr,5*sizeof(char*));
+  cr_assert( DPA_mempool_alloc( &mempool, (void**)ptr+0, rems / 4 ), "Allocation 0 failed" );
+  cr_assert( DPA_mempool_alloc( &mempool, (void**)ptr+1, rems / 4 ), "Allocation 1 failed" );
+  cr_assert_neq( ptr[0], orig[0], "ptr[0] hasn't changed" );
+  cr_assert_neq( ptr[1], orig[1], "ptr[1] hasn't changed" );
+  cr_assert( ptr[0], "ptr[0] was null" );
+  cr_assert( ptr[1], "ptr[1] was null" );
+  cr_assert( ptr[0] < ptr[1], "ptr[0] should be before ptr[1]" );
+  cr_assert( DPA_mempool_free( &mempool, (void**)ptr+0 ), "Failed to free allocation 1" );
+  cr_assert( !ptr[0], "ptr[0] wasn't null" );
+  ptr[0] = orig[0];
+  cr_assert( DPA_mempool_alloc( &mempool, (void**)ptr+0, rems / 4 ), "Allocation 3 failed" );
+  cr_assert_neq( ptr[0], orig[0], "ptr[0] hasn't changed" );
+  cr_assert( ptr[0], "ptr[0] was null" );
+  cr_assert( ptr[0] < ptr[1], "ptr[0] should be before ptr[1]" );
 }
 
 #define reallocTestCase(X,Y) \
@@ -103,6 +129,16 @@ MTest(mempool,free){
   cr_assert( DPA_mempool_free( &mempool, &ptr ), "Free 2 failed" );
 }
 
+MTest(mempool,free_using_realloc){
+  void* ptr = 0;
+  cr_assert( !DPA_mempool_realloc( &mempool, 0, 0, false ), "Realloc 0 succeded" );
+  cr_assert( DPA_mempool_alloc( &mempool, &ptr, 1 ), "Allocation failed" );
+  cr_assert( ptr, "ptr was null" );
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr, 0, false ), "Realloc 1 failed" );
+  cr_assert( !ptr, "ptr was not null" );
+  cr_assert( DPA_mempool_realloc( &mempool, &ptr, 0, false ), "Realloc 2 failed" );
+}
+
 MTest(mempool,DPA_mempool_realloc_check_no_space_fail){
   const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
@@ -125,7 +161,7 @@ MTest(mempool,DPA_mempool_realloc_check_no_space_fail){
   cr_assert( !memcmp(ptr[1],memory[1],rems), "Memory area 1 changed" );
 }
 
-MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_defragment){
+MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_move){
   const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[rems];
@@ -163,7 +199,7 @@ MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_end_normal){
   cr_assert( !memcmp((char*)ptr+rems,memory,rems), "Memory changed" );
 }
 
-MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin_defragment){
+MTest(mempool,DPA_mempool_realloc_check_grow_simple_preserve_begin_move){
   const int rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 3 ) / 2;
   cr_assert_gt(rems,0,"Not enougth buffer size");
   char memory[rems];

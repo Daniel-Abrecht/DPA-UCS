@@ -217,7 +217,9 @@ $(TEMP_LINUX)/test/test-all: $(TESTS) | $(LINUX_LIBRARY) $(CRITERION_LIB)
 
 test: $(TEMP_LINUX)/test/test-all
 	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^ --no-early-exit
-	gcov -rn $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep -hr '^//\s*TEST FOR:' "$(SRC)/test/" | sed 's|^//\s*TEST FOR:\s*||')))
+	for file in $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep -hr '^//\s*TEST FOR:' "$(SRC)/test/" | sed 's|^//\s*TEST FOR:\s*||'))); \
+	  do gcov -rn "$$file"; \
+	done
 
 ###################
 #       AVR       #

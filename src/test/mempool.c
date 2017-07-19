@@ -259,8 +259,6 @@ MTest(mempool,DPA_mempool_realloc_defragment_preceeding){
   cr_assert( !memcmp(ptr[0],memory[0],rems), "Memory 0 changed" );
 }
 
-#include <stdio.h>
-
 MTest(mempool,DPA_mempool_realloc_defragment_following){
   const size_t rems = ( sizeof(buffer) - DPAUCS_MEMPOOL_ENTRY_SIZE * 9 ) / 8;
   cr_assert_gt(rems,0,"Not enougth buffer size");
@@ -281,9 +279,9 @@ MTest(mempool,DPA_mempool_realloc_defragment_following){
   cr_assert( DPA_mempool_alloc( &mempool, &tmp[1], rems ), "Allocation 5 failed" );
   cr_assert( tmp[1], "tmp is null" );
   cr_assert( DPA_mempool_alloc( &mempool, &ptr[4], rems ), "Allocation 6 failed" );
-  cr_assert( ptr[4], "ptr[3] is null" );
+  cr_assert( ptr[4], "ptr[4] is null" );
   cr_assert( DPA_mempool_alloc( &mempool, &ptr[5], rems ), "Allocation 7 failed" );
-  cr_assert( ptr[5], "ptr[3] is null" );
+  cr_assert( ptr[5], "ptr[5] is null" );
   cr_assert( ptr[0] < ptr[1], "ptr[0] should be smaller than ptr[1]" );
   cr_assert( ptr[1] < ptr[2], "ptr[1] should be smaller than ptr[2]" );
   cr_assert( ptr[2] < tmp[0], "ptr[2] should be smaller than tmp[0]" );
@@ -292,6 +290,7 @@ MTest(mempool,DPA_mempool_realloc_defragment_following){
   cr_assert( tmp[1] < ptr[4], "tmp[1] should be smaller than ptr[4]" );
   cr_assert( ptr[4] < ptr[5], "ptr[4] should be smaller than ptr[5]" );
   memcpy(orig,ptr,sizeof(void*[6]));
+  void* tcp[2] = {tmp[0],tmp[1]};
   cr_assert( DPA_mempool_free( &mempool, &tmp[0] ), "Couldn't free memory" );
   cr_assert( !tmp[0], "tmp[0] isn't null" );
   cr_assert( DPA_mempool_free( &mempool, &tmp[1] ), "Couldn't free memory" );
@@ -312,14 +311,15 @@ MTest(mempool,DPA_mempool_realloc_defragment_following){
   cr_assert_eq(  ptr[0], orig[0], "ptr[0] has changed" );
   cr_assert_eq(  ptr[1], orig[1], "ptr[1] has changed" );
   cr_assert_neq( ptr[2], orig[2], "ptr[2] hasn't changed" );
-  printf( "%p %p\n", ptr[3], orig[3] );
+  cr_assert_eq(  ptr[2],  tcp[0], "ptr[2] wasn't moved to the previous location of tmp[0]" );
   cr_assert_eq(  ptr[3], orig[3], "ptr[3] has changed" );
   cr_assert_neq( ptr[4], orig[4], "ptr[4] hasn't changed" );
+  cr_assert_eq(  ptr[4],  tcp[1], "ptr[4] wasn't moved to the previous location of tmp[1]" );
   cr_assert_neq( ptr[5], orig[5], "ptr[5] hasn't changed" );
   cr_assert( ptr[0] < ptr[1], "ptr[0] should be smaller than ptr[1]" );
   cr_assert( ptr[1] < ptr[2], "ptr[1] should be smaller than ptr[2]" );
-  cr_assert( ptr[2] < ptr[3], "ptr[1] should be smaller than ptr[2]" );
-  cr_assert( ptr[3] < ptr[4], "ptr[1] should be smaller than ptr[2]" );
+  cr_assert( ptr[2] < ptr[3], "ptr[2] should be smaller than ptr[3]" );
+  cr_assert( ptr[3] < ptr[4], "ptr[3] should be smaller than ptr[4]" );
   cr_assert( ptr[4] < ptr[5], "ptr[4] should be smaller than ptr[5]" );
   cr_assert( !memcmp(ptr[0],memory[0],rems), "Memory 0 changed" );
   cr_assert( !memcmp(ptr[1],memory[1],rems), "Memory 1 changed" );

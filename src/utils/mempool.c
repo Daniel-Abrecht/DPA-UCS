@@ -1,5 +1,6 @@
-#include <stdbool.h>
+#include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 #include <DPA/utils/mempool.h>
 
 static inline void* getEntryEnd(DPA_mempoolEntry_t* entry){
@@ -116,7 +117,7 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
 
   mempool->freeMemory -= diff;
 
-  if(preserveContentEnd){ // begin
+  if(preserveContentEnd){ // end
 
     void* freeSpaceBegin = getEntryEnd(previous);
     size_t freeSpaceSize = (uintptr_t)entry - (uintptr_t)freeSpaceBegin;
@@ -132,7 +133,7 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
     *entry->reference = getEntryDatas( entry );
     entry->size += diff;
 
-  }else{ // end
+  }else{ // begin
 
     void* freeSpaceBegin = getEntryEnd(entry);
     void* freeSpaceEnd = entry->nextEntry ? (void*)entry->nextEntry : (void*)((uint8_t*)mempool->memory + mempool->size);
@@ -194,23 +195,25 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
     if( entry->nextEntry && dstEnd > (char*)entry->nextEntry ){
 
       // Find last entry to be moved right and posible free space following future entry
-      size_t reqSize = (uintptr_t)dstEnd - (uintptr_t)srcStart + ( dstEnd - (char*)entry->nextEntry );
+      size_t reqSize = dstEnd - (char*)entry->nextEntry;
       size_t s = 0;
       for( iterator = entry->nextEntry; iterator; iterator = iterator->nextEntry ){
         void* freeSpaceEnd = iterator->nextEntry;
         if(!freeSpaceEnd)
           freeSpaceEnd = (uint8_t*)mempool->memory + mempool->size;
-        s += (uintptr_t)getEntryEnd(iterator) - (uintptr_t)freeSpaceEnd;
+        s += (uintptr_t)freeSpaceEnd - (uintptr_t)getEntryEnd(iterator);
         if( s >= reqSize )
           break;
       }
       ////
 
+      assert(iterator);
+      assert(s >= reqSize);
+
       // Move entries to the right
-      DPA_mempoolEntry_t* tmp = iterator;
       size_t keep = s - reqSize;
       for(;
-        iterator->lastEntry != entry;
+        iterator != entry;
         iterator = iterator->lastEntry
       ){
         void* freeSpaceEnd = iterator->nextEntry;
@@ -225,7 +228,6 @@ bool DPA_mempool_realloc( DPA_mempool_t*const mempool, void**const memory, size_
           iterator->nextEntry->lastEntry = iterator;
         *iterator->reference = getEntryDatas( iterator );
       }
-      iterator = tmp;
     }
     ////
 

@@ -51,3 +51,28 @@ MTest(stream,referenceWrite){
   cr_assert_eq(ostBufferBuffer.buffer[1].range.size,sizeof(b)-1,"Stream entry 0 has wrong size");
   cr_assert_eq(ostBufferBuffer.buffer[1].ptr,b,"Stream entry 0 points to the wrong thing");
 }
+
+MTest(stream,copyWrite){
+  const char a[] = "Hello World\n";
+  DPA_stream_copyWrite(&stream,a,sizeof(a)-1);
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 offset should be 0");
+  cr_assert_eq(ostBuffer.range.size,sizeof(a)-1,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,0,"Ringbuffer 2 offset should be 0");
+  cr_assert_eq(ostBufferBuffer.range.size,1,"Ringbuffer 2 content size should be 1");
+  cr_assert_eq(ostBufferBuffer.buffer[0].type,BUFFER_BUFFER,"Stream entry 0 has wrong type");
+  cr_assert_eq(ostBufferBuffer.buffer[0].range.offset,0,"Stream entry 0 has wrong offset");
+  cr_assert_eq(ostBufferBuffer.buffer[0].range.size,sizeof(a)-1,"Stream entry 0 has wrong size");
+  cr_assert(!ostBufferBuffer.buffer[0].ptr,"Stream entry pointer should be null");
+  const char b[] = "test\n";
+  DPA_stream_copyWrite(&stream,b,sizeof(b)-1);
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 offset should be 0");
+  cr_assert_eq(ostBuffer.range.size,sizeof(a)+sizeof(b)-2,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,0,"Ringbuffer 2 offset should be 0");
+  cr_assert_eq(ostBufferBuffer.range.size,2,"Ringbuffer 2 content size should be 1");
+  cr_assert_eq(ostBufferBuffer.buffer[1].type,BUFFER_BUFFER,"Stream entry 0 has wrong type");
+  cr_assert_eq(ostBufferBuffer.buffer[1].range.offset,0,"Stream entry 0 has wrong offset");
+  cr_assert_eq(ostBufferBuffer.buffer[1].range.size,sizeof(b)-1,"Stream entry 0 has wrong size");
+  cr_assert(!ostBufferBuffer.buffer[1].ptr,"Stream entry pointer should be null");
+  cr_assert(!memcmp( ostBuffer.buffer, a, sizeof(a)-1 ), "First string wasn't stored correctly" );
+  cr_assert(!memcmp( ostBuffer.buffer+sizeof(a)-1, b, sizeof(b)-1 ), "Second string wasn't stored correctly" );
+}

@@ -11,7 +11,7 @@ DPA_DEFINE_RINGBUFFER( int, DPAUCS_test_ringbuffer_t, rb, 4, false );
 
 /* setup */
 
-void setup_normal( void ){
+static void setup_normal( void ){
   rb.inverse = false;
   DPA_ringbuffer_reset(&rb.super);
   cr_assert_eq(rb.size,4,"Ringbuffer size should be 4");
@@ -22,7 +22,7 @@ void setup_normal( void ){
   cr_assert(rb.buffer,"Ringbuffer buffer must be set");
 }
 
-void setup_reverse( void ){
+static void setup_reverse( void ){
   rb.inverse = true;
   DPA_ringbuffer_reset(&rb.super);
   cr_assert_eq(rb.size,4,"Ringbuffer size should be 4");

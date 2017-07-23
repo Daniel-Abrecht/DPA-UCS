@@ -12,7 +12,7 @@ static DPA_mempool_t mempool = {
   .size = sizeof(buffer)
 };
 
-void setup( void ){
+static void setup( void ){
   static DPA_mempool_t tmp = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
   memset( buffer, 0, sizeof(buffer) );
   mempool.memory = tmp.memory;

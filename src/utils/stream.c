@@ -226,7 +226,8 @@ size_t DPA_stream_getLength( const DPA_stream_t* stream, size_t max_ret, bool* h
   DPA_buffer_ringbuffer_t tmp = *stream->buffer_buffer;
   size_t n = 0;
   while( !DPA_ringbuffer_eof(&tmp.super) ){
-    size_t s = DPA_RINGBUFFER_GET( &tmp ).range.size;
+    const DPA_buffer_range_t range = DPA_RINGBUFFER_GET( &tmp ).range;
+    size_t s = range.size > range.offset ? range.size - range.offset : 0;
     if( s + n < n || s + n > max_ret ){
       if(has_more)
         *has_more = true;

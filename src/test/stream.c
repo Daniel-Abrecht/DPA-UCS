@@ -105,16 +105,35 @@ MTest(stream,getLength_using_copies){
 
   DPA_stream_referenceWrite(&stream,a,strlen(a));
   has_more = true;
-  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)*2,"wrong result 4");
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)*2,"wrong result 10");
   cr_assert_eq(has_more,false,"has_more wasn't set to false");
   has_more = true;
-  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)*2,"wrong result 5");
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)*2,"wrong result 11");
   cr_assert_eq(has_more,false,"has_more wasn't set to false");
-  cr_assert_eq(DPA_stream_getLength(&stream,~0,0),strlen(a)*2,"wrong result 6");
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,0),strlen(a)*2,"wrong result 12");
   has_more = false;
-  cr_assert_eq(DPA_stream_getLength(&stream,5,&has_more),5,"wrong result 7");
+  cr_assert_eq(DPA_stream_getLength(&stream,5,&has_more),5,"wrong result 13");
   cr_assert_eq(has_more,true,"has_more wasn't set to true");
-  cr_assert_eq(DPA_stream_getLength(&stream,5,0),5,"wrong result 8");
-  cr_assert_eq(DPA_stream_getLength(&stream,strlen(a)*2,0),strlen(a)*2,"wrong result 9");
+  cr_assert_eq(DPA_stream_getLength(&stream,5,0),5,"wrong result 14");
+  cr_assert_eq(DPA_stream_getLength(&stream,strlen(a)*2,0),strlen(a)*2,"wrong result 15");
+
+  DPA_stream_seek(&stream,strlen(a)+6);
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"Ringbuffer 2 offset should be 0");
+  cr_assert_eq(ostBufferBuffer.range.size,1,"Ringbuffer 2 content size should be 1");
+  cr_assert_eq(ostBufferBuffer.buffer[1].range.size,strlen(a),"Wrong stream entity size");
+  cr_assert_eq(ostBufferBuffer.buffer[1].range.offset,6,"Stream entity offset should be 6");
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)-6,"wrong result 16");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)-6,"wrong result 17");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,0),strlen(a)-6,"wrong result 18");
+  has_more = false;
+  cr_assert_eq(DPA_stream_getLength(&stream,5,&has_more),5,"wrong result 19");
+  cr_assert_eq(has_more,true,"has_more wasn't set to true");
+  cr_assert_eq(DPA_stream_getLength(&stream,5,0),5,"wrong result 20");
+  cr_assert_eq(DPA_stream_getLength(&stream,strlen(a)-6,0),strlen(a)-6,"wrong result 21");
+
 
 }

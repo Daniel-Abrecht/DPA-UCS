@@ -76,3 +76,45 @@ MTest(stream,copyWrite){
   cr_assert(!memcmp( ostBuffer.buffer, a, sizeof(a)-1 ), "First string wasn't stored correctly" );
   cr_assert(!memcmp( ostBuffer.buffer+sizeof(a)-1, b, sizeof(b)-1 ), "Second string wasn't stored correctly" );
 }
+
+MTest(stream,getLength_using_copies){
+  bool has_more;
+  const char a[] = "Hello World\n";
+
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),0,"wrong result 1");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,0,&has_more),0,"wrong result 2");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  cr_assert_eq(DPA_stream_getLength(&stream,0,0),0,"wrong result 3");
+
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a),"wrong result 4");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a),"wrong result 5");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,0),strlen(a),"wrong result 6");
+  has_more = false;
+  cr_assert_eq(DPA_stream_getLength(&stream,5,&has_more),5,"wrong result 7");
+  cr_assert_eq(has_more,true,"has_more wasn't set to true");
+  cr_assert_eq(DPA_stream_getLength(&stream,5,0),5,"wrong result 8");
+  cr_assert_eq(DPA_stream_getLength(&stream,strlen(a),0),strlen(a),"wrong result 9");
+
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)*2,"wrong result 4");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  has_more = true;
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,&has_more),strlen(a)*2,"wrong result 5");
+  cr_assert_eq(has_more,false,"has_more wasn't set to false");
+  cr_assert_eq(DPA_stream_getLength(&stream,~0,0),strlen(a)*2,"wrong result 6");
+  has_more = false;
+  cr_assert_eq(DPA_stream_getLength(&stream,5,&has_more),5,"wrong result 7");
+  cr_assert_eq(has_more,true,"has_more wasn't set to true");
+  cr_assert_eq(DPA_stream_getLength(&stream,5,0),5,"wrong result 8");
+  cr_assert_eq(DPA_stream_getLength(&stream,strlen(a)*2,0),strlen(a)*2,"wrong result 9");
+
+}

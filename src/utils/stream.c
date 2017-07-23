@@ -226,7 +226,7 @@ size_t DPA_stream_getLength( const DPA_stream_t* stream, size_t max_ret, bool* h
   DPA_buffer_ringbuffer_t tmp = *stream->buffer_buffer;
   size_t n = 0;
   while( !DPA_ringbuffer_eof(&tmp.super) ){
-    size_t s = DPA_RINGBUFFER_GET( stream->buffer_buffer ).range.size;
+    size_t s = DPA_RINGBUFFER_GET( &tmp ).range.size;
     if( s + n < n || s + n > max_ret ){
       if(has_more)
         *has_more = true;
@@ -234,7 +234,8 @@ size_t DPA_stream_getLength( const DPA_stream_t* stream, size_t max_ret, bool* h
     }
     n += s;
   }
-  *has_more = false;
+  if(has_more)
+    *has_more = false;
   return n;
 }
 
@@ -250,6 +251,7 @@ size_t DPA_stream_raw_getLength( const DPA_stream_raw_t* stream, size_t max_ret,
     }
     n += s;
   }
-  *has_more = false;
+  if(has_more)
+    *has_more = false;
   return n;
 }

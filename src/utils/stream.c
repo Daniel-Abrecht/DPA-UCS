@@ -207,7 +207,10 @@ void DPA_stream_seek( DPA_stream_t* stream, size_t size ){
   while( size && !DPA_ringbuffer_eof(&stream->buffer_buffer->super) ){
     DPA_bufferInfo_t* info = DPA_ringbuffer_begin(stream->buffer_buffer);
     if( info->range.size - info->range.offset <= size ){
+      if( info->type == BUFFER_BUFFER )
+        DPA_ringbuffer_skip_read( &stream->buffer->super, info->range.size - info->range.offset );
       size -= info->range.size - info->range.offset;
+      info->range.offset = size;
       DPA_ringbuffer_increment_read( &stream->buffer_buffer->super );
     }else{
       info->range.offset += size;

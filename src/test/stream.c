@@ -77,7 +77,7 @@ MTest(stream,copyWrite){
   cr_assert(!memcmp( ostBuffer.buffer+sizeof(a)-1, b, sizeof(b)-1 ), "Second string wasn't stored correctly" );
 }
 
-MTest(stream,getLength_using_copies){
+MTest(stream,getLength){
   bool has_more;
   const char a[] = "Hello World\n";
 
@@ -134,6 +134,32 @@ MTest(stream,getLength_using_copies){
   cr_assert_eq(has_more,true,"has_more wasn't set to true");
   cr_assert_eq(DPA_stream_getLength(&stream,5,0),5,"wrong result 20");
   cr_assert_eq(DPA_stream_getLength(&stream,strlen(a)-6,0),strlen(a)-6,"wrong result 21");
+}
 
+MTest(stream,seek_empty){
+  DPA_stream_seek(&stream,6);
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 offset should be 0");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,0,"Ringbuffer 2 offset should be 0");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"Ringbuffer 2 content size should be 0");
+}
 
+MTest(stream,seek_skip_only_buffer_entry){
+  const char a[] = "Hello World\n";
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  DPA_stream_seek(&stream,strlen(a));
+  cr_assert_eq(ostBuffer.range.offset,strlen(a),"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"Ringbuffer 2 content size should be 0");
+}
+
+MTest(stream,seek_skip_only_array_entry){
+  const char a[] = "Hello World\n";
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  DPA_stream_seek(&stream,strlen(a));
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 offset should be 0");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 content size should be 0");
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"Ringbuffer 2 content size should be 0");
 }

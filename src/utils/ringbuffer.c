@@ -151,11 +151,27 @@ size_t DPA_ringbuffer_write( DPA_ringbuffer_base_t* ringbuffer, const void* sour
   return size;
 }
 
-/* TODO
 size_t DPA_ringbuffer_skip_read( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
-  
+  if( ringbuffer->range.size > size )
+    size = ringbuffer->range.size;
+  ringbuffer->range.size -= size;
+  if(ringbuffer->inverse){
+    if( ringbuffer->range.offset <= size ){
+      ringbuffer->range.offset = ringbuffer->size - ( size - ringbuffer->range.offset );
+    }else{
+      ringbuffer->range.offset -= size;
+    }
+  }else{
+    if( ringbuffer->size - ringbuffer->range.offset > size ){
+      ringbuffer->range.offset += size;
+    }else{
+      ringbuffer->range.offset = size - (ringbuffer->size - ringbuffer->range.offset);
+    }
+  }
+  return size;
 }
 
+/*
 size_t DPA_ringbuffer_rewind_read( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
   
 }

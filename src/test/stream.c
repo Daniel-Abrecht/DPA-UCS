@@ -180,3 +180,11 @@ MTest(stream,seek_skip_partial){
   cr_assert_eq(ostBufferBuffer.buffer[0].range.size,strlen(a),"Wrong stream object size");
 }
 
+MTest(stream,getEntry){
+  cr_assert( !DPA_stream_getEntry(&stream), "No entry should have been returned" );
+  const char a[] = "Hello World\n";
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+0, "Wrong entry 1" );
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+0, "Wrong entry 2" );
+}

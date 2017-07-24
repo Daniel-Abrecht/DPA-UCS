@@ -34,6 +34,8 @@ void DPA_stream_swapEntries( DPA_streamEntry_t* a, DPA_streamEntry_t* b  ){
 }
 
 DPA_streamEntry_t* DPA_stream_getEntry( DPA_stream_t* stream ){
+  if( DPA_stream_eof(stream) )
+    return 0;
   return DPA_ringbuffer_begin( stream->buffer_buffer );
 }
 

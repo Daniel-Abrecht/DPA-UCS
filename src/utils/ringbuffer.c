@@ -152,7 +152,7 @@ size_t DPA_ringbuffer_write( DPA_ringbuffer_base_t* ringbuffer, const void* sour
 }
 
 size_t DPA_ringbuffer_skip_read( DPA_ringbuffer_base_t* ringbuffer, size_t size ){
-  if( ringbuffer->range.size > size )
+  if( ringbuffer->range.size < size )
     size = ringbuffer->range.size;
   ringbuffer->range.size -= size;
   if(ringbuffer->inverse){

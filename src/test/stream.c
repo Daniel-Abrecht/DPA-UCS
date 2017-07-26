@@ -188,3 +188,81 @@ MTest(stream,getEntry){
   DPA_stream_copyWrite(&stream,a,strlen(a));
   cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+0, "Wrong entry 2" );
 }
+
+MTest(stream,nextEntry_empty){
+  cr_assert( !DPA_stream_nextEntry(&stream), "Shuldn't have succeeded" );
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,0,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"Ringbuffer 2 content size should be 0");
+}
+
+MTest(stream,nextEntry_buffer_entry){
+  const char a[] = "Hello World\n";
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  cr_assert( DPA_stream_nextEntry(&stream), "DPA_stream_nextEntry failed" );
+  cr_assert_eq(ostBuffer.range.offset,12,"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,1,"Ringbuffer 2 content size should be 0");
+  cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+1, "Wrong entry" );
+}
+
+MTest(stream,nextEntry_array_entry){
+  const char a[] = "Hello World\n";
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  cr_assert( DPA_stream_nextEntry(&stream), "DPA_stream_nextEntry failed" );
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,1,"Ringbuffer 2 content size should be 0");
+  cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+1, "Wrong entry" );
+}
+
+MTest(stream,previousEntry_empty){
+  ostBufferBuffer.range.size = ostBufferBuffer.size;
+  cr_assert( !DPA_stream_previousEntry(&stream), "Shuldn't have succeeded" );
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,0,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,ostBufferBuffer.size,"Ringbuffer 2 content size should be 0");
+}
+
+MTest(stream,previousEntry_buffer_entry){
+  const char a[] = "Hello World\n";
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  cr_assert( DPA_stream_nextEntry(&stream), "failed to skip entry 0" );
+  cr_assert( DPA_stream_nextEntry(&stream), "failed to skip entry 1" );
+  cr_assert_eq(ostBuffer.range.offset,12,"1 Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"1 Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,2,"1 Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"1 Ringbuffer 2 content size should be 0");
+  cr_assert( DPA_stream_previousEntry(&stream), "DPA_stream_nextEntry failed" );
+  cr_assert_eq(ostBuffer.range.offset,0,"2 Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,12,"2 Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"2 Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,1,"2 Ringbuffer 2 content size should be 0");
+  cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+1, "Wrong entry" );
+}
+
+MTest(stream,previousEntry_array_entry){
+  const char a[] = "Hello World\n";
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  cr_assert( DPA_stream_nextEntry(&stream), "failed to skip entry 0" );
+  cr_assert( DPA_stream_nextEntry(&stream), "failed to skip entry 1" );
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,2,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"Ringbuffer 2 content size should be 0");
+  cr_assert( DPA_stream_previousEntry(&stream), "DPA_stream_nextEntry failed" );
+  cr_assert_eq(ostBuffer.range.offset,0,"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,1,"Ringbuffer 2 offset should be 1");
+  cr_assert_eq(ostBufferBuffer.range.size,1,"Ringbuffer 2 content size should be 0");
+  cr_assert_eq( DPA_stream_getEntry(&stream), ostBufferBuffer.buffer+1, "Wrong entry" );
+}
+

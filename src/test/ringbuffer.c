@@ -174,8 +174,6 @@ RTest(ringbuffer_reverse,read_overflow){
 /* DPA_ringbuffer_skip_read */
 
 FTest(ringbuffer,skip_read){
-  int expected[] = {256,257,258,259};
-  memcpy( rb.buffer, expected, 4*sizeof(int) );
   rb.range.size = 4;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 3 );
   cr_assert_eq(ret,3,"wrong amount read");
@@ -184,7 +182,6 @@ FTest(ringbuffer,skip_read){
 }
 
 RTest(ringbuffer_reverse,skip_read){
-  memcpy( rb.buffer, (int[]){256,257,258,259}, 4*sizeof(int) );
   rb.range.size = 4;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 3 );
   cr_assert_eq(ret,3,"wrong amount read");
@@ -193,8 +190,6 @@ RTest(ringbuffer_reverse,skip_read){
 }
 
 FTest(ringbuffer,skip_read_full){
-  int expected[] = {256,257,258,259,10};
-  memcpy( rb.buffer, expected, 4*sizeof(int) );
   rb.range.size = 4;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 4 );
   cr_assert_eq(ret,4,"wrong amount read");
@@ -203,8 +198,6 @@ FTest(ringbuffer,skip_read_full){
 }
 
 FTest(ringbuffer,skip_read_too_much){
-  int expected[] = {256,257,258,259,10};
-  memcpy( rb.buffer, expected, 4*sizeof(int) );
   rb.range.size = 4;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 5 );
   cr_assert_eq(ret,4,"wrong amount read");
@@ -213,7 +206,6 @@ FTest(ringbuffer,skip_read_too_much){
 }
 
 RTest(ringbuffer_reverse,skip_read_full){
-  memcpy( rb.buffer, (int[]){256,257,258,259}, 4*sizeof(int) );
   rb.range.size = 4;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 4 );
   cr_assert_eq(ret,4,"wrong amount read");
@@ -222,7 +214,6 @@ RTest(ringbuffer_reverse,skip_read_full){
 }
 
 FTest(ringbuffer,skip_read_overflow){
-  memcpy( rb.buffer, (int[]){256,257,258,259}, 4*sizeof(int) );
   rb.range.size = 4;
   rb.range.offset = 2;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 3 );
@@ -232,13 +223,77 @@ FTest(ringbuffer,skip_read_overflow){
 }
 
 RTest(ringbuffer_reverse,skip_read_overflow){
-  memcpy( rb.buffer, (int[]){256,257,258,259}, 4*sizeof(int) );
   rb.range.size = 4;
   rb.range.offset = 2;
   size_t ret = DPA_ringbuffer_skip_read( &rb.super, 3 );
   cr_assert_eq(ret,3,"wrong amount read");
   cr_assert_eq(rb.range.size,1,"Check if size was correctly updated");
   cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+/* DPA_ringbuffer_rewind_read */
+
+FTest(ringbuffer,rewind_read){
+  rb.range.offset = 3;
+  rb.range.size = 0;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 3 );
+  cr_assert_eq(ret,3,"wrong amount read");
+  cr_assert_eq(rb.range.size,3,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,0,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,rewind_read){
+  rb.range.offset = 1;
+  rb.range.size = 0;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 3 );
+  cr_assert_eq(ret,3,"wrong amount read");
+  cr_assert_eq(rb.range.size,3,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,4,"Check if offset is correct");
+}
+
+FTest(ringbuffer,rewind_read_full){
+  rb.range.offset = 3;
+  rb.range.size = 0;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 4 );
+  cr_assert_eq(ret,4,"wrong amount read");
+  cr_assert_eq(rb.range.size,4,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+FTest(ringbuffer,rewind_read_too_much){
+  rb.range.offset = 3;
+  rb.range.size = 0;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 5 );
+  cr_assert_eq(ret,4,"wrong amount read");
+  cr_assert_eq(rb.range.size,4,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,rewind_read_full){
+  rb.range.offset = 1;
+  rb.range.size = 0;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 4 );
+  cr_assert_eq(ret,4,"wrong amount read");
+  cr_assert_eq(rb.range.size,4,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,1,"Check if offset is correct");
+}
+
+FTest(ringbuffer,rewind_read_overflow){
+  rb.range.size = 0;
+  rb.range.offset = 2;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 3 );
+  cr_assert_eq(ret,3,"wrong amount read");
+  cr_assert_eq(rb.range.size,3,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,3,"Check if offset is correct");
+}
+
+RTest(ringbuffer_reverse,rewind_read_overflow){
+  rb.range.size = 0;
+  rb.range.offset = 2;
+  size_t ret = DPA_ringbuffer_rewind_read( &rb.super, 3 );
+  cr_assert_eq(ret,3,"wrong amount read");
+  cr_assert_eq(rb.range.size,3,"Check if size was correctly updated");
+  cr_assert_eq(rb.range.offset,1,"Check if offset is correct");
 }
 
 /* DPA_ringbuffer_reverse */

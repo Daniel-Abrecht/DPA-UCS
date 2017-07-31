@@ -43,18 +43,11 @@ void DPA_stream_restoreWriteOffset( DPA_stream_t* stream, size_t sros );
 size_t DPA_stream_getLength( const DPA_stream_t* stream, size_t max_ret, bool* has_more ); // inefficient
 size_t DPA_stream_raw_getLength( const DPA_stream_raw_t* stream, size_t max_ret, bool* has_more ); // inefficient
 size_t DPA_stream_seek( DPA_stream_t* stream, size_t size );
-
-/* Be careful with the following functions */
 size_t DPA_stream_rewind( DPA_stream_t* stream, size_t size );
+
 bool DPA_stream_to_raw_buffer( const DPA_stream_t* stream, DPA_stream_raw_t* raw );
 void DPAUCS_raw_stream_truncate( DPA_stream_raw_t* raw, size_t size );
 void DPAUCS_raw_as_stream( DPA_stream_raw_t* raw, void(*func)( DPA_stream_t* stream, void* ptr ), void* ptr );
-void DPA_stream_swapEntries( DPA_streamEntry_t* a, DPA_streamEntry_t* b  );
-DPA_streamEntry_t* DPA_stream_getEntry( DPA_stream_t* stream );
-bool DPA_stream_nextEntry( DPA_stream_t* stream );
-bool DPA_stream_previousEntry( DPA_stream_t* stream );
-/*-----------------------------------------*/
-
 
 #define DPA_stream_eof(s) DPA_ringbuffer_eof(&(s)->buffer_buffer->super)
 

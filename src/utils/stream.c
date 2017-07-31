@@ -17,41 +17,6 @@ void DPA_stream_restoreReadOffset( DPA_stream_t* stream, size_t old_size ){
   }
 }
 
-void DPA_stream_swapEntries( DPA_streamEntry_t* a, DPA_streamEntry_t* b  ){
-  if( a == b )
-    return;
-  DPA_streamEntry_t c = *a;
-  *a = *b;
-  *b = c;
-}
-
-DPA_streamEntry_t* DPA_stream_getEntry( DPA_stream_t* stream ){
-  if( DPA_stream_eof(stream) )
-    return 0;
-  return DPA_ringbuffer_begin( stream->buffer_buffer );
-}
-
-bool DPA_stream_nextEntry( DPA_stream_t* stream ){
-  if(DPA_ringbuffer_eof( &stream->buffer_buffer->super ))
-    return false;
-  DPA_streamEntry_t* entry = &DPA_RINGBUFFER_GET( stream->buffer_buffer );
-  if( entry->type == BUFFER_BUFFER )
-    DPA_ringbuffer_skip_read( &stream->buffer->super, entry->range.size - entry->range.offset );
-  entry->range.offset = entry->range.size;
-  return true;
-}
-
-bool DPA_stream_previousEntry( DPA_stream_t* stream ){
-  if(DPA_ringbuffer_full( &stream->buffer_buffer->super ))
-    return false;
-  DPA_ringbuffer_decrement_read( &stream->buffer_buffer->super );
-  DPA_streamEntry_t* entry = DPA_ringbuffer_begin( stream->buffer_buffer );
-  if( entry->type == BUFFER_BUFFER )
-    DPA_ringbuffer_rewind_read( &stream->buffer->super, entry->range.offset );
-  entry->range.offset = 0;
-  return true;
-}
-
 bool DPA_stream_to_raw_buffer( const DPA_stream_t* stream, DPA_stream_raw_t* raw ){
 
   DPA_uchar_ringbuffer_t cb = *stream->buffer;

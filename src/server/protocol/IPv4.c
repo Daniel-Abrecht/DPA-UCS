@@ -204,6 +204,9 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
 }
 
 static bool transmit(
+  size_t header_count,
+  const size_t header_size[header_count],
+  const void* header_data[header_count],
   DPA_stream_t* inputStream,
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
@@ -238,11 +241,18 @@ static bool transmit(
     src = tmp_IPv4Addr;
   }
 
+  for( size_t i=0; i<header_count; i++ ){
+    if( max_size_arg + header_size[i] < max_size_arg ){
+      max_size_arg = ~0;
+    }else{
+      max_size_arg += header_size[i];
+    }
+  }
   uint16_t max_size = DPA_MIN(max_size_arg,(uint16_t)~0);
 
-  size_t offset = 0;
+  size_t offset = 0, header = 0;
 
-  while( !DPA_stream_eof(inputStream) && offset < max_size ){
+  while( offset < max_size && ( header < header_count || ( inputStream && !DPA_stream_eof(inputStream) ) ) ){
 
     // prepare next packet
     DPAUCS_packet_info_t p;
@@ -264,12 +274,29 @@ static bool transmit(
 
     // create content
     size_t msize = DPA_MIN( (uint16_t)max_size - offset, (uint16_t)PACKET_MAX_PAYLOAD - sizeof(DPAUCS_IPv4_t) );
-    size_t s = DPA_stream_read( inputStream, ((unsigned char*)p.payload) + hl * 4, msize );
+    size_t s = 0;
+    {
+      unsigned char* data = ((unsigned char*)p.payload) + hl * 4;
+      while( s < msize ){
+        if( header < header_count ){
+          size_t hs = header_size[header];
+          if( hs > msize - s )
+            hs = msize - s;
+          memcpy( data, header_data[header], hs );
+          data += hs;
+          s += hs;
+          header++;
+        }else if(inputStream){
+          s += DPA_stream_read( inputStream, data, msize );
+          break;
+        }else break;
+      }
+    }
 
     // complete ip header
     uint8_t flags = 0;
 
-    if( !DPA_stream_eof(inputStream) && (uint32_t)(offset+s) < max_size )
+    if( ( header < header_count || ( inputStream && !DPA_stream_eof(inputStream) ) ) && (uint32_t)(offset+s) < max_size )
       flags |= IPv4_FLAG_MORE_FRAGMENTS;
 
     ip->length = DPA_htob16( p.size + hl * 4 + s );

@@ -148,18 +148,19 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
 }
 
 void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t length ){
-  DPA_stream_offsetStorage_t sros;
-  DPA_stream_saveReadOffset( &sros, stream );
+  size_t stream_size = stream ? DPA_stream_getLength(stream,~0,0) : 0;
 
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
+  uint16_t tcph_checksum = ~checksum( tcp, sizeof(*tcp) ); // TODO (option size)
   uint16_t data_checksum = ~checksumOfStream( stream, length );
 
-  uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum;
+  uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum + tcph_checksum;
   uint16_t checksum = ~( ( tmp_checksum & 0xFFFF ) + ( tmp_checksum >> 16 ) );
 
   tcp->checksum = checksum;
 
-  DPA_stream_restoreReadOffset( stream, &sros );
+  if(stream)
+    DPA_stream_restoreReadOffset( stream, stream_size );
 }
 
 static DPAUCS_tcp_transmission_t tcp_begin( void ){
@@ -209,16 +210,19 @@ bool DPAUCS_tcp_transmit(
   size_t data_size,
   uint32_t SEQ
 ){
+  memset(tcp,0,sizeof(*tcp));
 
-  // get pointer to entry in stream which represents tcp/tcp.header
-  DPA_streamEntry_t* tcpHeaderEntry = DPA_stream_getEntry( stream );
-  DPA_stream_nextEntry( stream ); // Skip tcp/tcp.header
+  const bool RST = flags & TCP_FLAG_RST;
+  const bool ACK = flags & TCP_FLAG_ACK;
+  if( RST ) flags = 0;
+  const bool SYN = flags & TCP_FLAG_SYN;
+  const bool FIN = flags & TCP_FLAG_FIN;
 
-  size_t headersize = tcpHeaderEntry->range.size; // get size of TCP Header
+  if(RST)
+    stream = 0;
 
-  // save start of datas of stream
-  DPA_stream_offsetStorage_t sros;
-  DPA_stream_saveReadOffset( &sros, stream );
+  size_t headersize = sizeof(*tcp); // TODO (option size)
+  size_t stream_size = stream ? DPA_stream_getLength(stream,~0,0) : 0;
 
   // Get maximum size of payload the underlaying protocol can handle
   size_t l3_max = ~0;
@@ -232,10 +236,6 @@ bool DPAUCS_tcp_transmit(
   uint32_t next = SEQ;
   uint32_t offset = 0;
   uint32_t size, off;
-
-  const bool SYN = flags & TCP_FLAG_SYN;
-  const bool FIN = flags & TCP_FLAG_FIN;
-  const bool ACK = flags & TCP_FLAG_ACK;
 
   do {
 
@@ -263,6 +263,9 @@ bool DPAUCS_tcp_transmit(
         flags |= TCP_FLAG_SYN; // Set SYN flag
       }
     }
+
+    if(RST)
+      flags |= TCP_FLAG_RST;
 
     // Check if there is anything to send, even if it's only an ACK
     if( size + SYN + FIN < off + !ACK )
@@ -294,19 +297,12 @@ bool DPAUCS_tcp_transmit(
       .flags = flags
     };
     tcp_from_tcb( tcp, tcb, &tmp_segment );
-    if( !offset )
+    if( stream && off && !offset )
       DPA_stream_seek( stream, off );
-    DPA_streamEntry_t* dataEntry = DPA_stream_getEntry( stream );
-    size_t dataEntryOffset = dataEntry->range.offset;
-    DPA_stream_previousEntry( stream );
-    DPA_streamEntry_t* entryBeforeData = DPA_stream_getEntry( stream );
-    DPA_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
-    dataEntry->range.offset = dataEntryOffset;
     tcp_calculateChecksum( tcb, tcp, stream, packet_length );
-    dataEntry->range.offset = dataEntryOffset;
-    DPAUCS_layer3_transmit( stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
+    printFrame(tcp);
+    DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
     DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
-    DPA_stream_swapEntries( tcpHeaderEntry, entryBeforeData );
 
     size_t segSize = size + tcp_flaglength(flags);
     offset += segSize;
@@ -316,7 +312,8 @@ bool DPAUCS_tcp_transmit(
 
   } while( size < off );
 
-  DPA_stream_restoreReadOffset( stream, &sros );
+  if( stream && stream_size )
+    DPA_stream_restoreReadOffset( stream, stream_size );
 
   return true;
 }

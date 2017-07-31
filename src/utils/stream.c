@@ -8,21 +8,13 @@ void DPA_stream_reset( DPA_stream_t* stream ){
   DPA_ringbuffer_reset( &stream->buffer->super );
 }
 
-void DPA_stream_saveReadOffset( DPA_stream_offsetStorage_t* sros, const DPA_stream_t* stream ){
-  DPA_bufferInfo_t* binf = DPA_ringbuffer_begin(stream->buffer_buffer);
-  sros->bufferBufferSize = stream->buffer_buffer->range.size;
-  sros->bufferBufferInfoOffset = binf->range.offset;
-}
-
-void DPA_stream_restoreReadOffset( DPA_stream_t* stream, const DPA_stream_offsetStorage_t* sros ){
-  size_t obbs = stream->buffer_buffer->range.size;
-  size_t nbbs = sros->bufferBufferSize;
-  if( obbs > nbbs ){
-//    rewindReadBuffer( stream->buffer_buffer, obbs - nbbs );
+void DPA_stream_restoreReadOffset( DPA_stream_t* stream, size_t old_size ){
+  size_t new_size = DPA_stream_getLength( stream, ~0, 0 );
+  if( old_size > new_size ){
+    DPA_stream_rewind( stream, old_size - new_size );
   }else{
-//    DPA_ringbuffer_rewind_read( &stream->buffer_buffer->super, nbbs - obbs );
+    DPA_stream_seek( stream, new_size - old_size );
   }
-//  DPA_BUFFER_BEGIN( stream->buffer_buffer )->offset = sros->bufferBufferInfoOffset;
 }
 
 void DPA_stream_swapEntries( DPA_streamEntry_t* a, DPA_streamEntry_t* b  ){
@@ -166,10 +158,15 @@ bool DPA_stream_referenceWrite( DPA_stream_t* stream, const void* p, size_t size
   return true;
 }
 
-static inline size_t stream_read_from_buffer( DPA_bufferInfo_t* info, void* p, size_t max_size ){
+static inline size_t stream_read_from_buffer(
+  const DPA_stream_t* stream,
+  DPA_bufferInfo_t* info,
+  void* p,
+  size_t max_size
+){
   size_t size = info->range.size - info->range.offset;
   size_t amount = size < max_size ? size : max_size;
-  size_t read = DPA_ringbuffer_read(info->ptr,p,amount);
+  size_t read = DPA_ringbuffer_read(&stream->buffer->super,p,amount);
   info->range.offset += read;
   if( read != amount ){
     info->range.size = read + info->range.offset;
@@ -182,7 +179,13 @@ static inline size_t stream_read_from_buffer( DPA_bufferInfo_t* info, void* p, s
   return read;
 }
 
-static inline size_t stream_read_from_array( DPA_bufferInfo_t* info, void* p, size_t max_size ){
+static inline size_t stream_read_from_array(
+  const DPA_stream_t* stream,
+  DPA_bufferInfo_t* info,
+  void* p,
+  size_t max_size
+){
+  (void)stream;
   size_t size = info->range.size - info->range.offset;
   size_t n = size < max_size ? size : max_size;
   memcpy(p,(char*)info->ptr+info->range.offset,n);
@@ -197,10 +200,10 @@ size_t DPA_stream_read( DPA_stream_t* stream, void* p, size_t max_size ){
     size_t size = 0;
     switch( info->type ){
       case BUFFER_ARRAY:
-        size = stream_read_from_array(info,p,n);
+        size = stream_read_from_array(stream,info,p,n);
       break;
       case BUFFER_BUFFER:
-        size = stream_read_from_buffer(info,p,n);
+        size = stream_read_from_buffer(stream,info,p,n);
       break;
       default: return max_size - n;
     }
@@ -212,22 +215,46 @@ size_t DPA_stream_read( DPA_stream_t* stream, void* p, size_t max_size ){
   return max_size - n;
 }
 
-void DPA_stream_seek( DPA_stream_t* stream, size_t size ){
-  while( size && !DPA_ringbuffer_eof(&stream->buffer_buffer->super) ){
+size_t DPA_stream_seek( DPA_stream_t* stream, size_t size ){
+  while( size ){
     DPA_bufferInfo_t* info = DPA_ringbuffer_begin(stream->buffer_buffer);
     if( info->range.size - info->range.offset <= size ){
       if( info->type == BUFFER_BUFFER )
         DPA_ringbuffer_skip_read( &stream->buffer->super, info->range.size - info->range.offset );
       size -= info->range.size - info->range.offset;
       info->range.offset = info->range.size;
+      if( DPA_ringbuffer_eof(&stream->buffer_buffer->super) )
+        break;
       DPA_ringbuffer_increment_read( &stream->buffer_buffer->super );
     }else{
       if( info->type == BUFFER_BUFFER )
         DPA_ringbuffer_skip_read( &stream->buffer->super, size );
       info->range.offset += size;
-      break;
+      size = 0;
     }
   }
+  return size;
+}
+
+size_t DPA_stream_rewind( DPA_stream_t* stream, size_t size ){
+  while( size ){
+    DPA_bufferInfo_t* info = DPA_ringbuffer_begin(stream->buffer_buffer);
+    if( info->range.offset <= size ){
+      if( info->type == BUFFER_BUFFER )
+        DPA_ringbuffer_rewind_read( &stream->buffer->super, info->range.offset );
+      size -= info->range.offset;
+      info->range.offset = 0;
+      if( DPA_ringbuffer_full(&stream->buffer_buffer->super) )
+        break;
+      DPA_ringbuffer_decrement_read( &stream->buffer_buffer->super );
+    }else{
+      if( info->type == BUFFER_BUFFER )
+        DPA_ringbuffer_rewind_read( &stream->buffer->super, size );
+      info->range.offset -= size;
+      size = 0;
+    }
+  }
+  return size;
 }
 
 /*********************************************************************************************

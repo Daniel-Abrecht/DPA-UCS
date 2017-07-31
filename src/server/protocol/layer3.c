@@ -37,10 +37,18 @@ void DPAUCS_layer3_destroyTransmissionStream( DPA_stream_t* stream ){
   DPA_stream_reset( stream );
 }
 
-bool DPAUCS_layer3_transmit( DPA_stream_t* stream, const DPAUCS_mixedAddress_pair_t* fromTo, uint8_t type, size_t max_size ){
+bool DPAUCS_layer3_transmit(
+  size_t header_count,
+  const size_t header_size[header_count],
+  const void* header_data[header_count],
+  DPA_stream_t* payload,
+  const DPAUCS_mixedAddress_pair_t* fromTo,
+  uint8_t type,
+  size_t max_size
+){
   const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( fromTo ) );
   if( handler && handler->transmit )
-    return (*handler->transmit)( stream, fromTo, type, max_size );
+    return (*handler->transmit)( header_count, header_size, header_data, payload, fromTo, type, max_size );
   return false;
 }
 

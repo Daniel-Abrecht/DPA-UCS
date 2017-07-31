@@ -24,6 +24,8 @@ uint16_t checksum( void* p, size_t l ){
 
 uint16_t checksumOfStream( DPA_stream_t* stream, size_t max_len ){
   uint32_t checksum = 0;
+  if(!stream)
+    return ~0;
   while( !DPA_stream_eof(stream) && max_len ){
     uint16_t num = 0;
     size_t s = DPA_MIN( sizeof(num), max_len );

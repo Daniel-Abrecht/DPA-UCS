@@ -44,7 +44,16 @@ enum icmp_types {
   ICMP_PHOTURIS
 };
 
-static bool icmp_receiveHandler( void* id, DPAUCS_address_t* from, DPAUCS_address_t* to, uint16_t offset, uint16_t length, DPAUCS_fragment_t** fragment, void* payload, bool last ){
+static bool icmp_receiveHandler(
+  void* id,
+  DPAUCS_address_t* from,
+  DPAUCS_address_t* to,
+  uint16_t offset,
+  uint16_t length,
+  DPAUCS_fragment_t** fragment,
+  void* payload,
+  bool last
+){
   if(!last)
     return false;
   (void)offset;
@@ -62,10 +71,7 @@ static bool icmp_receiveHandler( void* id, DPAUCS_address_t* from, DPAUCS_addres
         .source = to,
         .destination = from
       }} );
-      DPA_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
-      DPA_stream_referenceWrite( stream, payload, length );
-      DPAUCS_layer3_transmit( stream, &fromTo, PROTOCOL_ICMP, ~0 );
-      DPAUCS_layer3_destroyTransmissionStream( stream );
+      DPAUCS_layer3_transmit( 1, (size_t[]){length}, (const void*[]){payload}, 0, &fromTo, PROTOCOL_ICMP, ~0 );
     } break;
   }
   return true;

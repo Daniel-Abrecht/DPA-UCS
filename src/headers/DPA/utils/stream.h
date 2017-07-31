@@ -26,12 +26,6 @@ typedef struct DPA_stream {
   DPA_buffer_ringbuffer_t* buffer_buffer;
 } DPA_stream_t;
 
-typedef struct DPA_stream_offsetStorage {
-  size_t bufferOffset;
-  size_t bufferBufferSize;
-  size_t bufferBufferInfoOffset;
-} DPA_stream_offsetStorage_t;
-
 typedef DPA_bufferInfo_t DPA_streamEntry_t;
 
 typedef struct DPA_stream_raw {
@@ -44,15 +38,14 @@ bool DPA_stream_copyWrite( DPA_stream_t*, const void*, size_t );
 bool DPA_stream_referenceWrite( DPA_stream_t*, const void*, size_t );
 void DPA_stream_reset( DPA_stream_t* );
 size_t DPA_stream_read( DPA_stream_t*, void*, size_t );
-void DPA_stream_saveReadOffset( DPA_stream_offsetStorage_t* sros, const DPA_stream_t* stream );
-void DPA_stream_restoreReadOffset( DPA_stream_t* stream, const DPA_stream_offsetStorage_t* sros );
-void DPA_stream_saveWriteOffset( DPA_stream_offsetStorage_t* sros, const DPA_stream_t* stream );
-void DPA_stream_restoreWriteOffset( DPA_stream_t* stream, const DPA_stream_offsetStorage_t* sros );
+void DPA_stream_restoreReadOffset( DPA_stream_t* stream, size_t sros );
+void DPA_stream_restoreWriteOffset( DPA_stream_t* stream, size_t sros );
 size_t DPA_stream_getLength( const DPA_stream_t* stream, size_t max_ret, bool* has_more ); // inefficient
 size_t DPA_stream_raw_getLength( const DPA_stream_raw_t* stream, size_t max_ret, bool* has_more ); // inefficient
-void DPA_stream_seek( DPA_stream_t* stream, size_t size );
+size_t DPA_stream_seek( DPA_stream_t* stream, size_t size );
 
 /* Be careful with the following functions */
+size_t DPA_stream_rewind( DPA_stream_t* stream, size_t size );
 bool DPA_stream_to_raw_buffer( const DPA_stream_t* stream, DPA_stream_raw_t* raw );
 void DPAUCS_raw_stream_truncate( DPA_stream_raw_t* raw, size_t size );
 void DPAUCS_raw_as_stream( DPA_stream_raw_t* raw, void(*func)( DPA_stream_t* stream, void* ptr ), void* ptr );

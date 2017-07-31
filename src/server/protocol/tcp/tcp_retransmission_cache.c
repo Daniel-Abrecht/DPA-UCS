@@ -132,9 +132,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
   }else{
     DPA_LOG("Test");
-    DPAUCS_tcp_t tcp;
     for( size_t i=0; i<count; i++ )
-      DPAUCS_tcp_transmit( 0, &tcp, tcb[i], flags[i], 0, tcb[i]->SND.NXT );
+      DPAUCS_tcp_transmit( 0, tcb[i], flags[i], 0, tcb[i]->SND.NXT );
   }
 
   return true;
@@ -267,7 +266,6 @@ void tcp_retransmission_cache_do_retransmissions( void ){
 
     uint16_t flags = TCP_FLAG_ACK;
 
-    DPAUCS_tcp_t tcp;
     DPA_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
 
     size_t size = 0;
@@ -281,7 +279,7 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     if( it->cache.flags.FIN )
       flags |= TCP_FLAG_FIN;
 
-    DPAUCS_tcp_transmit( stream, &tcp, it, flags, size, it->cache.first_SEQ );
+    DPAUCS_tcp_transmit( stream, it, flags, size, it->cache.first_SEQ );
 
     DPAUCS_layer3_destroyTransmissionStream( stream );
 

@@ -147,7 +147,6 @@ void DPAUCS_tcp_abord( void* cid );
 
 bool DPAUCS_tcp_transmit(
   DPA_stream_t* stream,
-  DPAUCS_tcp_t* tcp,
   DPAUCS_transmissionControlBlock_t* tcb,
   uint16_t flags,
   size_t size,

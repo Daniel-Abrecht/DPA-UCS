@@ -204,13 +204,13 @@ static bool tcp_end( DPAUCS_tcp_transmission_t* transmission, unsigned count, DP
 
 bool DPAUCS_tcp_transmit(
   DPA_stream_t* stream,
-  DPAUCS_tcp_t* tcp,
   DPAUCS_transmissionControlBlock_t* tcb,
   uint16_t flags,
   size_t data_size,
   uint32_t SEQ
 ){
-  memset(tcp,0,sizeof(*tcp));
+  DPAUCS_tcp_t tcp;
+  memset(&tcp,0,sizeof(tcp));
 
   const bool RST = flags & TCP_FLAG_RST;
   const bool ACK = flags & TCP_FLAG_ACK;
@@ -221,7 +221,7 @@ bool DPAUCS_tcp_transmit(
   if(RST)
     stream = 0;
 
-  size_t headersize = sizeof(*tcp); // TODO (option size)
+  size_t headersize = sizeof(tcp); // TODO (option size)
   size_t stream_size = stream ? DPA_stream_getLength(stream,~0,0) : 0;
 
   // Get maximum size of payload the underlaying protocol can handle
@@ -296,13 +296,13 @@ bool DPAUCS_tcp_transmit(
       .SEQ = SEQ + alreadyAcknowledged + offset,
       .flags = flags
     };
-    tcp_from_tcb( tcp, tcb, &tmp_segment );
+    tcp_from_tcb( &tcp, tcb, &tmp_segment );
     if( stream && off && !offset )
       DPA_stream_seek( stream, off );
-    tcp_calculateChecksum( tcb, tcp, stream, packet_length );
-    printFrame(tcp);
-    DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
-    DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp->checksum );
+    tcp_calculateChecksum( tcb, &tcp, stream, packet_length );
+    printFrame(&tcp);
+    DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){&tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
+    DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp.checksum );
 
     size_t segSize = size + tcp_flaglength(flags);
     offset += segSize;

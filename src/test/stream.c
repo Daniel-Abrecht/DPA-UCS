@@ -179,3 +179,21 @@ MTest(stream,seek_skip_partial){
   cr_assert_eq(ostBufferBuffer.buffer[0].range.offset,6,"Wrong stream object offset");
   cr_assert_eq(ostBufferBuffer.buffer[0].range.size,strlen(a),"Wrong stream object size");
 }
+
+MTest(stream,read){
+  const char a[] = "Hello World\n";
+  DPA_stream_copyWrite(&stream,a,strlen(a));
+  DPA_stream_referenceWrite(&stream,a,strlen(a));
+  char res[sizeof(a)*2-2];
+  DPA_stream_read(&stream,res,strlen(a)*2);
+  cr_assert_eq(ostBuffer.range.offset,strlen(a),"Ringbuffer 1 wrong offset");
+  cr_assert_eq(ostBuffer.range.size,0,"Ringbuffer 1 wrong content size");
+  cr_assert_eq(ostBufferBuffer.range.offset,2,"Ringbuffer 2 offset should be 2");
+  cr_assert_eq(ostBufferBuffer.range.size,0,"Ringbuffer 2 content size should be 0");
+  cr_assert_eq(ostBufferBuffer.buffer[0].range.offset,strlen(a),"Wrong offset in stream object 0");
+  cr_assert_eq(ostBufferBuffer.buffer[0].range.size,strlen(a),"Wrong size in stream object 0");
+  cr_assert_eq(ostBufferBuffer.buffer[1].range.offset,strlen(a),"Wrong offset in stream object 1");
+  cr_assert_eq(ostBufferBuffer.buffer[1].range.size,strlen(a),"Wrong size in stream object 1");
+  cr_assert(!memcmp(a,res,strlen(a)),"First part of content read doasn't match what was written");
+  cr_assert(!memcmp(a,res+strlen(a),strlen(a)),"Second part of content read doasn't match what was written");
+}

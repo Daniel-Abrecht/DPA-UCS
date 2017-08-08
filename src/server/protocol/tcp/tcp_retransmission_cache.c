@@ -251,6 +251,18 @@ void tcp_cleanupCache( void ){
 
 #define RETRANSMISSION_INTERVAL AD_SEC
 
+struct tcp_retransmission_cache_do_retransmissions_sub_args {
+  DPAUCS_transmissionControlBlock_t* tcb;
+  uint16_t flags;
+  size_t size;
+  uint32_t SEQ;
+};
+
+static void tcp_retransmission_cache_do_retransmissions_sub( DPA_stream_t* stream, void* pargs ){
+  struct tcp_retransmission_cache_do_retransmissions_sub_args* args = pargs;
+  DPAUCS_tcp_transmit( stream, args->tcb, args->flags, args->size, args->SEQ );
+}
+
 void tcp_retransmission_cache_do_retransmissions( void ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
@@ -265,23 +277,34 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     DPA_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
 
     uint16_t flags = TCP_FLAG_ACK;
-
-    DPA_stream_t* stream = DPAUCS_layer3_createTransmissionStream();
-
-    size_t size = 0;
-
-    if( it->cache.first ){
-      
-    }
-
     if( it->cache.flags.SYN )
       flags |= TCP_FLAG_SYN;
     if( it->cache.flags.FIN )
       flags |= TCP_FLAG_FIN;
 
-    DPAUCS_tcp_transmit( stream, it, flags, size, it->cache.first_SEQ );
+    size_t size = 0;
 
-    DPAUCS_layer3_destroyTransmissionStream( stream );
+    if( it->cache.first ){
+      tcp_cache_entryInfo_t info;
+      DPAUCS_tcp_cacheEntry_t*const e = DCE(*it->cache.first);
+      getEntryInfo( &info, e );
+      DPA_stream_raw_t raw_stream = {
+        .bufferBufferSize = e->bufferBufferSize,
+        .charBufferSize   = e->charBufferSize,
+        .bufferBuffer     = info.bufferBuffer,
+        .charBuffer       = info.charBuffer
+      };
+
+      DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
+        .tcb = it,
+        .flags = flags,
+        .size = size,
+        .SEQ = it->cache.first_SEQ
+      }});
+
+    }else{
+      DPAUCS_tcp_transmit( 0, it, flags, size, it->cache.first_SEQ );
+    }
 
   }
 }

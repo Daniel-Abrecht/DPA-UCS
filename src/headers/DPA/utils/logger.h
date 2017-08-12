@@ -14,6 +14,6 @@
       (*DPA_log_func)( __FILE__ ":" DPA_TOSTRING(__LINE__) " | " __VA_ARGS__ ); \
   } while(0)
 
-extern DPA_WEAK_LOGGER int (*const DPA_log_func)( const char*, ... );
+extern DPA_WEAK_LOGGER int (*const DPA_log_func)( const char*, ... ) __attribute__ ((format (printf, 1, 2)));
 
 #endif

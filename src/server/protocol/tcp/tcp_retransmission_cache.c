@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <DPA/utils/logger.h>
 #include <DPA/utils/mempool.h>
+#include <DPA/utils/helper_macros.h>
 #include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 
@@ -13,11 +14,20 @@ static void* cacheEntries[TCP_RETRANSMISSION_CACHE_MAX_ENTRIES];
 
 #define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
 
-typedef struct tcp_cache_entry_tcb_entry {
+typedef struct packed tcp_cache_entry_tcb_entry {
   DPAUCS_transmissionControlBlock_t* tcb;
   void** next;
   uint16_t flags;
 } tcp_cache_entry_tcb_entry_t;
+
+typedef struct packed DPAUCS_tcp_cacheEntry {
+  size_t charBufferSize;
+  size_t bufferBufferSize;
+  size_t streamRealLength;
+  unsigned count;
+  bool streamIsLonger;
+  tcp_cache_entry_tcb_entry_t ctcb[];
+} DPAUCS_tcp_cacheEntry_t;
 
 typedef struct {
   unsigned char* charBuffer;
@@ -25,16 +35,10 @@ typedef struct {
   tcp_cache_entry_tcb_entry_t* tcb_list;
 } tcp_cache_entryInfo_t;
 
-static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, void* off ){
-  char* emem = (char*)off;
-  DPAUCS_tcp_cacheEntry_t* entry = (DPAUCS_tcp_cacheEntry_t*)( emem + *(size_t*)off );
-  size_t count = entry->count;
-  size_t offset = DPA_CALC_PREV_ALIGN_OFFSET( *(size_t*)off - entry->bufferBufferSize * sizeof( DPA_bufferInfo_t ), DPA_bufferInfo_t );
-  res->bufferBuffer = (void*)( emem + offset );
-  offset  = DPA_CALC_ALIGN_OFFSET( sizeof(*entry) + *(size_t*)off, tcp_cache_entry_tcb_entry_t );
-  res->tcb_list = (void*)( emem + offset );
-  offset += count * sizeof( tcp_cache_entry_tcb_entry_t );
-  res->charBuffer = (void*)( emem + offset );
+static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, DPAUCS_tcp_cacheEntry_t* entry ){
+  res->bufferBuffer = ((DPA_bufferInfo_t*)entry) - entry->bufferBufferSize;
+  res->tcb_list = entry->ctcb;
+  res->charBuffer = (unsigned char*)&res->tcb_list[entry->count];
 }
 
 bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags ){
@@ -50,8 +54,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
   for( unsigned i=count; i--; ){
     DPAUCS_transmissionControlBlock_t* it = tcb[i];
-    if( flags[i] & TCP_FLAG_SYN )
-      it->cache.flags.SYN = true;
+//    if( flags[i] & TCP_FLAG_SYN )
+//      it->cache.flags.SYN = true;
     if( flags[i] & TCP_FLAG_FIN )
       it->cache.flags.FIN = true;
     if( !it->cache.first )
@@ -62,13 +66,10 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
     size_t                             fullSize  = sizeof( size_t );
     const size_t bufferBuffer_offset = fullSize  = DPA_CALC_ALIGN_OFFSET( fullSize, DPA_bufferInfo_t );
-                                       fullSize += e.bufferBufferSize * sizeof( DPA_bufferInfo_t );
-    const size_t entry_offset        = fullSize  = DPA_CALC_ALIGN_OFFSET( fullSize, DPAUCS_tcp_cacheEntry_t );
-                                       fullSize += sizeof( DPAUCS_tcp_cacheEntry_t );
-    const size_t tcb_list_offset     = fullSize  = DPA_CALC_ALIGN_OFFSET( fullSize, tcp_cache_entry_tcb_entry_t );
-    const size_t charBuffer_offset   = fullSize += count * sizeof( DPAUCS_transmissionControlBlock_t* );
+    const size_t entry_offset        = fullSize += sizeof( DPA_bufferInfo_t[e.bufferBufferSize] );
+    const size_t tcb_list_offset     = fullSize += sizeof( DPAUCS_tcp_cacheEntry_t );
+    const size_t charBuffer_offset   = fullSize += sizeof( tcp_cache_entry_tcb_entry_t[count] );
                                        fullSize += e.charBufferSize;
-
     DPA_LOG(
       "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
       (unsigned long long)fullSize, (unsigned long long)e.streamRealLength
@@ -79,11 +80,12 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     if(entry < cacheEntries)
       return false;
 
-    DPA_mempool_alloc( &mempool, (void**)entry, fullSize );
+    DPA_mempool_alloc( &mempool, entry, fullSize );
     if( !*entry ) return false;
+    DPA_LOG("%zu bytes requested, %zu allocated in entry %zu\n",fullSize,DPAUCS_MEMPOOL_SIZE(*entry),entry-cacheEntries);
 
     char* emem = (char*)*entry;
-    *(size_t*)*entry = entry_offset;
+    *(size_t*)emem = entry_offset;
     *(DPAUCS_tcp_cacheEntry_t*)( emem + entry_offset ) = e;
     tcp_cache_entry_tcb_entry_t* tcb_list = (tcp_cache_entry_tcb_entry_t*)( emem + tcb_list_offset );
 
@@ -131,15 +133,16 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     }
 
   }else{
-    DPA_LOG("Test");
     for( size_t i=0; i<count; i++ )
-      DPAUCS_tcp_transmit( 0, tcb[i], flags[i], 0, tcb[i]->SND.NXT );
+      if(flags[i] & TCP_FLAG_SYN)
+        DPAUCS_tcp_transmit( 0, tcb[i], flags[i], 0, tcb[i]->SND.NXT );
   }
 
   return true;
 }
 
 static void removeFromCache( void** entry ){
+  DPA_LOG("Entry %zu freed\n",entry-cacheEntries);
   DPA_mempool_free( &mempool, entry );
 }
 
@@ -165,7 +168,7 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
       DPA_stream_raw_t raw_stream = {
         .bufferBufferSize = e->bufferBufferSize,
         .charBufferSize   = e->charBufferSize,
-//        .bufferBuffer     = info.bufferBuffer,
+        .bufferBuffer     = info.bufferBuffer,
         .charBuffer       = info.charBuffer
       };
       e->streamRealLength = DPA_stream_raw_getLength( &raw_stream, ~0, &e->streamIsLonger );
@@ -193,6 +196,7 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
 }
 
 void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
+  return;
   while( tcp_cleanupCacheEntryCheckTCB( tcb ) );
 }
 
@@ -260,6 +264,7 @@ struct tcp_retransmission_cache_do_retransmissions_sub_args {
 
 static void tcp_retransmission_cache_do_retransmissions_sub( DPA_stream_t* stream, void* pargs ){
   struct tcp_retransmission_cache_do_retransmissions_sub_args* args = pargs;
+  DPA_LOG( "tcp_retransmission_cache_do_retransmissions_sub: expected stream size: %zu, real stream size %zu\n", args->size, DPA_stream_getLength(stream,~0,0) );
   DPAUCS_tcp_transmit( stream, args->tcb, args->flags, args->size, args->SEQ );
 }
 
@@ -282,8 +287,6 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     if( it->cache.flags.FIN )
       flags |= TCP_FLAG_FIN;
 
-    size_t size = 0;
-
     if( it->cache.first ){
       tcp_cache_entryInfo_t info;
       DPAUCS_tcp_cacheEntry_t*const e = DCE(*it->cache.first);
@@ -298,12 +301,12 @@ void tcp_retransmission_cache_do_retransmissions( void ){
       DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
         .tcb = it,
         .flags = flags,
-        .size = size,
+        .size = e->streamRealLength,
         .SEQ = it->cache.first_SEQ
       }});
 
     }else{
-      DPAUCS_tcp_transmit( 0, it, flags, size, it->cache.first_SEQ );
+      DPAUCS_tcp_transmit( 0, it, flags, 0, it->cache.first_SEQ );
     }
 
   }

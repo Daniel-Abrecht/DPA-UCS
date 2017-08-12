@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -163,9 +164,9 @@ static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint
       DPA_LOG( "send: error: %d %s\n", errno, strerror(errno) );
     }
   }else if( ret >= len ){
-    DPA_LOG( "send: %lu OK\n", len );
+    DPA_LOG( "send: %lu OK\n", (unsigned long)len );
   }else{
-    DPA_LOG( "send: error: only %lu of %lu bytes sent\n", ret, len );
+    DPA_LOG( "send: error: only %ld of %lu bytes sent\n", ret, (unsigned long)len );
   }
 
 }
@@ -175,7 +176,11 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
   long i = recv(sock, packet, maxlen, 0);
   if( i<0 && errno != EAGAIN && errno != EWOULDBLOCK )
     DPA_LOG( "recv: error: %d %s\n", errno, strerror(errno) );
-  return i < 0 ? 0 : i;
+  if( i <= 0 ){
+    i = 0;
+    usleep(1000);
+  }
+  return i;
 }
 
 static void eth_shutdown( void ){

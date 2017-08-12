@@ -250,7 +250,7 @@ bool DPAUCS_tcp_transmit(
       // acknowledged than I sent, the amount of acknowledged datas, which is SND.UNA - SEG.SEQ mod 2^32,
       // must be smaller or equal to those datas already sent. Otherwise, datas from a previous segment
       // havn't yet been acknowledged, and none of the datas of the current segment are acknowledged.
-    DPA_LOG("SND.UNA: %lx, SEG.SEQ: %lx\n",tcb->SND.UNA,SEQ);
+    DPA_LOG("SND.UNA: %lx, SEG.SEQ: %lx\n",(unsigned long)tcb->SND.UNA,(unsigned long)SEQ);
     uint32_t alreadyAcknowledged = tcb->SND.UNA - SEQ;
     if( alreadyAcknowledged > alreadySent )
       alreadyAcknowledged = 0;

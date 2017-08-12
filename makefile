@@ -63,6 +63,9 @@ OPTIONAL_FILES += server/protocol/tcp/tcp_stack.o
 OPTIONAL_FILES += server/protocol/tcp/tcp_retransmission_cache.o
 OPTIONAL_FILES += server/protocol/IPv4.o
 
+OPTIONAL_FILES += files.g1.o
+OPTIONAL_FILES += server/files.o
+
 MAIN_FILE = main.o
 
 FILES += server/server.o

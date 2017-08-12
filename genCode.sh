@@ -42,14 +42,16 @@ const flash DPAUCS_ressource_file_t $varname[] = {
     mkdir -p "$(dirname "$root/$dest/$url.c")"
     cat $file | "$root/2cstr" > "$root/$dest/$url.c"
     mime="$(escape "$(file --mime-type "$file" | sed 's/^.*: //')")"
+    hash="$(escape "$(md5sum "$file" | grep -o '^[^ ]*')")"
 
     echo "{
     {
-      DPAUCS_RESSOURCE_FileRessource,
+      &file_ressource_handler.super,
       \"/\" $basemacroname $efile,
       sizeof(\"/\" $basemacroname $efile)-1
     },
     $mime,
+    $hash,
     sizeof(
       #include $einclude
     ),

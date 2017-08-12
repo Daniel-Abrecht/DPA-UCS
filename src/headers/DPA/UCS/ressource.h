@@ -5,30 +5,28 @@
 #include <DPA/utils/stream.h>
 #include <DPA/utils/helper_macros.h>
 
+#define DPAUCS_EXPORT_RESSOURCE_HANDLER( NAME, DRIVER ) \
+  DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS_ressource_handler*, DPAUCS_ressource_handler, DPAUCS_ressource_handler_ ## NAME ) DRIVER
+
+#define DPAUCS_EACH_RESSOURCE_HANDLER( ITERATOR ) \
+  DPA_FOR_SECTION_LIST_HACK( const struct DPAUCS_ressource_handler*, DPAUCS_ressource_handler, ITERATOR )
 
 DPA_MODULE( ressource );
 
-
-enum DPAUCS_ressource_entry_type {
-#ifdef RESSOURCE_GETTER
-#define X( RG ) DPAUCS_RESSOURCE_ ## RG,
-  RESSOURCE_GETTER
-#undef X
-#endif
-  DPAUCS_RESSOURCE_COUNT
-};
-
 typedef struct DPAUCS_ressource_entry {
-  const enum DPAUCS_ressource_entry_type type;
+  const struct DPAUCS_ressource_handler* handler;
   const char* path;
   unsigned path_length;
 } DPAUCS_ressource_entry_t;
 
-const DPAUCS_ressource_entry_t* defaultRessourceGetter( const char* path, unsigned length );
-const DPAUCS_ressource_entry_t* weak getRessource( const char* path, unsigned length );
-bool DPAUCS_defaultWriteRessourceHeaders( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
-bool weak DPAUCS_writeRessourceHeaders( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
-bool DPAUCS_defaultWriteRessource( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
-bool weak DPAUCS_writeRessource( DPA_stream_t*, const DPAUCS_ressource_entry_t* );
+typedef struct DPAUCS_ressource_handler {
+  const DPAUCS_ressource_entry_t* (*open)( const char* path, unsigned length );
+  void (*close)( const DPAUCS_ressource_entry_t* );
+  size_t (*read)( const DPAUCS_ressource_entry_t*, DPA_stream_t* );
+  const char* (*getMime)( const DPAUCS_ressource_entry_t* );
+  const char* (*getHash)( const DPAUCS_ressource_entry_t* );
+} DPAUCS_ressource_entry_handler_t;
+
+const DPAUCS_ressource_entry_t* ressourceOpen( const char* path, unsigned length );
 
 #endif

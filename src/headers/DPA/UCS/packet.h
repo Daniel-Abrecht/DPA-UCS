@@ -14,7 +14,7 @@
 typedef struct packed DPAUCS_LLC {
   uint8_t dsap; // ???
   uint8_t ssap; // ???
-  packed union  {
+  union packed {
     struct packed {
       uint8_t control; // ???
       uint8_t payload[PACKET_MAX_PAYLOAD];

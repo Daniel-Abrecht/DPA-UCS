@@ -309,7 +309,7 @@ static bool transmit(
     // send packet
     DPAUCS_sendPacket( &p, hl * 4 + s );
     DPA_LOG(
-      "transmit: Sent fragment offset %lu, payload size %lu\n",
+      "transmit: Sent fragment offset %zu, payload size %zu\n",
       offset, s
     );
 

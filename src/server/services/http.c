@@ -225,19 +225,28 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
   if(code) DPA_stream_referenceWrite( stream, code->message, code->length );
 
   DPA_stream_referenceWrite( stream, S( "\r\n"
-    "Connection: Close" "\r\n"
+    "Connection: Close"
   ));
 
   switch( c->method ){
     case HTTP_METHOD_GET:
     case HTTP_METHOD_HEAD: {
-      DPAUCS_writeRessourceHeaders( stream, c->ressource );
-      DPA_stream_referenceWrite( stream, S("\r\n") );
+      const char* mime = c->ressource->handler->getMime(c->ressource);
+      const char* hash = c->ressource->handler->getHash(c->ressource);
+      if( mime ){
+        DPA_stream_referenceWrite( stream, S("\r\nContent-Type: ") );
+        DPA_stream_referenceWrite( stream, mime, strlen(mime) );
+      }
+      if( hash ){
+        DPA_stream_referenceWrite( stream, S("\r\nEtag: ") );
+        DPA_stream_copyWrite( stream, hash, strlen(hash) );
+      }
+      DPA_stream_referenceWrite( stream, S("\r\n\r\n") );
     } if( c->method == HTTP_METHOD_GET ) {
-      DPAUCS_writeRessource( stream, c->ressource );
+      c->ressource->handler->read( c->ressource, stream );
     } break;
     default: {
-      DPA_stream_referenceWrite( stream, S("\r\n") );
+      DPA_stream_referenceWrite( stream, S("\r\n\r\n") );
     } break;
   }
 
@@ -352,7 +361,7 @@ static void onreceive( void* cid, void* data, size_t size ){
           break;
         }
 
-        c->ressource = getRessource( it, urlEnd );
+        c->ressource = ressourceOpen( it, urlEnd );
         c->parseState = HTTP_PARSE_PROTOCOL;
 
         if( c->status < 400 && !c->ressource )
@@ -488,6 +497,8 @@ static void onreceive( void* cid, void* data, size_t size ){
 
 
   if( c->parseState == HTTP_PARSER_ERROR ){
+    if(c->ressource)
+      c->ressource->handler->close( c->ressource );
     HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
     return;
   }
@@ -496,12 +507,17 @@ static void onreceive( void* cid, void* data, size_t size ){
     return;
 
   if( c->status >= 400 ){
+    if(c->ressource)
+      c->ressource->handler->close( c->ressource );
     HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
     return;
   }
 
   DPAUCS_tcp_send( &writeRessource, &cid, 1, c );
   DPAUCS_tcp_close( cid );
+
+  if(c->ressource)
+    c->ressource->handler->close( c->ressource );
 
 }
 #undef S
@@ -516,6 +532,8 @@ static void onclose( void* cid ){
   DPA_LOG("http_service->onclose\n");
   HTTP_Connections_t* c = getConnection(cid);
   if(!c) return;
+  if(c->ressource)
+    c->ressource->handler->close( c->ressource );
   c->cid = 0;
   DPA_LOG("Connection closed\n");
 }

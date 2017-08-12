@@ -27,7 +27,8 @@ bool DPA_stream_to_raw_buffer( const DPA_stream_t* stream, DPA_stream_raw_t* raw
   if( cb_size > raw->charBufferSize || bb_size > raw->bufferBufferSize )
     return false;
 
-  DPA_ringbuffer_read( &cb.super, raw->charBuffer + raw->charBufferSize - cb_size, cb_size );
+  DPA_ringbuffer_reverse( &bb.super );
+  DPA_ringbuffer_read( &cb.super, raw->charBuffer, cb_size );
   DPA_ringbuffer_read( &bb.super, raw->bufferBuffer, bb_size );
 
   return true;
@@ -62,14 +63,16 @@ void DPAUCS_raw_stream_truncate( DPA_stream_raw_t* raw, size_t size ){
 
 void DPAUCS_raw_as_stream( DPA_stream_raw_t* raw, void(*func)(DPA_stream_t*,void*), void* ptr ){
 
+  DPA_LOG("DPAUCS_raw_as_stream: cbs: %zu, bbs: %zu, cb: %p, bb: %p\n",raw->charBufferSize,raw->bufferBufferSize,(void*)raw->charBuffer,(void*)raw->bufferBuffer);
+
   DPA_uchar_ringbuffer_t buffer = {
     .super = {
       .size = raw->charBufferSize,
       .range = {
-        .offset = raw->charBufferSize,
+        .offset = 0,
         .size = raw->charBufferSize
       },
-      .inverse = true,
+      .inverse = false,
       .type_size = sizeof( *buffer.buffer ),
       .buffer = raw->charBuffer,
     }
@@ -79,14 +82,17 @@ void DPAUCS_raw_as_stream( DPA_stream_raw_t* raw, void(*func)(DPA_stream_t*,void
     .super = {
       .size = raw->bufferBufferSize,
       .range = {
-        .offset = 0,
+        .offset = raw->bufferBufferSize,
         .size = raw->bufferBufferSize
       },
-      .inverse = false,
+      .inverse = true,
       .buffer = raw->bufferBuffer,
       .type_size = sizeof( *buffer_buffer.buffer )
     }
   };
+
+  for( size_t i=0; i<raw->bufferBufferSize; i++ )
+    raw->bufferBuffer[i].range.offset = 0;
 
   DPA_stream_t stream = {
     .buffer = &buffer,
@@ -136,9 +142,9 @@ static inline size_t stream_read_from_buffer(
   if( read != amount ){
     info->range.size = read + info->range.offset;
     DPA_LOG(
-      "BUG: Ringbuffer doesn't contain es much data as expected."
-      "This may happen if the streambuffers are modified without using the stream API or"
-      "By using the stream API in unintended ways."
+      "\x1b[31mBUG: Ringbuffer doesn't contain es much data as expected. "
+      "This may happen if the streambuffers are modified without using the stream API or "
+      "by using the stream API in unintended ways.\x1b[39m\n"
     );
   }
   return read;

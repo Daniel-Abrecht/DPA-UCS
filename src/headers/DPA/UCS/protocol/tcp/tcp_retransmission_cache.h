@@ -14,20 +14,12 @@
 
 struct DPAUCS_tcp_transmission;
 struct DPAUCS_transmissionControlBlock;
+struct DPAUCS_tcp_cacheEntry;
 
 typedef void(*cacheAccessFunc_t)(struct DPAUCS_tcp_transmission*, struct DPAUCS_transmissionControlBlock**, uint16_t);
 
-typedef struct DPAUCS_tcp_cacheEntry {
-  size_t charBufferSize;
-  size_t bufferBufferSize;
-  size_t streamRealLength;
-  unsigned count;
-  bool streamIsLonger; // if streamRealLength can't represent the full length
-} DPAUCS_tcp_cacheEntry_t;
-
-
 bool tcp_addToCache( struct DPAUCS_tcp_transmission*, unsigned, struct DPAUCS_transmissionControlBlock**, uint16_t* );
-void tcp_removeFromCache( DPAUCS_tcp_cacheEntry_t** );
+void tcp_removeFromCache( struct DPAUCS_tcp_cacheEntry** );
 void tcp_cleanupCache( void );
 void tcp_cacheCleanupTCB( struct DPAUCS_transmissionControlBlock* );
 void tcp_retransmission_cache_do_retransmissions( void );

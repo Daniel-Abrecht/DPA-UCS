@@ -287,7 +287,7 @@ static bool transmit(
           s += hs;
           header++;
         }else if(inputStream){
-          s += DPA_stream_read( inputStream, data, msize );
+          s += DPA_stream_read( inputStream, data, msize - s );
           break;
         }else break;
       }

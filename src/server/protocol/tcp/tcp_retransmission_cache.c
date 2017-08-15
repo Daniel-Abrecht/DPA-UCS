@@ -54,8 +54,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
   for( unsigned i=count; i--; ){
     DPAUCS_transmissionControlBlock_t* it = tcb[i];
-//    if( flags[i] & TCP_FLAG_SYN )
-//      it->cache.flags.SYN = true;
+    if( flags[i] & TCP_FLAG_SYN )
+      it->cache.flags.SYN = true;
     if( flags[i] & TCP_FLAG_FIN )
       it->cache.flags.FIN = true;
     if( !it->cache.first )
@@ -93,7 +93,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       tcb_list[i] = (tcp_cache_entry_tcb_entry_t){
         .tcb  = tcb[i],
         .next = 0,
-        .flags = flags[i]
+        .flags = flags[i] & ~(TCP_FLAG_SYN|TCP_FLAG_FIN)
       };
     }
 
@@ -132,10 +132,6 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       }
     }
 
-  }else{
-    for( size_t i=0; i<count; i++ )
-      if(flags[i] & TCP_FLAG_SYN)
-        DPAUCS_tcp_transmit( 0, tcb[i], flags[i], 0, tcb[i]->SND.NXT );
   }
 
   return true;
@@ -207,7 +203,7 @@ static void tcp_cacheDiscardEntryOctets( void**const entry, uint32_t size ){
   DPA_stream_raw_t raw_stream = {
     .bufferBufferSize = e->bufferBufferSize,
     .charBufferSize   = e->charBufferSize,
-//        .bufferBuffer     = info.bufferBuffer,
+    .bufferBuffer     = info.bufferBuffer,
     .charBuffer       = info.charBuffer
   };
   DPAUCS_raw_stream_truncate( &raw_stream, size );
@@ -274,20 +270,22 @@ void tcp_retransmission_cache_do_retransmissions( void ){
   for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ ){
     if( it->state == TCP_CLOSED_STATE
      || it->state == TCP_TIME_WAIT_STATE
-     || ( it->cache.last_transmission
-     && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
     ) continue;
+    if( it->cache.last_transmission && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
+      continue;
     adelay_start( &it->cache.last_transmission );
 
     DPA_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
 
     uint16_t flags = TCP_FLAG_ACK;
-    if( it->cache.flags.SYN )
+    if( it->cache.flags.SYN ){
       flags |= TCP_FLAG_SYN;
-    if( it->cache.flags.FIN )
-      flags |= TCP_FLAG_FIN;
+    }else{
+      if( it->cache.flags.FIN )
+        flags |= TCP_FLAG_FIN;
+    }
 
-    if( it->cache.first ){
+    if( it->cache.first && !it->cache.flags.SYN ){
       tcp_cache_entryInfo_t info;
       DPAUCS_tcp_cacheEntry_t*const e = DCE(*it->cache.first);
       getEntryInfo( &info, e );
@@ -297,6 +295,12 @@ void tcp_retransmission_cache_do_retransmissions( void ){
         .bufferBuffer     = info.bufferBuffer,
         .charBuffer       = info.charBuffer
       };
+
+      for( unsigned i = e->count; i--; ){
+        if( e->ctcb[i].tcb == it ){
+          flags |= e->ctcb[i].flags;
+        }
+      }
 
       DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
         .tcb = it,

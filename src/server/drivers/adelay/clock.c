@@ -1,9 +1,11 @@
-#include <time.h>
+#include <sys/time.h>
 #include <DPA/UCS/adelay.h>
 
 DPA_MODULE( adelay_driver ){}
 
 void adelay_update( void ){
-  static const unsigned long CLOCK_TYPE_MAX = (((1lu<<(sizeof(clock_t)*8u-1u))-1ul)<<1)+1lu;
-  adelay_update_time( clock(), CLOCK_TYPE_MAX ? CLOCK_TYPE_MAX : ~0lu, CLOCKS_PER_SEC );
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  unsigned long time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
+  adelay_update_time( time_in_micros, ~0, 1000000 );
 }

@@ -172,6 +172,9 @@ static DPAUCS_tcp_transmission_t tcp_begin( void ){
 static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DPAUCS_TCP_state state ){
   if( tcb->state == state )
     return false;
+  if( state == TCP_ESTAB_STATE ){
+    tcb->cache.flags.SYN = false;
+  }
   static const char* stateNames[] = {TCP_STATES(DPA_STRINGIFY)};
   DPA_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
   tcb->state = state;

@@ -106,7 +106,7 @@ typedef struct DPAUCS_transmissionControlBlock {
     struct { // RST must be handled specially, PUSH and URG are related to the segment in the retransmission cache.
       bool SYN : 1; // SYN not yet acknowledged
       bool FIN : 1; // No more datas will be added to cache
-      bool acknowledge_FIN : 1; // ACK for FIN of other endpoint has to be sent
+      bool ACK : 1; // Set ACK for next transmission
       bool need_ACK : 1; // Need to send an ACK
     } flags;
   } cache;

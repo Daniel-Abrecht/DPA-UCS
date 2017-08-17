@@ -9,7 +9,7 @@
 #include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 
-#define RETRANSMISSION_INTERVAL AD_SEC * 100
+#define RETRANSMISSION_INTERVAL AD_SEC * 2
 
 #define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
 
@@ -62,6 +62,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     if( flags[i] & TCP_FLAG_SYN )
       it->cache.flags.SYN = true;
     if( it->RCV.UNA != it->RCV.NXT ){
+      it->cache.flags.ACK = true;
       it->cache.flags.need_ACK = true;
       it->RCV.UNA = it->RCV.NXT;
     }
@@ -279,7 +280,9 @@ void tcp_retransmission_cache_do_retransmissions( void ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
   for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ ){
-    if( !it->cache.flags.acknowledge_FIN && !it->cache.flags.need_ACK ){
+    if( it->cache.flags.need_ACK ){
+      it->cache.flags.ACK = true;
+    }else{
       if( it->state == TCP_CLOSED_STATE
       || it->state == TCP_TIME_WAIT_STATE
       ) continue;
@@ -287,12 +290,11 @@ void tcp_retransmission_cache_do_retransmissions( void ){
         continue;
     }
     adelay_start( &it->cache.last_transmission );
-    it->cache.flags.acknowledge_FIN = false;
     it->cache.flags.need_ACK = false;
 
     DPA_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
 
-    uint16_t flags = TCP_FLAG_ACK;
+    uint16_t flags = it->cache.flags.ACK ? TCP_FLAG_ACK : 0;
     if( it->cache.flags.SYN )
       flags |= TCP_FLAG_SYN;
 
@@ -329,5 +331,6 @@ void tcp_retransmission_cache_do_retransmissions( void ){
       DPAUCS_tcp_transmit( 0, it, flags, 0, it->cache.first_SEQ );
     }
 
+    it->cache.flags.ACK = false;
   }
 }

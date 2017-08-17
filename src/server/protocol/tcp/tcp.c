@@ -242,7 +242,7 @@ bool DPAUCS_tcp_transmit(
 
   do {
 
-    flags = ACK ? TCP_FLAG_ACK : 0;
+    flags = ( !RST || ACK ) ? TCP_FLAG_ACK : 0;
 
     size = data_size;
 
@@ -272,7 +272,7 @@ bool DPAUCS_tcp_transmit(
 
     DPA_LOG( "%u %u\n", size, off );
     // Check if there is anything to send, even if it's only an ACK
-    if( size + SYN + FIN < off + !ACK )
+    if( size + SYN + FIN < off + !ACK  && !( off==0 && size==0 && RST ) )
       break;
 
     if( size < off ){ // if FIN was acknowledged, it takes up sequence space, which increases off by 1
@@ -459,12 +459,8 @@ static bool tcp_processPacket(
 
   if( tcb->state == TCP_TIME_WAIT_STATE ){
     if( ( SEG.flags & TCP_FLAG_FIN ) && ( SEG.SEQ == tcb->RCV.NXT - 1 ) ){
-      if( !adelay_done(&tcb->cache.last_transmission,AD_SEC/2) ){
-        DPA_LOG("Detected retransmission of FIN in less than 1/2 of a second after last transmission, assuming peer has last ACK not yet recived\n");
-      }else{
-        DPA_LOG("Detected retransmission of FIN, assuming final ACK for FIN got lost\n");
-        tcb->cache.flags.acknowledge_FIN = true;
-      }
+      if( adelay_done(&tcb->cache.last_transmission,AD_SEC/2) )
+        tcb->cache.flags.need_ACK = true;
     }else{
       DPA_LOG("Ignored possible retransmission in TCP_TIME_WAIT_STATE\n");
     }
@@ -530,7 +526,7 @@ static bool tcp_processPacket(
   }
 
   if( SEG.flags & TCP_FLAG_FIN ){
-    tcb->cache.flags.acknowledge_FIN = true;
+    tcb->cache.flags.need_ACK = true;
     switch( tcb->state ){
       case TCP_ESTAB_STATE     : tcp_setState( tcb, TCP_CLOSE_WAIT_STATE ); goto eof_code;
       case TCP_FIN_WAIT_1_STATE: tcp_setState( tcb, TCP_CLOSING_STATE    ); goto eof_code;

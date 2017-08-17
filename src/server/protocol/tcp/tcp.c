@@ -151,7 +151,7 @@ void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   size_t stream_size = stream ? DPA_stream_getLength(stream,~0,0) : 0;
 
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
-  uint16_t tcph_checksum = ~checksum( tcp, sizeof(*tcp) ); // TODO (option size)
+  uint16_t tcph_checksum = ~checksum( tcp, header_length );
   uint16_t data_checksum = ~checksumOfStream( stream, length-header_length );
 
   uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum + tcph_checksum;
@@ -270,11 +270,18 @@ bool DPAUCS_tcp_transmit(
     if(RST)
       flags |= TCP_FLAG_RST;
 
+    DPA_LOG( "%u %u\n", size, off );
     // Check if there is anything to send, even if it's only an ACK
     if( size + SYN + FIN < off + !ACK )
       break;
 
-    size -= off;
+    if( size < off ){ // if FIN was acknowledged, it takes up sequence space, which increases off by 1
+      size = 0;
+      off = 0;
+    }else{
+      size -= off;
+    }
+
     // Ensure datas will fit into packet
     if( size > l3_max - headersize )
       size = l3_max - headersize;
@@ -303,7 +310,6 @@ bool DPAUCS_tcp_transmit(
     if( stream && off && !offset )
       DPA_stream_seek( stream, off );
     tcp_calculateChecksum( tcb, &tcp, stream, headersize, packet_length );
-    printFrame(&tcp);
     DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){&tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, size );
     DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp.checksum );
 
@@ -452,7 +458,16 @@ static bool tcp_processPacket(
   }
 
   if( tcb->state == TCP_TIME_WAIT_STATE ){
-    DPA_LOG("Ignored possible retransmission in TCP_TIME_WAIT_STATE\n");
+    if( ( SEG.flags & TCP_FLAG_FIN ) && ( SEG.SEQ == tcb->RCV.NXT - 1 ) ){
+      if( !adelay_done(&tcb->cache.last_transmission,AD_SEC/2) ){
+        DPA_LOG("Detected retransmission of FIN in less than 1/2 of a second after last transmission, assuming peer has last ACK not yet recived\n");
+      }else{
+        DPA_LOG("Detected retransmission of FIN, assuming final ACK for FIN got lost\n");
+        tcb->cache.flags.acknowledge_FIN = true;
+      }
+    }else{
+      DPA_LOG("Ignored possible retransmission in TCP_TIME_WAIT_STATE\n");
+    }
     return false;
   }
 
@@ -515,6 +530,7 @@ static bool tcp_processPacket(
   }
 
   if( SEG.flags & TCP_FLAG_FIN ){
+    tcb->cache.flags.acknowledge_FIN = true;
     switch( tcb->state ){
       case TCP_ESTAB_STATE     : tcp_setState( tcb, TCP_CLOSE_WAIT_STATE ); goto eof_code;
       case TCP_FIN_WAIT_1_STATE: tcp_setState( tcb, TCP_CLOSING_STATE    ); goto eof_code;

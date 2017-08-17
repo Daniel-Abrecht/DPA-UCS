@@ -104,7 +104,8 @@ typedef struct DPAUCS_transmissionControlBlock {
     adelay_t last_transmission; // If there was no previous transmission, this must be zero. Otherwise, it mustn't be zero.
     struct { // RST must be handled specially, PUSH and URG are related to the segment in the retransmission cache.
       bool SYN : 1; // SYN not yet acknowledged
-      bool FIN : 1; // FIN not yet acknowledged
+      bool FIN : 1; // No more datas will be added to cache
+      bool acknowledge_FIN : 1; // ACK for FIN of other endpoint has to be sent
     } flags;
   } cache;
 

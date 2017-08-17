@@ -5,14 +5,19 @@
 #include <DPA/utils/logger.h>
 #include <DPA/utils/mempool.h>
 #include <DPA/utils/helper_macros.h>
+#include <DPA/UCS/adelay.h>
 #include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
+
+#define RETRANSMISSION_INTERVAL AD_SEC * 100
+
+#define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
+
 
 static char buffer[TCP_RETRANSMISSION_CACHE_SIZE] = {0};
 static DPA_mempool_t mempool = DPAUCS_MEMPOOL(buffer,sizeof(buffer));
 static void* cacheEntries[TCP_RETRANSMISSION_CACHE_MAX_ENTRIES];
 
-#define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
 
 typedef struct packed tcp_cache_entry_tcb_entry {
   DPAUCS_transmissionControlBlock_t* tcb;
@@ -253,8 +258,6 @@ void tcp_cleanupCache( void ){
   }
 }
 
-#define RETRANSMISSION_INTERVAL AD_SEC
-
 struct tcp_retransmission_cache_do_retransmissions_sub_args {
   DPAUCS_transmissionControlBlock_t* tcb;
   uint16_t flags;
@@ -272,26 +275,28 @@ void tcp_retransmission_cache_do_retransmissions( void ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
   for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ ){
-    if( it->state == TCP_CLOSED_STATE
-     || it->state == TCP_TIME_WAIT_STATE
-    ) continue;
-    if( it->cache.last_transmission && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
-      continue;
+    if( !it->cache.flags.acknowledge_FIN ){
+      if( it->state == TCP_CLOSED_STATE
+      || it->state == TCP_TIME_WAIT_STATE
+      ) continue;
+      if( it->cache.last_transmission && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
+        continue;
+    }
     adelay_start( &it->cache.last_transmission );
+    it->cache.flags.acknowledge_FIN = false;
 
     DPA_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
 
     uint16_t flags = TCP_FLAG_ACK;
-    if( it->cache.flags.SYN ){
+    if( it->cache.flags.SYN )
       flags |= TCP_FLAG_SYN;
-    }else{
-      if( it->cache.flags.FIN )
-        flags |= TCP_FLAG_FIN;
-    }
 
     if( it->cache.first && !it->cache.flags.SYN ){
       tcp_cache_entryInfo_t info;
+      DPAUCS_tcp_cacheEntry_t*const last = DCE(*it->cache.last);
       DPAUCS_tcp_cacheEntry_t*const e = DCE(*it->cache.first);
+      if( last == e && it->cache.flags.FIN && !it->cache.flags.SYN )
+        flags |= TCP_FLAG_FIN;
       getEntryInfo( &info, e );
       DPA_stream_raw_t raw_stream = {
         .bufferBufferSize = e->bufferBufferSize,
@@ -314,6 +319,8 @@ void tcp_retransmission_cache_do_retransmissions( void ){
       }});
 
     }else{
+      if( it->cache.flags.FIN && !it->cache.flags.SYN )
+        flags |= TCP_FLAG_FIN;
       DPAUCS_tcp_transmit( 0, it, flags, 0, it->cache.first_SEQ );
     }
 

@@ -132,6 +132,10 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       }
     }
 
+  }else{
+    for( size_t i=0; i<count; i++ )
+      if( flags[i] & TCP_FLAG_RST )
+        DPAUCS_tcp_transmit( 0, tcb[i], flags[i], 0, tcb[i]->SND.NXT );
   }
 
   return true;

@@ -29,7 +29,7 @@ static DPAUCS_transmissionControlBlock_t* searchTCB( DPAUCS_transmissionControlB
 static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionControlBlock_t* );
 static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb );
 void tcp_from_tcb( DPAUCS_tcp_t* tcp, DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_segment_t* SEG );
-void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t length );
+void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t header_length, uint16_t length );
 static DPAUCS_transmissionControlBlock_t* getTcbByCurrentId( const void*const );
 static bool tcp_sendNoData( unsigned count, DPAUCS_transmissionControlBlock_t** tcb, uint16_t* flags );
 static bool tcp_connectionUnstable( DPAUCS_transmissionControlBlock_t* stcb );
@@ -147,12 +147,12 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
   return 0;
 }
 
-void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t length ){
+void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t header_length, uint16_t length ){
   size_t stream_size = stream ? DPA_stream_getLength(stream,~0,0) : 0;
 
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
   uint16_t tcph_checksum = ~checksum( tcp, sizeof(*tcp) ); // TODO (option size)
-  uint16_t data_checksum = ~checksumOfStream( stream, length );
+  uint16_t data_checksum = ~checksumOfStream( stream, length-header_length );
 
   uint32_t tmp_checksum = (uint32_t)data_checksum + ps_checksum + tcph_checksum;
   uint16_t checksum = ~( ( tmp_checksum & 0xFFFF ) + ( tmp_checksum >> 16 ) );
@@ -302,9 +302,9 @@ bool DPAUCS_tcp_transmit(
     tcp_from_tcb( &tcp, tcb, &tmp_segment );
     if( stream && off && !offset )
       DPA_stream_seek( stream, off );
-    tcp_calculateChecksum( tcb, &tcp, stream, packet_length );
+    tcp_calculateChecksum( tcb, &tcp, stream, headersize, packet_length );
     printFrame(&tcp);
-    DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){&tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, packet_length );
+    DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){&tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, size );
     DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp.checksum );
 
     size_t segSize = size + tcp_flaglength(flags);

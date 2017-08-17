@@ -248,7 +248,12 @@ static bool transmit(
       max_size_arg += header_size[i];
     }
   }
-  uint16_t max_size = DPA_MIN(max_size_arg,(uint16_t)~0);
+  if( max_size_arg > (uint16_t)~0 ){
+    DPA_LOG("Can't send more than %zu bytes in an IPv4 packet, but %zu bytes available\n",(size_t)((uint16_t)~0),max_size_arg);
+    return false;
+  }
+
+  uint16_t max_size = max_size_arg;
 
   size_t offset = 0, header = 0;
 

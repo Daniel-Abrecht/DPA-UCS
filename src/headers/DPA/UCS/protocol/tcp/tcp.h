@@ -81,6 +81,7 @@ typedef struct DPAUCS_transmissionControlBlock {
 
   struct {
     uint32_t
+      UNA,
       NXT,
       WND
     ;
@@ -106,6 +107,7 @@ typedef struct DPAUCS_transmissionControlBlock {
       bool SYN : 1; // SYN not yet acknowledged
       bool FIN : 1; // No more datas will be added to cache
       bool acknowledge_FIN : 1; // ACK for FIN of other endpoint has to be sent
+      bool need_ACK : 1; // Need to send an ACK
     } flags;
   } cache;
 

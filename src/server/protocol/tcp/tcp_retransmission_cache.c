@@ -61,6 +61,10 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     DPAUCS_transmissionControlBlock_t* it = tcb[i];
     if( flags[i] & TCP_FLAG_SYN )
       it->cache.flags.SYN = true;
+    if( it->RCV.UNA != it->RCV.NXT ){
+      it->cache.flags.need_ACK = true;
+      it->RCV.UNA = it->RCV.NXT;
+    }
     if( flags[i] & TCP_FLAG_FIN )
       it->cache.flags.FIN = true;
     if( !it->cache.first )
@@ -275,7 +279,7 @@ void tcp_retransmission_cache_do_retransmissions( void ){
   DPAUCS_transmissionControlBlock_t* start = DPAUCS_transmissionControlBlocks;
   DPAUCS_transmissionControlBlock_t* end = DPAUCS_transmissionControlBlocks + TRANSMISSION_CONTROL_BLOCK_COUNT;
   for( DPAUCS_transmissionControlBlock_t* it=start; it<end; it++ ){
-    if( !it->cache.flags.acknowledge_FIN ){
+    if( !it->cache.flags.acknowledge_FIN && !it->cache.flags.need_ACK ){
       if( it->state == TCP_CLOSED_STATE
       || it->state == TCP_TIME_WAIT_STATE
       ) continue;
@@ -284,6 +288,7 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     }
     adelay_start( &it->cache.last_transmission );
     it->cache.flags.acknowledge_FIN = false;
+    it->cache.flags.need_ACK = false;
 
     DPA_LOG("Retransmit entry for tcb %u\n", (unsigned)(it-DPAUCS_transmissionControlBlocks) );
 

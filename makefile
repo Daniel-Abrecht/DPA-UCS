@@ -20,7 +20,7 @@ AVR_AR=avr-ar
 AVR_MCU=atmega16
 AVR_F_CPU = 3686400UL
 
-OPTIONS        += -std=c11 #-flto
+OPTIONS        += -std=c11
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 

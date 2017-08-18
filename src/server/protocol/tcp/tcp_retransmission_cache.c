@@ -61,11 +61,6 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     DPAUCS_transmissionControlBlock_t* it = tcb[i];
     if( flags[i] & TCP_FLAG_SYN )
       it->cache.flags.SYN = true;
-    if( it->RCV.UNA != it->RCV.NXT ){
-      it->cache.flags.ACK = true;
-      it->cache.flags.need_ACK = true;
-      it->RCV.UNA = it->RCV.NXT;
-    }
     if( flags[i] & TCP_FLAG_FIN )
       it->cache.flags.FIN = true;
     if( !it->cache.first )
@@ -171,8 +166,8 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
     return false;
   uint32_t acknowledged_octets = tcb->SND.UNA - tcb->cache.first_SEQ;
   bool ret = false;
-  // check if all octets may have been acknowledged
-  if( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ){
+  // check if all octets may have been acknowledged or conection doesn't exist anymore
+  if( ( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ) || tcb->state == TCP_CLOSED_STATE ){
     // update streamlength info if necessary
     if( e->streamIsLonger ){
       DPA_stream_raw_t raw_stream = {
@@ -184,12 +179,12 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
       e->streamRealLength = DPA_stream_raw_getLength( &raw_stream, ~0, &e->streamIsLonger );
     }
     // check if really all octets have been acknowledged
-    if( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ){
+    if( ( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ) || tcb->state == TCP_CLOSED_STATE ){
       // remove tcb from entry and entry from tcb
       ret = true;
       info.tcb_list[tcb_index].tcb = 0;
       tcb->cache.first = info.tcb_list[tcb_index].next;
-      tcb->cache.first_SEQ = e->streamRealLength;
+      tcb->cache.first_SEQ += e->streamRealLength;
       if( !tcb->cache.first )
         tcb->cache.last = 0;
       for( size_t i=tcb_index+1, n=e->count; i < n; i++ ){

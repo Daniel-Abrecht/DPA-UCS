@@ -43,6 +43,7 @@ static uint32_t ISS = 0;
 
 static inline void tcp_una_change_handler( DPAUCS_transmissionControlBlock_t* tcb, uint32_t new_una ){
   tcb->SND.UNA = new_una;
+  tcb->cache.flags.need_ACK = true;
   tcp_cacheCleanupTCB( tcb );
 }
 
@@ -623,6 +624,12 @@ static bool tcp_processHeader(
     if( stcb->currentId && stcb->currentId != tcb.currentId )
       return false;
     stcb->currentId = tcb.currentId;
+    if( SEG.flags & TCP_FLAG_RST ){
+      DPA_LOG("RST recived, invalidating connection\n");
+      tcp_setState( stcb, TCP_CLOSED_STATE );
+      tcp_cacheCleanupTCB( stcb );
+      return false;
+    }
     uint16_t rcv_data_offset;
     if( tcp_get_receivewindow_data_offset( stcb, &SEG, &rcv_data_offset ) )
       return false; // out of window

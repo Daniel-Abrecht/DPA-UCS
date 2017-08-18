@@ -81,7 +81,6 @@ typedef struct DPAUCS_transmissionControlBlock {
 
   struct {
     uint32_t
-      UNA,
       NXT,
       WND
     ;

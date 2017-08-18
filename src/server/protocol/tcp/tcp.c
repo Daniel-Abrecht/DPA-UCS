@@ -43,7 +43,6 @@ static uint32_t ISS = 0;
 
 static inline void tcp_una_change_handler( DPAUCS_transmissionControlBlock_t* tcb, uint32_t new_una ){
   tcb->SND.UNA = new_una;
-  tcb->cache.flags.need_ACK = true;
   tcp_cacheCleanupTCB( tcb );
 }
 

@@ -61,6 +61,10 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     DPAUCS_transmissionControlBlock_t* it = tcb[i];
     if( flags[i] & TCP_FLAG_SYN )
       it->cache.flags.SYN = true;
+    if( it->RCV.UNA != it->RCV.NXT ){
+      it->cache.flags.ACK = true;
+      it->RCV.UNA = it->RCV.NXT;
+    }
     if( flags[i] & TCP_FLAG_FIN )
       it->cache.flags.FIN = true;
     if( !it->cache.first )

@@ -270,7 +270,6 @@ bool DPAUCS_tcp_transmit(
     if(RST)
       flags |= TCP_FLAG_RST;
 
-    DPA_LOG( "%u %u\n", size, off );
     // Check if there is anything to send, even if it's only an ACK
     if( size + SYN + FIN < off + !ACK  && !( off==0 && size==0 && RST ) )
       break;
@@ -311,7 +310,7 @@ bool DPAUCS_tcp_transmit(
       DPA_stream_seek( stream, off );
     tcp_calculateChecksum( tcb, &tcp, stream, headersize, packet_length );
     DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){&tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, size );
-    DPA_LOG( "DPAUCS_tcp_transmit: %u bytes sent, tcp checksum %x\n", (unsigned)packet_length, (unsigned)tcp.checksum );
+    DPA_LOG( "DPAUCS_tcp_transmit: sending %uB payload, %uB headers, tcp checksum %x, offset %u\n", (unsigned)size,(unsigned)headersize, (unsigned)tcp.checksum, (unsigned)offset );
 
     size_t segSize = size + tcp_flaglength(flags);
     offset += segSize;
@@ -319,7 +318,7 @@ bool DPAUCS_tcp_transmit(
     if( tcb->SND.NXT < next )
       tcb->SND.NXT = next;
 
-  } while( size < off );
+  } while( size );
 
   if( stream && stream_size )
     DPA_stream_restoreReadOffset( stream, stream_size );

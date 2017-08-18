@@ -208,6 +208,8 @@ size_t DPA_stream_seek( DPA_stream_t* stream, size_t size ){
 }
 
 size_t DPA_stream_rewind( DPA_stream_t* stream, size_t size ){
+  if( DPA_ringbuffer_eof(stream->buffer_buffer) )
+    DPA_ringbuffer_decrement_read( &stream->buffer_buffer->super );
   while( size ){
     DPA_bufferInfo_t* info = DPA_ringbuffer_begin(stream->buffer_buffer);
     if( info->range.offset <= size ){

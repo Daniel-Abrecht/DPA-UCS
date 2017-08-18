@@ -429,7 +429,11 @@ static DPAUCS_fragmentHandler_t fragment_handler = {
 static const DPAUCS_l3_handler_t l3_handler = {
   .type = DPAUCS_ETH_T_IPv4,
   .rawAddressSize = 4,
-  .packetSizeLimit = 0xFFFFu,
+  // We don't know the biggest reassembled IP Packet supportet by other systems,
+  // don't set it to 0xFFFFu, it's too big for linux systems which add the header
+  // size of the reassembled packet to the payload size before checking the size
+  // This value is just a hint for higher level protocols anyway.
+  .packetSizeLimit = 0x7FFFu,
   .packetHandler = &packetHandler,
   .transmit = &transmit,
   .isBroadcast = &isBroadcast,

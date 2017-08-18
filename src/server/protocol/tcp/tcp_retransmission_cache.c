@@ -301,29 +301,37 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     if( it->cache.first && !it->cache.flags.SYN ){
       tcp_cache_entryInfo_t info;
       DPAUCS_tcp_cacheEntry_t*const last = DCE(*it->cache.last);
-      DPAUCS_tcp_cacheEntry_t*const e = DCE(*it->cache.first);
-      if( last == e && it->cache.flags.FIN && !it->cache.flags.SYN )
-        flags |= TCP_FLAG_FIN;
-      getEntryInfo( &info, e );
-      DPA_stream_raw_t raw_stream = {
-        .bufferBufferSize = e->bufferBufferSize,
-        .charBufferSize   = e->charBufferSize,
-        .bufferBuffer     = info.bufferBuffer,
-        .charBuffer       = info.charBuffer
-      };
+      DPAUCS_tcp_cacheEntry_t* next;
+      DPAUCS_tcp_cacheEntry_t* e = DCE(*it->cache.first);
+      do {
+        uint16_t frag_flags = flags;
+        next = 0;
+        if( last == e && it->cache.flags.FIN && !it->cache.flags.SYN )
+          flags |= TCP_FLAG_FIN;
+        getEntryInfo( &info, e );
+        DPA_stream_raw_t raw_stream = {
+          .bufferBufferSize = e->bufferBufferSize,
+          .charBufferSize   = e->charBufferSize,
+          .bufferBuffer     = info.bufferBuffer,
+          .charBuffer       = info.charBuffer
+        };
 
-      for( unsigned i = e->count; i--; ){
-        if( e->ctcb[i].tcb == it ){
-          flags |= e->ctcb[i].flags;
+        for( unsigned i = e->count; i--; ){
+          if( e->ctcb[i].tcb == it ){
+            frag_flags |= e->ctcb[i].flags;
+            if( e->ctcb[i].next && *e->ctcb[i].next )
+              next = DCE(*e->ctcb[i].next);
+          }
         }
-      }
 
-      DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
-        .tcb = it,
-        .flags = flags,
-        .size = e->streamRealLength,
-        .SEQ = it->cache.first_SEQ
-      }});
+        DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
+          .tcb = it,
+          .flags = flags,
+          .size = e->streamRealLength,
+          .SEQ = it->cache.first_SEQ
+        }});
+
+      } while(( e = next ));
 
     }else{
       if( it->cache.flags.FIN && !it->cache.flags.SYN )

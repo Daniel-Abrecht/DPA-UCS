@@ -54,7 +54,7 @@ const flash DPAUCS_ressource_file_t $varname[] = {
     $hash,
     sizeof(
       #include $einclude
-    ),
+    )-1,
     #include $einclude
   }," | head -c -1
 

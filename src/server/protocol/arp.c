@@ -134,6 +134,7 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
       DPAUCS_packet_info_t infReply = *info;
       // set destination mac of ethernet frame to source mac of received frame 
       memcpy(infReply.destination_mac,info->source_mac,sizeof(DPAUCS_mac_t));
+      memcpy(infReply.source_mac,info->interface->mac,sizeof(DPAUCS_mac_t));
 
       // Fill in source mac and payload pointing to new buffer
       // Initializes ethernet frame

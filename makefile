@@ -39,7 +39,7 @@ endif
 ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(v))))
 ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
 
-ifneq ($(call ifdef_any_of,SANITIZE),)
+ifneq ($(call ifdef_any_of,DEBUG),)
 OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os

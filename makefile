@@ -23,13 +23,11 @@ AVR_F_CPU = 3686400UL
 OPTIONS        += -std=c11
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
 OPTIONS        += -Wall -Wextra -pedantic -Werror
+#OPTIONS        += --short-enums
 
 LINUX_LIBS=
 
-linux: OPTIONS += --short-enums
-avr:   OPTIONS += --short-enums
-
-test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined
+test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined -fstack-protector-all -fcheck-pointer-bounds
 test-% test: LINUX_LIBS += -lgcov
 
 OPTIONS        += $(O)
@@ -41,12 +39,16 @@ endif
 ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(v))))
 ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
 
-ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
+ifneq ($(call ifdef_any_of,SANITIZE),)
 OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os
 OPTIONS        += -ffast-math
 OPTIONS        += -s -ffunction-sections -fdata-sections
+endif
+
+ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
+OPTIONS        += -g -fprofile-arcs -ftest-coverage -fsanitize=undefined -fsanitize=address -fstack-protector-all
 endif
 
 PROJECT_DIR=$(PWD)

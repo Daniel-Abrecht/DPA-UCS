@@ -11,7 +11,7 @@
 #define DPAUCS_GET_ADDR( X ) ((char*)( &(X)->type + 1 ))
 
 #define DPAUCS_LA( TYPE, SIZE, ADDRESS ) \
-  (DPAUCS_logicAddress_t*)((struct packed { \
+  (DPAUCS_logicAddress_t*)((struct { \
     uint16_t type; \
     unsigned char address[SIZE]; \
   }[]){{ \
@@ -20,7 +20,7 @@
   }})
 
 #define DPAUCS_ADDR( TYPE, SIZE ) \
-  (DPAUCS_address_t*)((struct packed { \
+  (DPAUCS_address_t*)((struct { \
     unsigned char mac[6]; \
     uint16_t type; \
     unsigned char address[SIZE]; \

@@ -93,7 +93,7 @@ void DPAUCS_add_logicAddress( const DPAUCS_interface_t*const interface, const DP
 
 void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
-    if(DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress)){
+    if( address_list[i].logicAddress && DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress) ){
       address_list[i].logicAddress = 0;
       break;
     }
@@ -102,7 +102,7 @@ void DPAUCS_remove_logicAddress( const DPAUCS_logicAddress_t*const logicAddress 
 
 void DPAUCS_each_logicAddress(uint16_t type, bool(*func)(const DPAUCS_logicAddress_t*,void*),void* x){
   for( int i=0; i<MAX_LOGIC_ADDRESSES; i++ )
-    if( address_list[i].logicAddress->type & type )
+    if( address_list[i].logicAddress && ( address_list[i].logicAddress->type & type ) )
       if( !(*func)(address_list[i].logicAddress,x) )
         break;
 }
@@ -214,7 +214,7 @@ static receive_driver_state_t current_receive_driver_state;
 
 const DPAUCS_interface_t* DPAUCS_getInterface( const DPAUCS_logicAddress_t* logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
-    if( DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress) )
+    if( address_list[i].logicAddress && DPAUCS_compare_logicAddress(address_list[i].logicAddress,logicAddress) )
       return address_list[i].interface;
   }
   return 0;

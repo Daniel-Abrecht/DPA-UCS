@@ -52,7 +52,7 @@ bool DPAUCS_persistMixedAddress( DPAUCS_mixedAddress_pair_t* map ){
     map->flags |= DPAUCS_F_AP_SRC_SVR_OR_APC;
     map->logic.source = &DPAUCS_arpCache_register( map->address.source )->logic;
   }
-  const DPAUCS_logicAddress_t* dest = DPAUCS_get_logicAddress( &map->address.source->logic );
+  const DPAUCS_logicAddress_t* dest = DPAUCS_get_logicAddress( &map->address.destination->logic );
   if( dest ){
     map->logic.destination = dest;
   }else{

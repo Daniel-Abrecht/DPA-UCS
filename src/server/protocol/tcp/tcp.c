@@ -182,7 +182,7 @@ static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DP
   return true;
 }
 
-inline uint8_t tcp_flaglength( uint32_t flags ){
+static inline uint8_t tcp_flaglength( uint32_t flags ){
   /* RFC 793  Page 26
    * > ...
    * > is achived by implicitly including some

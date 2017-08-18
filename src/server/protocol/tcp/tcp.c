@@ -73,6 +73,7 @@ static void removeTCB( DPAUCS_transmissionControlBlock_t* tcb ){
   if(tcb->service->onclose)
     (*tcb->service->onclose)(tcb);
   tcp_setState(tcb,TCP_CLOSED_STATE);
+  tcp_cacheCleanupTCB( tcb );
   DPAUCS_freeMixedAddress( &tcb->fromTo );
   tcb->currentId = 0;
   DPA_LOG("Connection removed.\n");
@@ -625,8 +626,7 @@ static bool tcp_processHeader(
     stcb->currentId = tcb.currentId;
     if( SEG.flags & TCP_FLAG_RST ){
       DPA_LOG("RST recived, invalidating connection\n");
-      tcp_setState( stcb, TCP_CLOSED_STATE );
-      tcp_cacheCleanupTCB( stcb );
+      removeTCB(stcb);
       return false;
     }
     uint16_t rcv_data_offset;

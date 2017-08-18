@@ -206,7 +206,6 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
 }
 
 void tcp_cacheCleanupTCB( DPAUCS_transmissionControlBlock_t* tcb ){
-  return;
   while( tcp_cleanupCacheEntryCheckTCB( tcb ) );
 }
 
@@ -272,7 +271,6 @@ struct tcp_retransmission_cache_do_retransmissions_sub_args {
 
 static void tcp_retransmission_cache_do_retransmissions_sub( DPA_stream_t* stream, void* pargs ){
   struct tcp_retransmission_cache_do_retransmissions_sub_args* args = pargs;
-  DPA_LOG( "tcp_retransmission_cache_do_retransmissions_sub: expected stream size: %zu, real stream size %zu\n", args->size, DPA_stream_getLength(stream,~0,0) );
   DPAUCS_tcp_transmit( stream, args->tcb, args->flags, args->size, args->SEQ );
 }
 

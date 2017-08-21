@@ -17,7 +17,7 @@ LINUX_CC=gcc
 LINUX_AR=gcc-ar
 AVR_CC=avr-gcc
 AVR_AR=avr-ar
-AVR_MCU=atmega16
+AVR_MCU=atmega1284
 AVR_F_CPU = 3686400UL
 
 OPTIONS        += -std=c11
@@ -44,7 +44,7 @@ OPTIONS        += -Og -g -DDEBUG
 else
 OPTIONS        += -Os
 OPTIONS        += -ffast-math
-OPTIONS        += -s -ffunction-sections -fdata-sections
+OPTIONS        += -ffunction-sections -fdata-sections
 endif
 
 ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
@@ -120,7 +120,7 @@ TESTS=$(shell \
 #       AVR       #
 ###################
 
-AVR_OPTIONS	= $(OPTIONS) -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
+AVR_OPTIONS	= $(OPTIONS) -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU) -DNO_LOGGING
 TEMP_AVR	= tmp/avr_$(AVR_MCU)
 AVR_NAME	= dpaucs-$(AVR_MCU)
 AVR_TARGET	= $(BIN)/$(AVR_NAME)
@@ -236,6 +236,7 @@ $(AVR_LIBRARY): $(AVR_FILES) $(AVR_GENERATED)
 
 $(AVR_TARGET): $(TEMP_AVR)/$(MAIN_FILE) | $(AVR_LIBRARY)
 	$(AVR_CC) $(AVR_OPTIONS) $^ -Wl,--whole-archive -l$(AVR_NAME) -Wl,--no-whole-archive -o $@
+	avr-size -C --mcu=atmega1284 $@
 
 $(TEMP_AVR)/%.o: $(SRC)/%.c $(HEADERS)
 	@mkdir -p "$(shell dirname "$@")"

@@ -7,7 +7,9 @@
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
 
 #define DEFAULT_TTL 64
+#ifndef DPA_MAX_PACKET_INFO_BUFFER_SIZE
 #define DPA_MAX_PACKET_INFO_BUFFER_SIZE 512u
+#endif
 
 #define DPAUCS_EXPORT_FRAGMENT_HANDLER( NAME, HANDLER ) \
   DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS_fragmentHandler*, DPAUCS_fragmentHandler, DPAUCS_ ## NAME ## _fragmentHandler ) HANDLER

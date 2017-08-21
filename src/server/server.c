@@ -37,6 +37,7 @@ static struct {
 static jmp_buf fatal_error_exitpoint;
 
 void weak DPAUCS_onfatalerror( const char* message ){
+  (void)message;
   DPA_LOG( "%s", message );
 }
 

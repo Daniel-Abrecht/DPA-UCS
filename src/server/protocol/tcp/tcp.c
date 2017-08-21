@@ -98,6 +98,7 @@ static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionCo
 
 void printFrame( DPAUCS_tcp_t* tcp ){
   uint16_t flags = DPA_btoh16( tcp->flags );
+  (void)flags;
   DPA_LOG( "TCP Packet:\n"
     "  source: " "%u" "\n"
     "  destination: " "%u" "\n"
@@ -176,8 +177,10 @@ static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DP
   if( state == TCP_ESTAB_STATE ){
     tcb->cache.flags.SYN = false;
   }
+#ifndef NO_LOGGING
   static const char* stateNames[] = {TCP_STATES(DPA_STRINGIFY)};
   DPA_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
+#endif
   tcb->state = state;
   return true;
 }
@@ -503,6 +506,7 @@ static bool tcp_processPacket(
   {
     unsigned long RCV_NXT_old = tcb->RCV.NXT;
     tcb->RCV.NXT = SEG.SEQ + SEG.LEN;
+    (void)RCV_NXT_old;
     DPA_LOG(
       "n: %lu, tcb->RCV.NXT: %lu => %lu\n",
       (unsigned long)n,

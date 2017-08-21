@@ -6,7 +6,7 @@ struct DPAUCS_address;
 struct DPAUCS_logicAddress;
 
 #ifndef ARP_ENTRY_BUFFER_SIZE
-#define ARP_ENTRY_BUFFER_SIZE 1024
+#define ARP_ENTRY_BUFFER_SIZE 256
 #endif
 
 #define DPAUCS_ETH_T_ARP 0x0806

@@ -39,8 +39,8 @@ struct DPAUCS_ethernet_driver;
 
 void DPAUCS_run( void(*)(void*), void* );
 
-noreturn void DPAUCS_fatal( const char* message );
-void DPAUCS_onfatalerror( const char* message );
+noreturn void DPAUCS_fatal( const flash char* message );
+void DPAUCS_onfatalerror( const flash char* message );
 
 void DPAUCS_add_logicAddress( const DPAUCS_interface_t*const interface, const DPAUCS_logicAddress_t*const logicAddress );
 void DPAUCS_remove_logicAddress( const struct DPAUCS_logicAddress*const logicAddress );

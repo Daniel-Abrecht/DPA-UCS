@@ -69,16 +69,18 @@ enum HTTP_ConnectionAction {
   HTTP_CONNECTION_ACTION_UNKNOWN = HTTP_CONNECTION_ACTION_COUNT
 };
 
-const char* HTTP_ConnectionActions[] = {
-  "Close",
-  "Keep-Alive",
-  "Upgrade"
+#define S(a) (const flash char[]){a}
+const flash char* HTTP_ConnectionActions[] = {
+  S("Close"),
+  S("Keep-Alive"),
+  S("Upgrade")
 };
+#undef S
 
 
 typedef struct HTTP_Connection {
   void* cid;
-  const flash DPAUCS_ressource_entry_t* ressource;
+  const DPAUCS_ressource_entry_t* ressource;
   uint16_t status;
   struct {
     uint8_t major, minor;
@@ -96,12 +98,12 @@ static HTTP_Connections_t connections[DPA_MAX_HTTP_CONNECTIONS];
 
 typedef struct HTTP_error {
   uint16_t code;
-  const char* message;
+  const flash char* message;
   uint8_t length;
 } HTTP_error_t;
 
-#define S(STR) STR, sizeof(STR)-1
-static const HTTP_error_t HTTP_errors[] = {
+#define S(STR) (const flash char[]){STR}, sizeof(STR)-1
+static const flash HTTP_error_t HTTP_errors[] = {
   { 200, S("OK") },
   { 400, S("Bad Request") },
   { 401, S("Unauthorized") },
@@ -149,18 +151,20 @@ static const HTTP_error_t HTTP_errors[] = {
   { 510, S("Not Extended") }
 };
 #undef S
-const size_t HTTP_error_count = sizeof(HTTP_errors)/sizeof(*HTTP_errors);
+const flash size_t HTTP_error_count = sizeof(HTTP_errors)/sizeof(*HTTP_errors);
 
 struct writeErrorPageParams {
   uint16_t code;
   bool headOnly;
 };
 
+static const flash char http_1_0_[] = {"HTTP/1.0 "};
+
 #define S(STR) STR, sizeof(STR)-1
 static bool writeErrorPage( DPA_stream_t* stream, void* ptr ){
 
   struct writeErrorPageParams* params = ptr;
-  const HTTP_error_t* error = 0;
+  const flash HTTP_error_t* error = 0;
 
   for( unsigned i=0,n=HTTP_error_count; i<n; i++ )
   if( HTTP_errors[i].code == params->code ){
@@ -168,7 +172,7 @@ static bool writeErrorPage( DPA_stream_t* stream, void* ptr ){
     break;
   }
 
-  DPA_stream_referenceWrite( stream, S("HTTP/1.0 ") );
+  DPA_stream_progmemWrite( stream, S(http_1_0_) );
   char code_buf[7];
   char* code_string = code_buf + sizeof(code_buf);
   *--code_string = 0;
@@ -179,19 +183,21 @@ static bool writeErrorPage( DPA_stream_t* stream, void* ptr ){
   }
 
   DPA_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
-  if(error) DPA_stream_referenceWrite( stream, error->message, error->length );
+  if(error) DPA_stream_progmemWrite( stream, error->message, error->length );
 
-  DPA_stream_referenceWrite( stream, S( "\r\n"
+  static const flash char headers[] = {
+    "\r\n"
     "Connection: Close" "\r\n"
     "Content-Type: text/plain" "\r\n"
     "\r\n"
-  ));
+  };
+  DPA_stream_progmemWrite( stream, S(headers) );
 
   if( params->headOnly )
     return true;
 
   DPA_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
-  if(error) DPA_stream_referenceWrite( stream, error->message, error->length );
+  if(error) DPA_stream_progmemWrite( stream, error->message, error->length );
 
   return true;
 
@@ -203,7 +209,7 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
 
   HTTP_Connections_t* c = ptr;
 
-  const HTTP_error_t* code = 0;
+  const flash HTTP_error_t* code = 0;
 
   for( unsigned i=0,n=HTTP_error_count; i<n; i++ )
   if( HTTP_errors[i].code == c->status ){
@@ -211,7 +217,7 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
     break;
   }
 
-  DPA_stream_referenceWrite( stream, S("HTTP/1.0 ") );
+  DPA_stream_progmemWrite( stream, S(http_1_0_) );
   char code_buf[7];
   char* code_string = code_buf + sizeof(code_buf);
   *--code_string = 0;
@@ -222,31 +228,34 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
   }
 
   DPA_stream_copyWrite( stream, code_string, code_buf + sizeof(code_buf) - code_string - 1 );
-  if(code) DPA_stream_referenceWrite( stream, code->message, code->length );
+  if(code) DPA_stream_progmemWrite( stream, code->message, code->length );
 
-  DPA_stream_referenceWrite( stream, S( "\r\n"
-    "Connection: Close"
-  ));
+  static const flash char connection_header[] = {"\r\nConnection: Close"};
+  DPA_stream_progmemWrite( stream, S(connection_header) );
+
+  static const flash char CR_LF_CR_LF[] = {"\r\n\r\n"};
 
   switch( c->method ){
     case HTTP_METHOD_GET:
     case HTTP_METHOD_HEAD: {
-      const char* mime = c->ressource->handler->getMime(c->ressource);
+      const flash char* mime = c->ressource->handler->getMime(c->ressource);
       const char* hash = c->ressource->handler->getHash(c->ressource);
       if( mime ){
-        DPA_stream_referenceWrite( stream, S("\r\nContent-Type: ") );
-        DPA_stream_referenceWrite( stream, mime, strlen(mime) );
+        static const flash char content_type_header[] = {"\r\nContent-Type: "};
+        DPA_stream_progmemWrite( stream, S(content_type_header) );
+        DPA_stream_progmemWrite( stream, mime, DPA_progmem_strlen(mime) );
       }
       if( hash ){
-        DPA_stream_referenceWrite( stream, S("\r\nEtag: ") );
+        static const flash char etag_header[] = {"\r\nEtag: "};
+        DPA_stream_progmemWrite( stream, S(etag_header) );
         DPA_stream_copyWrite( stream, hash, strlen(hash) );
       }
-      DPA_stream_referenceWrite( stream, S("\r\n\r\n") );
+      DPA_stream_progmemWrite( stream, S(CR_LF_CR_LF) );
     } if( c->method == HTTP_METHOD_GET ) {
       c->ressource->handler->read( c->ressource, stream );
     } break;
     default: {
-      DPA_stream_referenceWrite( stream, S("\r\n\r\n") );
+      DPA_stream_progmemWrite( stream, S(CR_LF_CR_LF) );
     } break;
   }
 
@@ -287,7 +296,6 @@ static bool onopen( void* cid ){
 }
 
 
-#define MEMEQ( STR, MEM, N ) ( N == sizeof(STR)-1 && !memcmp( (MEM), (STR), sizeof(STR)-1 ) )
 #define S(STR) STR, sizeof(STR)-1
 static void onreceive( void* cid, void* data, size_t size ){
   DPA_LOG("http_service->onreceive: \n");
@@ -380,7 +388,8 @@ static void onreceive( void* cid, void* data, size_t size ){
 
         DPA_mempos( &lineEndPos, it, n, S("\r\n") );
         DPA_memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
-        if( !DPA_streq_nocase( "HTTP", it, protocolEndPos ) )
+        static const flash char fstr_http[] = {"HTTP"};
+        if( !DPA_streq_nocase_fn( fstr_http, it, protocolEndPos ) )
           c->status = 480;
 
         c->parseState = HTTP_PARSE_VERSION;
@@ -465,13 +474,16 @@ static void onreceive( void* cid, void* data, size_t size ){
         size_t value_length = lineEndPos - key_length - 1;
         DPA_memtrim( &value, &value_length, ' ' );
 
-        if( DPA_streq_nocase( "Connection", key, key_length ) ){
+        static const flash char fstr_Connection[] = {"Connection"};
+        static const flash char fstr_Upgrade[] = {"Upgrade"};
+
+        if( DPA_streq_nocase_fn( fstr_Connection, key, key_length ) ){
           enum HTTP_ConnectionAction ca;
           for( ca=0; ca<HTTP_CONNECTION_ACTION_COUNT; ca++ )
-            if( DPA_streq_nocase( HTTP_ConnectionActions[ca], value, value_length ) )
+            if( DPA_streq_nocase_fn( HTTP_ConnectionActions[ca], value, value_length ) )
               break;
           c->connectionAction = ca;
-        }else if( DPA_streq_nocase( "Upgrade", key, key_length ) ){
+        }else if( DPA_streq_nocase_fn( fstr_Upgrade, key, key_length ) ){
           
         }
 
@@ -521,7 +533,6 @@ static void onreceive( void* cid, void* data, size_t size ){
 
 }
 #undef S
-#undef MEMEQ
 
 static void oneof( void* cid ){
   DPA_LOG("http_service->oneof\n");

@@ -40,7 +40,7 @@ typedef struct {
   tcp_cache_entry_tcb_entry_t* tcb_list;
 } tcp_cache_entryInfo_t;
 
-static inline void GCC_BUGFIX_50925 getEntryInfo( tcp_cache_entryInfo_t* res, DPAUCS_tcp_cacheEntry_t* entry ){
+static inline void getEntryInfo( tcp_cache_entryInfo_t* res, DPAUCS_tcp_cacheEntry_t* entry ){
   res->bufferBuffer = ((DPA_bufferInfo_t*)entry) - entry->bufferBufferSize;
   res->tcb_list = entry->ctcb;
   res->charBuffer = (unsigned char*)&res->tcb_list[entry->count];
@@ -119,10 +119,13 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
       DPAUCS_transmissionControlBlock_t* it = tcb[i];
       if( (!it->cache.first) != (it->SND.NXT==it->SND.UNA) ){
         // This should never happen
-        DPA_LOG( "\x1b[31mCritical BUG: %s\x1b[39m\n",
-          it->cache.first ? "A cache entry exists, but any octet is already acknowledged!"
-                          : "Some octets aren't yet acknowledged, but they aren't cached!"
+#ifndef NO_LOGGING
+        static const flash char msg_already_acked[] = {"A cache entry exists, but any octet is already acknowledged!"};
+        static const flash char msg_missing[] = {"Some octets aren't yet acknowledged, but they aren't cached!"};
+        DPA_LOG( "\x1b[31mCritical BUG: %" PRIsFLASH "\x1b[39m\n",
+          it->cache.first ? msg_already_acked : msg_missing
         );
+#endif
       }
       if( !it->cache.first ){
         it->cache.last_transmission = 0;

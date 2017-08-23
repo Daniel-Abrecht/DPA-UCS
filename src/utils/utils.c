@@ -1,7 +1,20 @@
 #include <string.h>
 #include <DPA/utils/utils.h>
 
-bool DPA_mempos( size_t* position, void* haystack, size_t haystack_size, void* needle, size_t needle_size ){
+size_t DPA_progmem_strlen( const flash char* str ){
+  size_t i = 0;
+  while( *str++ )
+    if( !++i )
+      return ~0;
+  return i;
+}
+
+void DPA_progmem_memcpy( void* dst, const flash void* src, size_t size ){
+  while( size-- )
+    ((char*)dst)[size] = ((const flash char*)src)[size];
+}
+
+bool DPA_mempos( size_t* position, const void* haystack, size_t haystack_size, const void* needle, size_t needle_size ){
 
   if( needle_size == 0 )
     return false;
@@ -13,7 +26,7 @@ bool DPA_mempos( size_t* position, void* haystack, size_t haystack_size, void* n
   size_t i=0, j=0;
 
   while( i < needle_size && n--+i )
-    if( ((char*)needle)[i++] != ((char*)haystack)[j++] )
+    if( ((const char*)needle)[i++] != ((const char*)haystack)[j++] )
       n-=i-1, j-=i-1, i=0;
 
   if( i < needle_size )
@@ -42,6 +55,26 @@ void DPA_memtrim( const char**restrict mem, size_t*restrict size, char c ){
 }
 
 bool DPA_streq_nocase( const char* str, const char* mem, size_t size ){
+  while( size-- ){
+    char a = *str++;
+    char b = *mem++;
+    if( ( ( a >= 'A' && a <= 'Z' ) ? a - 'A' + 'a' : a ) != ( ( b >= 'A' && b <= 'Z' ) ? b - 'A' + 'a' : b ) )
+      return false;
+  }
+  return true;
+}
+
+bool DPA_streq_nocase_fn( const flash char* str, const char* mem, size_t size ){
+  while( size-- ){
+    char a = *str++;
+    char b = *mem++;
+    if( ( ( a >= 'A' && a <= 'Z' ) ? a - 'A' + 'a' : a ) != ( ( b >= 'A' && b <= 'Z' ) ? b - 'A' + 'a' : b ) )
+      return false;
+  }
+  return true;
+}
+
+bool DPA_streq_nocase_ff( const flash char* str, const flash char* mem, size_t size ){
   while( size-- ){
     char a = *str++;
     char b = *mem++;

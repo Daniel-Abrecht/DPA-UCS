@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdint.h>
+#include <DPA/utils/utils.h>
 #include <DPA/utils/stream.h>
 #include <DPA/utils/logger.h>
 
@@ -42,7 +43,10 @@ void DPAUCS_raw_stream_truncate( DPA_stream_raw_t* raw, size_t size ){
     if( bb->range.size > size ){
       switch( bb->type ){
         case BUFFER_BUFFER: cbskip  += size; break;
-        case BUFFER_ARRAY : *(char**)&bb->ptr += size; break;
+        case BUFFER_ARRAY : *(const char**)&bb->cptr += size; break;
+#ifdef __FLASH
+        case BUFFER_FLASH : *(const flash char**)&bb->fptr += size; break;
+#endif
         default: break;
       }
       bb->range.size -= size;
@@ -124,10 +128,24 @@ bool DPA_stream_referenceWrite( DPA_stream_t* stream, const void* p, size_t size
   entry.type = BUFFER_ARRAY;
   entry.range.size = size;
   entry.range.offset = 0;
-  entry.ptr = (void*)p;
+  entry.cptr = p;
   DPA_RINGBUFFER_PUT( stream->buffer_buffer, entry );
   return true;
 }
+
+#ifdef __FLASH
+bool DPA_stream_progmemWrite( DPA_stream_t* stream, const flash void* p, size_t size ){
+  if(DPA_ringbuffer_full(&stream->buffer_buffer->super))
+    return false;
+  DPA_bufferInfo_t entry = {0};
+  entry.type = BUFFER_FLASH;
+  entry.range.size = size;
+  entry.range.offset = 0;
+  entry.fptr = p;
+  DPA_RINGBUFFER_PUT( stream->buffer_buffer, entry );
+  return true;
+}
+#endif
 
 static inline size_t stream_read_from_buffer(
   const DPA_stream_t* stream,
@@ -159,10 +177,26 @@ static inline size_t stream_read_from_array(
   (void)stream;
   size_t size = info->range.size - info->range.offset;
   size_t n = size < max_size ? size : max_size;
-  memcpy(p,(char*)info->ptr+info->range.offset,n);
+  memcpy(p,(const char*)info->cptr+info->range.offset,n);
   info->range.offset += n;
   return n;
 }
+
+#ifdef __FLASH
+static inline size_t stream_read_from_flash(
+  const DPA_stream_t* stream,
+  DPA_bufferInfo_t* info,
+  void* p,
+  size_t max_size
+){
+  (void)stream;
+  size_t size = info->range.size - info->range.offset;
+  size_t n = size < max_size ? size : max_size;
+  DPA_progmem_memcpy(p,(const flash char*)info->fptr+info->range.offset,n);
+  info->range.offset += n;
+  return n;
+}
+#endif
 
 size_t DPA_stream_read( DPA_stream_t* stream, void* p, size_t max_size ){
   size_t n = max_size;
@@ -170,12 +204,17 @@ size_t DPA_stream_read( DPA_stream_t* stream, void* p, size_t max_size ){
     DPA_bufferInfo_t* info = DPA_ringbuffer_begin(stream->buffer_buffer);
     size_t size = 0;
     switch( info->type ){
-      case BUFFER_ARRAY:
-        size = stream_read_from_array(stream,info,p,n);
-      break;
       case BUFFER_BUFFER:
         size = stream_read_from_buffer(stream,info,p,n);
       break;
+      case BUFFER_ARRAY:
+        size = stream_read_from_array(stream,info,p,n);
+      break;
+#ifdef __FLASH
+      case BUFFER_FLASH:
+        size = stream_read_from_flash(stream,info,p,n);
+      break;
+#endif
       default: return max_size - n;
     }
     n -= size;

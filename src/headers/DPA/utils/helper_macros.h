@@ -28,19 +28,13 @@
 #define DPA_MODULE( name ) void modul_ ## name( void )
 #define DPA_DEPENDENCY( name ) modul_ ## name()
 
-// workarround for gcc bug 50925 in gcc < 4.9
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=50925#c19
-#if defined( __GNUC__ ) && ( __GNUC__ < 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ < 9 ) ) && defined( __OPTIMIZE_SIZE__ )
-#define GCC_BUGFIX_50925 __attribute__((optimize("O3")))
-#else
-#define GCC_BUGFIX_50925
-#endif
-
 #ifndef flash
 #ifdef __FLASH
-#define flash //__flash
+#define flash __flash
+#define PRIsFLASH "S"
 #else
 #define flash
+#define PRIsFLASH "s"
 #endif
 #endif
 

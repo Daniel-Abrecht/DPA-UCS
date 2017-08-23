@@ -20,21 +20,19 @@ AVR_AR=avr-ar
 AVR_MCU=atmega1284
 AVR_F_CPU = 3686400UL
 
-OPTIONS        += -std=c11
+LINUX_OPTIONS  += -std=c11
+# gnu11 Needed for __flash support
+AVR_OPTIONS    += -std=gnu11
 OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
 OPTIONS        += -Wall -Wextra -pedantic -Werror
 #OPTIONS        += --short-enums
 
 LINUX_LIBS=
 
-test-% test: OPTIONS += -fprofile-arcs -ftest-coverage -fsanitize=undefined -fstack-protector-all -fcheck-pointer-bounds
+test-% test: OPTIONS += -fprofile-arcs -ftest-coverage
 test-% test: LINUX_LIBS += -lgcov
 
 OPTIONS        += $(O)
-
-ifdef SANITIZE
-OPTIONS        += -fsanitize=undefined
-endif
 
 ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(v))))
 ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
@@ -87,12 +85,12 @@ FILES += $(OPTIONAL_FILES)
 #      LINUX      #
 ###################
 
-LINUX_OPTIONS	= $(OPTIONS)
-TEMP_LINUX	= tmp/linux
-LINUX_NAME	= dpaucs-linux
-LINUX_TARGET	= $(BIN)/$(LINUX_NAME)
-LINUX_LIBRARY   = $(BIN)/lib$(LINUX_NAME).a
-LINUX_GENERATED = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
+LINUX_OPTIONS	+= $(OPTIONS)
+TEMP_LINUX	 = tmp/linux
+LINUX_NAME	 = dpaucs-linux
+LINUX_TARGET	 = $(BIN)/$(LINUX_NAME)
+LINUX_LIBRARY    = $(BIN)/lib$(LINUX_NAME).a
+LINUX_GENERATED  = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 
 LINUX_OPTIONS  += -I${TEMP_LINUX}
 
@@ -120,12 +118,12 @@ TESTS=$(shell \
 #       AVR       #
 ###################
 
-AVR_OPTIONS	= $(OPTIONS) -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU) -DNO_LOGGING
-TEMP_AVR	= tmp/avr_$(AVR_MCU)
-AVR_NAME	= dpaucs-$(AVR_MCU)
-AVR_TARGET	= $(BIN)/$(AVR_NAME)
-AVR_LIBRARY	= $(BIN)/lib$(AVR_NAME).a
-AVR_GENERATED   = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
+AVR_OPTIONS	+= $(OPTIONS) -Waddr-space-convert -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
+TEMP_AVR	 = tmp/avr_$(AVR_MCU)
+AVR_NAME	 = dpaucs-$(AVR_MCU)
+AVR_TARGET	 = $(BIN)/$(AVR_NAME)
+AVR_LIBRARY	 = $(BIN)/lib$(AVR_NAME).a
+AVR_GENERATED    = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 
 AVR_OPTIONS  += -I${TEMP_AVR}
 

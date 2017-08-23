@@ -22,16 +22,30 @@ function createFileIncludeCode {
   basemacroname="$(echo "FILE_BASE_$varname" | tr '[:lower:]' '[:upper:]')"
   root="$(pwd)"
   pushd "$folder" > /dev/null
+  i=0
   echo "
 #include \"$headerfile\"
-#define $basemacroname $(escape "$baseurl")
-
-const flash DPAUCS_ressource_file_t $varname[] = {
-  " | head -c -1
-  find -type f | sort | while IFS= read file; do
+#define $basemacroname $(escape "$baseurl")"
+  i=0
+  find -type f | sort | while IFS= read file
+  do
+    i=$(expr $i + 1)
+    url="$(echo $file | sed 's/^[^/]\///')"
+    einclude="$(escape "$inc/$url.c")"
+    echo "const flash char ${varname}_content_$i[] = 
+      #include $einclude
+    ;"
+  done
+  echo -n "
+const DPAUCS_ressource_file_t $varname[] = {
+  "
+  find -type f | sort | while IFS= read file
+  do
+    i=$(expr $i + 1)
 
     if [ "$(basename "$file")" = "index.html" ];
-      then efile="$(dirname "$file")/"
+    then
+      efile="$(dirname "$file")/"
     else
       efile="$file"
     fi
@@ -47,15 +61,15 @@ const flash DPAUCS_ressource_file_t $varname[] = {
     echo "{
     {
       &file_ressource_handler.super,
-      \"/\" $basemacroname $efile,
+      (const flash char[]){\"/\" $basemacroname $efile},
       sizeof(\"/\" $basemacroname $efile)-1
     },
-    $mime,
-    $hash,
+    (const flash char[]){$mime},
+    (const char[]){$hash},
     sizeof(
-      #include $einclude
+      ${varname}_content_$i
     )-1,
-    #include $einclude
+    ${varname}_content_$i
   }," | head -c -1
 
   done
@@ -77,7 +91,7 @@ function createFileIncludeHeader {
 #include <DPA/UCS/files.h>
 
 extern const size_t ${varname}_size;
-extern const flash DPAUCS_ressource_file_t $varname[];
+extern const DPAUCS_ressource_file_t $varname[];
 
 #endif
 "

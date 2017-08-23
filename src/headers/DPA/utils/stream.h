@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <DPA/utils/ringbuffer.h>
+#include <DPA/utils/helper_macros.h>
 
 #define DPA_BUFFER_BUFFER_USERDEFINED(buf) ( DPA_BUFFER_GET(buf).type >= BUFFER_TYPE_SIZE )
 #define DPA_BUFFER_BUFFER_TYPE(buf) ( DPA_BUFFER_GET(buf).type - BUFFER_TYPE_SIZE )
@@ -12,13 +13,22 @@
 enum DPA_buffer_type {
   BUFFER_BUFFER,
   BUFFER_ARRAY,
+#ifdef __FLASH
+  BUFFER_FLASH,
+#endif
   BUFFER_TYPE_SIZE
 };
 
 typedef struct DPA_bufferInfo {
   enum DPA_buffer_type type;
   DPA_buffer_range_t range;
-  void* ptr;
+  union {
+    void* ptr;
+    const void* cptr;
+#ifdef __FLASH
+    const flash void* fptr;
+#endif
+  };
 } DPA_bufferInfo_t;
 
 typedef struct DPA_stream {
@@ -36,6 +46,11 @@ typedef struct DPA_stream_raw {
 
 bool DPA_stream_copyWrite( DPA_stream_t*, const void*, size_t );
 bool DPA_stream_referenceWrite( DPA_stream_t*, const void*, size_t );
+#ifdef __FLASH
+bool DPA_stream_progmemWrite( DPA_stream_t*, const flash void*, size_t );
+#else
+#define DPA_stream_progmemWrite DPA_stream_referenceWrite
+#endif
 void DPA_stream_reset( DPA_stream_t* );
 size_t DPA_stream_read( DPA_stream_t*, void*, size_t );
 void DPA_stream_restoreReadOffset( DPA_stream_t* stream, size_t sros );

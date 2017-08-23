@@ -99,13 +99,19 @@ static DPAUCS_transmissionControlBlock_t* addTemporaryTCB( DPAUCS_transmissionCo
 void printFrame( DPAUCS_tcp_t* tcp ){
   uint16_t flags = DPA_btoh16( tcp->flags );
   (void)flags;
+  static const flash char fstr_flag[][4] = { "",
+    " FIN", " SYN", " RST",
+    " PSH", " ACK", " URG",
+    " ECE", " CWR", " NS"
+  };
+  (void)fstr_flag;
   DPA_LOG( "TCP Packet:\n"
     "  source: " "%u" "\n"
     "  destination: " "%u" "\n"
     "  sequence: " "%u" "\n"
     "  acknowledgment: " "%u" "\n"
     "  dataOffset: " "%u" "\n"
-    "  flags: %s %s %s %s %s %s %s %s %s\n"
+    "  flags:%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH "\n"
     "  windowSize: " "%u" "\n"
     "  checksum: " "%u" "\n"
     "  urgentPointer: " "%u" "\n",
@@ -114,15 +120,15 @@ void printFrame( DPAUCS_tcp_t* tcp ){
     (unsigned)DPA_btoh32(tcp->sequence),
     (unsigned)DPA_btoh32(tcp->acknowledgment),
     (unsigned)((tcp->dataOffset>>2)&~3u),
-    ( flags & TCP_FLAG_FIN ) ? "FIN" : "",
-    ( flags & TCP_FLAG_SYN ) ? "SYN" : "",
-    ( flags & TCP_FLAG_RST ) ? "RST" : "",
-    ( flags & TCP_FLAG_PSH ) ? "PSH" : "",
-    ( flags & TCP_FLAG_ACK ) ? "ACK" : "",
-    ( flags & TCP_FLAG_URG ) ? "URG" : "",
-    ( flags & TCP_FLAG_ECE ) ? "ECE" : "",
-    ( flags & TCP_FLAG_CWR ) ? "CWR" : "",
-    ( flags & TCP_FLAG_NS  ) ? "NS"  : "",
+    ( flags & TCP_FLAG_FIN ) ? fstr_flag[1] : fstr_flag[0],
+    ( flags & TCP_FLAG_SYN ) ? fstr_flag[2] : fstr_flag[0],
+    ( flags & TCP_FLAG_RST ) ? fstr_flag[3] : fstr_flag[0],
+    ( flags & TCP_FLAG_PSH ) ? fstr_flag[4] : fstr_flag[0],
+    ( flags & TCP_FLAG_ACK ) ? fstr_flag[5] : fstr_flag[0],
+    ( flags & TCP_FLAG_URG ) ? fstr_flag[6] : fstr_flag[0],
+    ( flags & TCP_FLAG_ECE ) ? fstr_flag[7] : fstr_flag[0],
+    ( flags & TCP_FLAG_CWR ) ? fstr_flag[8] : fstr_flag[0],
+    ( flags & TCP_FLAG_NS  ) ? fstr_flag[9] : fstr_flag[0],
     (unsigned)DPA_btoh16(tcp->windowSize),
     (unsigned)DPA_btoh16(tcp->checksum),
     (unsigned)DPA_btoh16(tcp->urgentPointer)
@@ -171,6 +177,11 @@ static DPAUCS_tcp_transmission_t tcp_begin( void ){
   };
 }
 
+#ifndef NO_LOGGING
+#define S(X) (const flash char[]){#X}
+static const flash char* stateNames[] = {TCP_STATES(S)};
+#undef S
+#endif
 static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DPAUCS_TCP_state state ){
   if( tcb->state == state )
     return false;
@@ -178,8 +189,7 @@ static inline bool tcp_setState( DPAUCS_transmissionControlBlock_t* tcb, enum DP
     tcb->cache.flags.SYN = false;
   }
 #ifndef NO_LOGGING
-  static const char* stateNames[] = {TCP_STATES(DPA_STRINGIFY)};
-  DPA_LOG("%s => %s\n",stateNames[tcb->state],stateNames[state]);
+  DPA_LOG("%"PRIsFLASH" => %"PRIsFLASH"\n",stateNames[tcb->state],stateNames[state]);
 #endif
   tcb->state = state;
   return true;

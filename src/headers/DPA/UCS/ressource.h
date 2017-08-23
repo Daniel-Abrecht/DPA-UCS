@@ -15,7 +15,7 @@ DPA_MODULE( ressource );
 
 typedef struct DPAUCS_ressource_entry {
   const struct DPAUCS_ressource_handler* handler;
-  const char* path;
+  const flash char* path;
   unsigned path_length;
 } DPAUCS_ressource_entry_t;
 
@@ -23,7 +23,7 @@ typedef struct DPAUCS_ressource_handler {
   const DPAUCS_ressource_entry_t* (*open)( const char* path, unsigned length );
   void (*close)( const DPAUCS_ressource_entry_t* );
   size_t (*read)( const DPAUCS_ressource_entry_t*, DPA_stream_t* );
-  const char* (*getMime)( const DPAUCS_ressource_entry_t* );
+  const flash char* (*getMime)( const DPAUCS_ressource_entry_t* );
   const char* (*getHash)( const DPAUCS_ressource_entry_t* );
 } DPAUCS_ressource_entry_handler_t;
 

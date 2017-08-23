@@ -10,7 +10,7 @@ typedef struct DPAUCS_ressource_file_handler {
 
 typedef struct DPAUCS_ressource_file {
   DPAUCS_ressource_entry_t super;
-  const char* mime;
+  const flash char* mime;
   const char* hash;
   size_t size;
   const flash char* content;

@@ -1,8 +1,13 @@
 #ifndef DPAUCS_TCP_IP_STACK_MEMORY_H
 #define DPAUCS_TCP_IP_STACK_MEMORY_H
 
+#ifndef STACK_BUFFER_SIZE
 #define STACK_BUFFER_SIZE 1024u * 3u // 3 KiB
+#endif
+
+#ifndef DPA_MAX_FRAGMANTS
 #define DPA_MAX_FRAGMANTS 32
+#endif
 
 struct DPAUCS_fragmentHandler;
 

@@ -2,7 +2,9 @@
 #define DPA_HELPER_MACROS_H
 
 #if __STDC_VERSION__ < 201112L
+#ifndef __GNUC__
 #pragma anon_unions
+#endif
 #ifndef noreturn
 #define noreturn __attribute__((noreturn))
 #endif

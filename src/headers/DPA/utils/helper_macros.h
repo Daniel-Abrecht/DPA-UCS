@@ -8,7 +8,9 @@
 #ifndef noreturn
 #define noreturn __attribute__((noreturn))
 #endif
+#define static_assert(...)
 #else
+#include <assert.h>
 #include <stdnoreturn.h>
 #endif
 

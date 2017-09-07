@@ -18,10 +18,9 @@ ISR(TIMER0_OVF_vect){
     PRESCALER * (1ul<<COUNTER_BITS) / ( F_CPU / 100ul )
   );
 }
-/*
-// Atmega16, todo, port to atmega1284
+
 DPAUCS_INIT( adelay_timer ){
-  TCCR0 = PRESCALER_BITS; 
+  TCCR0B = PRESCALER_BITS; 
   // Overflow Interrupt erlauben
-  TIMSK |= (1<<TOIE0);
-}*/
+  TIMSK0 |= (1<<TOIE0);
+}

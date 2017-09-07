@@ -58,6 +58,8 @@ static void DPAUCS_init( void ){
 
   memset(services,0,sizeof(services));
 
+  DPA_LOG("Initialising DPAUCS...\n");
+
   DPAUCS_EACH_ETHERNET_DRIVER(it){
     DPA_LOG("Initialize ethernet driver \"%s\"\n",it->name);
     (*it->driver->init)();
@@ -67,18 +69,24 @@ static void DPAUCS_init( void ){
     (*func)();
   }
 
+  DPA_LOG("Initialisation done\n");
+
 }
 
 static void DPAUCS_shutdown( void ){
 
+  DPA_LOG("Shutdown of DPAUCS...\n");
+
   DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPA_LOG("Shutdown ethernet driver \"%s\"\n",it->name);
+    DPA_LOG("Shutdown of ethernet driver \"%s\"\n",it->name);
     (*it->driver->shutdown)();
   }
 
   DPAUCS_EACH_SHUTDOWN_FUNCTION( func ){
     (*func)();
   }
+
+  DPA_LOG("Shutdown completed...\n");
 
 }
 

@@ -18,7 +18,7 @@ LINUX_AR=gcc-ar
 AVR_CC=avr-gcc
 AVR_AR=avr-ar
 AVR_MCU=atmega1284
-AVR_F_CPU = 3686400UL
+AVR_F_CPU = 16000000UL
 
 LINUX_OPTIONS  += -std=c11
 # gnu11 Needed for __flash support
@@ -62,6 +62,7 @@ OPTIONAL_FILES += server/protocol/tcp/tcp.o
 OPTIONAL_FILES += server/protocol/tcp/tcp_stack.o
 OPTIONAL_FILES += server/protocol/tcp/tcp_retransmission_cache.o
 OPTIONAL_FILES += server/protocol/IPv4.o
+OPTIONAL_FILES += utils/logger.o
 
 OPTIONAL_FILES += files.g1.o
 OPTIONAL_FILES += server/files.o
@@ -97,7 +98,6 @@ LINUX_OPTIONS  += -I${TEMP_LINUX}
 LINUX_FILES_TMP  = $(FILES)
 LINUX_FILES_TMP += server/drivers/eth/linux.o
 LINUX_FILES_TMP += server/drivers/adelay/clock.o
-LINUX_FILES_TMP += utils/logger.o
 
 LINUX_FILES = $(shell \
   for file in ${LINUX_FILES_TMP}; \
@@ -129,6 +129,7 @@ AVR_OPTIONS  += -I${TEMP_AVR}
 
 AVR_FILES_TMP  = $(FILES)
 AVR_FILES_TMP += server/drivers/eth/dummy.o
+AVR_FILES_TMP += server/drivers/avrStdioToUART.o
 
 ifndef NO_ADELAY_DRIVER
 AVR_FILES_TMP   += server/drivers/adelay/timer.o

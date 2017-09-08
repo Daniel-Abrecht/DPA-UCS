@@ -4,7 +4,7 @@
 #include <DPA/utils/stream.h>
 #include <DPA/UCS/protocol/address.h>
 
-#define MAX_LAYER3_PROTO_HANDLERS 3
+#define MAX_LAYER4_PROTO_HANDLERS 3
 
 #ifndef OUTSTREAM_BYTE_BUFFER_SIZE
 #define OUTSTREAM_BYTE_BUFFER_SIZE 256
@@ -13,12 +13,6 @@
 #ifndef OUTSTREAM_REFERENCE_BUFFER_SIZE
 #define OUTSTREAM_REFERENCE_BUFFER_SIZE 16
 #endif
-
-#define DPAUCS_EXPORT_L3_HANDLER( NAME, HANDLER ) \
-  DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS_l3_handler*, DPAUCS_l3_handler, DPAUCS_ ## NAME ## _l3_handler ) HANDLER
-
-#define DPAUCS_EACH_ADDRESS_HANDLER( ITERATOR ) \
-  DPA_FOR_SECTION_LIST_HACK( const struct DPAUCS_l3_handler*, DPAUCS_l3_handler, ITERATOR )
 
 typedef struct DPAUCS_fragment DPAUCS_fragment_t;
 typedef struct DPAUCS_packet_info DPAUCS_packet_info_t;
@@ -57,9 +51,11 @@ typedef struct DPAUCS_l3_handler {
   uint16_t (*calculatePseudoHeaderChecksum)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t*, uint8_t, uint16_t );
 } DPAUCS_l3_handler_t;
 
-extern DPAUCS_l4_handler_t* l4_handlers[MAX_LAYER3_PROTO_HANDLERS];
+DPA_LOOSE_LIST_DECLARE( const flash struct DPAUCS_l3_handler*, DPAUCS_l3_handler_list )
 
-const DPAUCS_l3_handler_t* DPAUCS_getAddressHandler( uint16_t type );
+extern DPAUCS_l4_handler_t* l4_handlers[MAX_LAYER4_PROTO_HANDLERS];
+
+const flash DPAUCS_l3_handler_t* DPAUCS_getAddressHandler( uint16_t type );
 void DPAUCS_layer3_addProtocolHandler( DPAUCS_l4_handler_t* handler );
 void DPAUCS_layer3_removeProtocolHandler( DPAUCS_l4_handler_t* handler );
 

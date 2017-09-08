@@ -18,15 +18,15 @@ typedef struct DPAUCS_fragment {
   // packetNumber to take care about overflows
   unsigned short packetNumber;
   uint16_t size; // payloadsize
-  struct DPAUCS_fragmentHandler* handler;
+  const flash struct DPAUCS_fragmentHandler* handler;
 } DPAUCS_fragment_t;
 
-DPAUCS_fragment_t** DPAUCS_createFragment( struct DPAUCS_fragmentHandler* type, size_t size );
+DPAUCS_fragment_t** DPAUCS_createFragment( const flash struct DPAUCS_fragmentHandler* type, size_t size );
 void DPAUCS_removeOldestFragment( void );
 void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment );
-void DPAUCS_eachFragment( struct DPAUCS_fragmentHandler* filter, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg );
-unsigned DPAUCS_getFragmentTypeSize( struct DPAUCS_fragmentHandler* type );
-bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, struct DPAUCS_fragmentHandler* newType );
+void DPAUCS_eachFragment( const flash struct DPAUCS_fragmentHandler* filter, bool(*handler)(DPAUCS_fragment_t**,void*), void* arg );
+unsigned DPAUCS_getFragmentTypeSize( const flash struct DPAUCS_fragmentHandler* type );
+bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, const flash struct DPAUCS_fragmentHandler* newType );
 void* DPAUCS_getFragmentData( DPAUCS_fragment_t* fragment );
 
 #endif

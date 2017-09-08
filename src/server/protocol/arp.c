@@ -24,8 +24,8 @@ static const ARP_entry_t *entries_end;
 static inline size_t getLargestAddressSize( void ){
   static size_t size = 0;
   if( !size ){
-    DPAUCS_EACH_ADDRESS_HANDLER( it ){
-      size_t s = (*it)->rawAddressSize;
+    for( struct DPAUCS_l3_handler_list* it = DPAUCS_l3_handler_list; it; it=it->next ){
+      size_t s = it->entry->rawAddressSize;
       if( size < s )
         size = s;
     }
@@ -54,8 +54,8 @@ static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress
   return 0;
 }
 
-DPAUCS_INIT( ARP ){
-  entries_end = (ARP_entry_t*)( entries + ( ARP_ENTRY_BUFFER_SIZE % getRealArpEntrySize() ) );
+DPAUCS_INIT {
+  entries_end = (ARP_entry_t*)( entries + ( ARP_ENTRY_BUFFER_SIZE - ( ARP_ENTRY_BUFFER_SIZE % getRealArpEntrySize() ) ) );
 }
 
 const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr ){
@@ -64,9 +64,9 @@ const DPAUCS_address_t* DPAUCS_arpCache_register( const DPAUCS_address_t* addr )
 
   if( !entry ){
 
-  for( ARP_entry_t* it = (ARP_entry_t*)entries; it < entries_end; next_arp_entry(&it) )
-    if(!it->referenceCount)
-      entry = it;
+    for( ARP_entry_t* it = (ARP_entry_t*)entries; it < entries_end; next_arp_entry(&it) )
+      if(!it->referenceCount)
+        entry = it;
 
     if(!entry)
       return 0;
@@ -171,9 +171,9 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
 
 }
 
-static const DPAUCS_l3_handler_t handler = {
+static flash const DPAUCS_l3_handler_t handler = {
   .type = DPAUCS_ETH_T_ARP,
   .packetHandler = &packetHandler
 };
 
-DPAUCS_EXPORT_L3_HANDLER( ARP, &handler );
+DPA_LOOSE_LIST_ADD( DPAUCS_l3_handler_list, &handler )

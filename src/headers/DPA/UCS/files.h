@@ -16,6 +16,6 @@ typedef struct DPAUCS_ressource_file {
   const flash char* content;
 } DPAUCS_ressource_file_t;
 
-extern DPAUCS_ressource_file_handler_t file_ressource_handler;
+extern const flash DPAUCS_ressource_file_handler_t file_ressource_handler;
 
 #endif

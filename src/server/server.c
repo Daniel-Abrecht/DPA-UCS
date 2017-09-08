@@ -60,13 +60,13 @@ static void DPAUCS_init( void ){
 
   DPA_LOG("Initialising DPAUCS...\n");
 
-  DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPA_LOG("Initialize ethernet driver \"%s\"\n",it->name);
-    (*it->driver->init)();
+  for( struct DPAUCS_ethernet_driver_list* it = DPAUCS_ethernet_driver_list; it; it = it->next ){
+    DPA_LOG("Initialize ethernet driver \"%s\"\n",it->entry->name);
+    (*it->entry->init)();
   }
 
-  DPAUCS_EACH_INIT_FUNCTION( func ){
-    (*func)();
+  for( struct DPAUCS_init_function_list* it = DPAUCS_init_function_list; it; it = it->next ){
+    (*it->entry)();
   }
 
   DPA_LOG("Initialisation done\n");
@@ -77,13 +77,13 @@ static void DPAUCS_shutdown( void ){
 
   DPA_LOG("Shutdown of DPAUCS...\n");
 
-  DPAUCS_EACH_ETHERNET_DRIVER(it){
-    DPA_LOG("Shutdown of ethernet driver \"%s\"\n",it->name);
-    (*it->driver->shutdown)();
+  for( struct DPAUCS_ethernet_driver_list* it = DPAUCS_ethernet_driver_list; it; it = it->next ){
+    DPA_LOG("Shutdown of ethernet driver \"%s\"\n",it->entry->name);
+    (*it->entry->shutdown)();
   }
 
-  DPAUCS_EACH_SHUTDOWN_FUNCTION( func ){
-    (*func)();
+  for( struct DPAUCS_shutdown_function_list* it = DPAUCS_shutdown_function_list; it; it = it->next ){
+    (*it->entry)();
   }
 
   DPA_LOG("Shutdown completed...\n");
@@ -171,7 +171,7 @@ DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAdd
       ) && services[i].port == port
         && services[i].service->tos == tos
     ) return services[i].service;
-    return 0;
+  return 0;
 }
 
 void getPacketInfo( const DPAUCS_interface_t* interface, DPAUCS_packet_info_t* info, DPAUCS_packet_t* packet ){
@@ -216,7 +216,7 @@ void getPacketInfo( const DPAUCS_interface_t* interface, DPAUCS_packet_info_t* i
 }
 
 typedef struct receive_driver_state {
-  const DPAUCS_ethernet_driver_entry_t* driverInfo;
+  struct DPAUCS_ethernet_driver_list* driver;
   const DPAUCS_interface_t* interface;
 } receive_driver_state_t;
 static receive_driver_state_t current_receive_driver_state;
@@ -229,34 +229,29 @@ const DPAUCS_interface_t* DPAUCS_getInterface( const DPAUCS_logicAddress_t* logi
   return 0;
 }
 
-const DPAUCS_ethernet_driver_entry_t* getDriverOfInterface( const DPAUCS_interface_t* interface ){
-  DPAUCS_EACH_ETHERNET_DRIVER( driverInfo ){
-    if( (size_t)( interface - driverInfo->driver->interfaces )
-      < driverInfo->driver->interface_count
-    ) return driverInfo;
-  }
+const DPAUCS_ethernet_driver_t* getDriverOfInterface( const DPAUCS_interface_t* interface ){
+  for( struct DPAUCS_ethernet_driver_list* it = DPAUCS_ethernet_driver_list; it; it = it->next )
+    if( (size_t)( interface - it->entry->interfaces ) < it->entry->interface_count )
+      return it->entry;
   return 0;
 }
 
 static bool DPAUCS_receive_next_interface( void ){
-  DPAUCS_ETHERNET_DRIVER_GET_LIST(ethernet_driver_list_start,ethernet_driver_list_end);
-  if( (size_t)( current_receive_driver_state.driverInfo - ethernet_driver_list_start )
-   >= (size_t)( ethernet_driver_list_end - ethernet_driver_list_start )
-  ) current_receive_driver_state.driverInfo = ethernet_driver_list_start;
-  if( current_receive_driver_state.driverInfo
-   && !current_receive_driver_state.driverInfo->driver->interface_count ){
-    current_receive_driver_state.driverInfo++;
+  if( !DPAUCS_ethernet_driver_list )
     return false;
+  if( !current_receive_driver_state.driver || !current_receive_driver_state.driver->next ){
+    current_receive_driver_state.driver = DPAUCS_ethernet_driver_list;
+    current_receive_driver_state.interface = current_receive_driver_state.driver->entry->interfaces;
+  }else if(
+    (size_t)( ++current_receive_driver_state.interface - current_receive_driver_state.driver->entry->interfaces )
+    >= current_receive_driver_state.driver->entry->interface_count
+  ){
+    current_receive_driver_state.driver = current_receive_driver_state.driver->next;
+    current_receive_driver_state.interface = current_receive_driver_state.driver->entry->interfaces;
   }
-  if( (size_t)(
-    ++current_receive_driver_state.interface
-    - current_receive_driver_state.driverInfo->driver->interfaces
-  ) >= current_receive_driver_state.driverInfo->driver->interface_count ){
-    current_receive_driver_state.driverInfo++;
-    if( (size_t)( current_receive_driver_state.driverInfo - ethernet_driver_list_start )
-     >= (size_t)( ethernet_driver_list_end - ethernet_driver_list_start )
-    ) current_receive_driver_state.driverInfo = ethernet_driver_list_start;
-    current_receive_driver_state.interface = current_receive_driver_state.driverInfo->driver->interfaces;
+  if( !current_receive_driver_state.driver->entry->interface_count ){
+    current_receive_driver_state.interface = 0;
+    return false;
   }
   return true;
 }
@@ -268,7 +263,7 @@ static void DPAUCS_receive_next(){
   if( !DPAUCS_receive_next_interface() )
     return;
 
-  packet->size = (*current_receive_driver_state.driverInfo->driver->receive)(
+  packet->size = (*current_receive_driver_state.driver->entry->receive)(
     current_receive_driver_state.interface,
     packet->data.raw,
     PACKET_SIZE
@@ -338,11 +333,11 @@ void DPAUCS_sendPacket( DPAUCS_packet_info_t* info, uint16_t size ){
   }
   size += (uint8_t*)info->payload - nextPacketToSend.data.raw; // add ethernetheadersize
   nextPacketToSend.size = size;
-  const DPAUCS_ethernet_driver_entry_t* driverInfo = getDriverOfInterface( info->interface );
-  if(!driverInfo){
+  const DPAUCS_ethernet_driver_t* driver = getDriverOfInterface( info->interface );
+  if(!driver){
     DPA_LOG("DPAUCS_sendPacket: interface or driver unavailable\n");
     return;
   }
-  (*driverInfo->driver->send)( info->interface, nextPacketToSend.data.raw, size );
+  (*driver->send)( info->interface, nextPacketToSend.data.raw, size );
 }
 

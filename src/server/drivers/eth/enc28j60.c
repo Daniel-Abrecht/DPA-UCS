@@ -28,6 +28,7 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
 static void eth_shutdown( void ){}
 
 static DPAUCS_ethernet_driver_t driver = {
+  .name       = "enc28j60",
   .init       = &eth_init,
   .send       = &eth_send,
   .receive    = &eth_receive,
@@ -36,4 +37,4 @@ static DPAUCS_ethernet_driver_t driver = {
   .interface_count = 1
 };
 
-DPAUCS_EXPORT_ETHERNET_DRIVER( enc28j60, &driver );
+DPA_LOOSE_LIST_ADD( DPAUCS_ethernet_driver_list, &driver )

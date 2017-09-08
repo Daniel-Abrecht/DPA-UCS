@@ -149,7 +149,7 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
   (void)tcp;
   DPAUCS_logicAddress_pair_t fromTo = {0};
   DPAUCS_mixedPairToLogicAddress( &fromTo, &tcb->fromTo );
-  const DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( &tcb->fromTo ) );
+  const flash DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( &tcb->fromTo ) );
   if( handler && handler->calculatePseudoHeaderChecksum )
     return (*handler->calculatePseudoHeaderChecksum)( fromTo.source, fromTo.destination, PROTOCOL_TCP, length );
   return 0;
@@ -823,12 +823,12 @@ static DPAUCS_l4_handler_t tcpHandler = {
 
 static int counter = 0;
 
-DPAUCS_INIT( tcp ){
+DPAUCS_INIT {
   if(counter++) return;
   DPAUCS_layer3_addProtocolHandler(&tcpHandler);
 }
 
-DPAUCS_SHUTDOWN( tcp ){
+DPAUCS_SHUTDOWN {
   if(--counter) return;
   DPAUCS_layer3_removeProtocolHandler(&tcpHandler);
 }

@@ -5,32 +5,29 @@
 #include <stdbool.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
+#include <DPA/utils/helper_macros.h>
 
 #define DEFAULT_TTL 64
 #ifndef DPA_MAX_PACKET_INFO_BUFFER_SIZE
 #define DPA_MAX_PACKET_INFO_BUFFER_SIZE 512u
 #endif
 
-#define DPAUCS_EXPORT_FRAGMENT_HANDLER( NAME, HANDLER ) \
-  DPA_SECTION_LIST_ENTRY_HACK( const struct DPAUCS_fragmentHandler*, DPAUCS_fragmentHandler, DPAUCS_ ## NAME ## _fragmentHandler ) HANDLER
-
-#define DPAUCS_EACH_FRAGMENT_HANDLER( ITERATOR ) \
-  DPA_FOR_SECTION_LIST_HACK( const struct DPAUCS_fragmentHandler*, DPAUCS_fragmentHandler, ITERATOR )
-
 struct DPAUCS_fragmentHandler;
 struct DPAUCS_ip_packetInfo;
+
+DPA_LOOSE_LIST_DECLARE( const flash struct DPAUCS_fragmentHandler*, DPAUCS_fragmentHandler_list )
 
 typedef struct DPAUCS_fragmentHandler {
   size_t packetInfo_size;
   size_t fragmentInfo_size;
   bool (*isSamePacket)( struct DPAUCS_ip_packetInfo*, struct DPAUCS_ip_packetInfo* );
   void (*destructor)( DPAUCS_fragment_t** );
-  bool (*beforeTakeover)( DPAUCS_fragment_t***, struct DPAUCS_fragmentHandler* );
+  bool (*beforeTakeover)( DPAUCS_fragment_t***, const flash struct DPAUCS_fragmentHandler* );
   void (*takeoverFailtureHandler)( DPAUCS_fragment_t** );
 } DPAUCS_fragmentHandler_t;
 
 typedef struct DPAUCS_ip_packetInfo {
-  struct DPAUCS_fragmentHandler* handler; // must be the first member
+  const flash struct DPAUCS_fragmentHandler* handler; // must be the first member
   bool valid;
   uint16_t offset;
   void(*onremove)(void*);

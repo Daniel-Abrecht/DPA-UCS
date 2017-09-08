@@ -20,9 +20,9 @@ static bool removeFragmentByPacketNumber(DPAUCS_fragment_t** fragment, void* pac
   return false;
 }
 
-bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, DPAUCS_fragmentHandler_t* newHandler ){
+bool DPAUCS_takeover( DPAUCS_fragment_t** fragment, const flash DPAUCS_fragmentHandler_t* newHandler ){
   DPAUCS_fragment_t tmp = **fragment;
-  bool(*beforeTakeover)(DPAUCS_fragment_t***,DPAUCS_fragmentHandler_t*) = (*fragment)->handler->beforeTakeover;
+  bool(*beforeTakeover)(DPAUCS_fragment_t***,const flash DPAUCS_fragmentHandler_t*) = (*fragment)->handler->beforeTakeover;
   if( beforeTakeover )
     if(! (*beforeTakeover)( &fragment, newHandler ) )
       return false;
@@ -44,7 +44,7 @@ void* DPAUCS_getFragmentData( DPAUCS_fragment_t* fragment ){
   return (char*)fragment + DPAUCS_MEMPOOL_SIZE( fragment ) - fragment->size;
 }
 
-DPAUCS_fragment_t** DPAUCS_createFragment( DPAUCS_fragmentHandler_t* handler, size_t size ){
+DPAUCS_fragment_t** DPAUCS_createFragment( const flash DPAUCS_fragmentHandler_t* handler, size_t size ){
   size_t fragmentTypeSize = handler->fragmentInfo_size;
   unsigned short packetNumber = packetNumberCounter++;
   DPAUCS_eachFragment(0,&removeFragmentByPacketNumber,&packetNumber);
@@ -102,7 +102,7 @@ void DPAUCS_removeFragment( DPAUCS_fragment_t** fragment ){
 }
 
 struct eachFragmentArgs {
-  DPAUCS_fragmentHandler_t* handler;
+  const flash DPAUCS_fragmentHandler_t* handler;
   bool(*callback)(DPAUCS_fragment_t**,void*);
   void* arg;
 };
@@ -115,7 +115,7 @@ static bool eachFragment_helper(void** mem,void* arg){
   return true;
 }
 
-void DPAUCS_eachFragment( DPAUCS_fragmentHandler_t* handler, bool(*callback)(DPAUCS_fragment_t**,void*), void* arg ){
+void DPAUCS_eachFragment( const flash DPAUCS_fragmentHandler_t* handler, bool(*callback)(DPAUCS_fragment_t**,void*), void* arg ){
   struct eachFragmentArgs args = {handler,callback,arg};
   DPA_mempool_each( &mempool, &eachFragment_helper, &args );
 }

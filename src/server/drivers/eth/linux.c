@@ -188,6 +188,7 @@ static void eth_shutdown( void ){
 }
 
 static DPAUCS_ethernet_driver_t driver = {
+  .name       = "linux",
   .init       = &eth_init,
   .send       = &eth_send,
   .receive    = &eth_receive,
@@ -196,4 +197,4 @@ static DPAUCS_ethernet_driver_t driver = {
   .interface_count = 1
 };
 
-DPAUCS_EXPORT_ETHERNET_DRIVER( linux, &driver );
+DPA_LOOSE_LIST_ADD( DPAUCS_ethernet_driver_list, &driver )

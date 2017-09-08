@@ -25,6 +25,7 @@
 #ifndef packed
 #define packed __attribute__ ((__packed__))
 #endif
+
 #ifndef weak
 #define weak __attribute__((weak))
 #endif
@@ -53,20 +54,24 @@
 #define DPA_STRINGIFY(x) #x
 #define DPA_TOSTRING(x) DPA_STRINGIFY(x)
 
-#define DPA_FOR_SECTION_LIST_HACK(TYPE,NAME,ITERATOR) \
-  extern TYPE weak __start_ ## NAME ## _section_list_hack[]; \
-  extern TYPE weak __stop_ ## NAME ## _section_list_hack[]; \
-  for( TYPE* ITERATOR = __start_ ## NAME ## _section_list_hack; \
-       ITERATOR < __stop_ ## NAME ## _section_list_hack; ITERATOR++ )
+#define DPA_CONCAT_EVAL(A,B) A ## B
+#define DPA_CONCAT(A,B) DPA_CONCAT_EVAL(A,B)
 
-#define DPA_FOR_SECTION_GET_LIST(TYPE,NAME,START,END) \
-  extern TYPE weak __start_ ## NAME ## _section_list_hack[]; \
-  extern TYPE weak __stop_ ## NAME ## _section_list_hack[]; \
-  static TYPE* START = __start_ ## NAME ## _section_list_hack; \
-  static TYPE* END = __stop_ ## NAME ## _section_list_hack;
+#define DPA_LOOSE_LIST_DECLARE(TYPE,NAME) \
+  struct NAME; \
+  struct NAME { \
+    TYPE entry; \
+    struct NAME* next; \
+  }; \
+  extern struct NAME* NAME; \
+  weak struct NAME* NAME;
 
-#define DPA_SECTION_LIST_ENTRY_HACK(TYPE,NAME,SYMBOL) \
-  extern TYPE SYMBOL; TYPE SYMBOL \
-  __attribute__ ((section ( DPA_TOSTRING( NAME ## _section_list_hack )),used)) =
+#define DPA_LOOSE_LIST_ADD(LIST,ENTRY) \
+  static struct LIST DPA_CONCAT( list_item_, __LINE__ ) = {(ENTRY),0}; \
+  static void DPA_CONCAT( list_append_, __LINE__ )() __attribute__((constructor)); \
+  static void DPA_CONCAT( list_append_, __LINE__ )(){ \
+    DPA_CONCAT( list_item_, __LINE__ ).next = (LIST); \
+    LIST = &DPA_CONCAT( list_item_, __LINE__ ); \
+  }
 
 #endif

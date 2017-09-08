@@ -2,7 +2,7 @@
 #include <DPA/UCS/protocol/ip_stack.h>
 #include <DPA/UCS/protocol/tcp/tcp_stack.h>
 
-static DPAUCS_fragmentHandler_t fragment_handler;
+static const flash DPAUCS_fragmentHandler_t fragment_handler;
 
 bool DPAUCS_tcp_cache_add( DPAUCS_fragment_t** fragment, DPAUCS_transmissionControlBlock_t* tcb ){
   if(! DPAUCS_takeover( fragment, &fragment_handler ) )
@@ -31,7 +31,7 @@ static void fragmentDestructor(DPAUCS_fragment_t** f){
   // TODO
 }
 
-static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, DPAUCS_fragmentHandler_t* newHandler ){
+static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, const flash DPAUCS_fragmentHandler_t* newHandler ){
   DPAUCS_tcp_fragment_t** tcpf = (DPAUCS_tcp_fragment_t**)*f;
   (void)tcpf;
   (void)newHandler;
@@ -46,11 +46,11 @@ static void takeoverFailtureHandler(DPAUCS_fragment_t** f){
 }
 
 
-static DPAUCS_fragmentHandler_t fragment_handler = {
+static const flash DPAUCS_fragmentHandler_t fragment_handler = {
   .fragmentInfo_size = sizeof(DPAUCS_tcp_fragment_t),
   .destructor = &fragmentDestructor,
   .beforeTakeover = &fragmentBeforeTakeover,
   .takeoverFailtureHandler = &takeoverFailtureHandler
 };
 
-DPAUCS_EXPORT_FRAGMENT_HANDLER( TCP, &fragment_handler );
+DPA_LOOSE_LIST_ADD( DPAUCS_fragmentHandler_list, &fragment_handler )

@@ -3,9 +3,9 @@
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/adelay.h>
 
+#define COUNTER_BITS        8
 #define PRESCALER        1024
 #define PRESCALER_BITS   (1<<CS00)|(1<<CS02)
-#define COUNTER_BITS        8
 
 DPA_MODULE( adelay_driver ){}
 
@@ -19,7 +19,7 @@ ISR(TIMER0_OVF_vect){
   );
 }
 
-DPAUCS_INIT( adelay_timer ){
+DPAUCS_INIT {
   TCCR0B = PRESCALER_BITS; 
   // Overflow Interrupt erlauben
   TIMSK0 |= (1<<TOIE0);

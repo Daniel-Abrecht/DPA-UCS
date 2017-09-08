@@ -84,12 +84,12 @@ static DPAUCS_l4_handler_t icmp_handler = {
 
 static int counter = 0;
 
-DPAUCS_INIT( icmp ){
+DPAUCS_INIT {
   if(counter++) return;
   DPAUCS_layer3_addProtocolHandler(&icmp_handler);
 }
 
-DPAUCS_SHUTDOWN( icmp ){
+DPAUCS_SHUTDOWN {
   if(--counter) return;
   DPAUCS_layer3_removeProtocolHandler(&icmp_handler);
 }

@@ -13,25 +13,21 @@
 #define MAX_SERVICES 16
 #endif
 
-#define DPAUCS_INIT( NAME ) \
-  static void DPAUCS_real_init_ ## NAME ## _func(void); \
-  DPA_SECTION_LIST_ENTRY_HACK( const DPAUCS_init_func_t, DPAUCS_init_func, DPAUCS_ ## NAME ## _init ) &DPAUCS_real_init_ ## NAME ## _func; \
-  void DPAUCS_real_init_ ## NAME ## _func(void)
+#define DPAUCS_INIT \
+  static void DPA_CONCAT( DPA_CONCAT( DPAUCS_init_, __LINE__ ), _func )( void ); \
+  DPA_LOOSE_LIST_ADD( DPAUCS_init_function_list, &DPA_CONCAT( DPA_CONCAT( DPAUCS_init_, __LINE__ ), _func ) ) \
+  static void DPA_CONCAT( DPA_CONCAT( DPAUCS_init_, __LINE__ ), _func )( void )
 
-#define DPAUCS_SHUTDOWN( NAME ) \
-  static void DPAUCS_real_shutdown_ ## NAME ## _func(void); \
-  DPA_SECTION_LIST_ENTRY_HACK( const DPAUCS_shutdown_func_t, DPAUCS_shutdown_func, DPAUCS_ ## NAME ## _shutdown ) &DPAUCS_real_shutdown_ ## NAME ## _func; \
-  void DPAUCS_real_shutdown_ ## NAME ## _func(void)
-
-#define DPAUCS_EACH_INIT_FUNCTION( ITERATOR ) \
-  DPA_FOR_SECTION_LIST_HACK( const DPAUCS_init_func_t, DPAUCS_init_func, ITERATOR )
-
-#define DPAUCS_EACH_SHUTDOWN_FUNCTION( ITERATOR ) \
-  DPA_FOR_SECTION_LIST_HACK( const DPAUCS_shutdown_func_t, DPAUCS_shutdown_func, ITERATOR )
-
+#define DPAUCS_SHUTDOWN \
+  static void DPA_CONCAT( DPA_CONCAT( DPAUCS_shutdown_, __LINE__ ), _func )( void ); \
+  DPA_LOOSE_LIST_ADD( DPAUCS_shutdown_function_list, &DPA_CONCAT( DPA_CONCAT( DPAUCS_shutdown_, __LINE__ ), _func ) ) \
+  static void DPA_CONCAT( DPA_CONCAT( DPAUCS_shutdown_, __LINE__ ), _func )( void )
 
 typedef void(*DPAUCS_init_func_t)(void);
 typedef void(*DPAUCS_shutdown_func_t)(void);
+
+DPA_LOOSE_LIST_DECLARE( const DPAUCS_init_func_t, DPAUCS_init_function_list )
+DPA_LOOSE_LIST_DECLARE( const DPAUCS_shutdown_func_t, DPAUCS_shutdown_function_list )
 
 struct DPAUCS_service;
 struct DPAUCS_packet_info;

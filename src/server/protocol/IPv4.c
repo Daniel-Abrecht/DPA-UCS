@@ -53,7 +53,7 @@ typedef struct DPAUCS_IPv4_fragment {
 } DPAUCS_IPv4_fragment_t;
 
 
-static DPAUCS_fragmentHandler_t fragment_handler;
+static const flash DPAUCS_fragmentHandler_t fragment_handler;
 
 static void packetHandler( DPAUCS_packet_info_t* info ){
   if( (*(uint8_t*)info->payload) >> 4 != 4 ) // Version must be 4
@@ -78,7 +78,7 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
   }
 
   DPAUCS_l4_handler_t* handler = 0;
-  for(int i=0; i<MAX_LAYER3_PROTO_HANDLERS; i++)
+  for(int i=0; i<MAX_LAYER4_PROTO_HANDLERS; i++)
     if( l4_handlers[i]
      && l4_handlers[i]->protocol == ip->protocol
     ){
@@ -392,7 +392,7 @@ static void fragmentDestructor(DPAUCS_fragment_t** f){
   DPAUCS_layer3_removePacket(((DPAUCS_ip_fragment_t*)*f)->info);
 }
 
-static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, DPAUCS_fragmentHandler_t* newHandler ){
+static bool fragmentBeforeTakeover( DPAUCS_fragment_t*** f, const flash DPAUCS_fragmentHandler_t* newHandler ){
   DPAUCS_ip_fragment_t** ipf = (DPAUCS_ip_fragment_t**)*f;
   DPAUCS_ip_packetInfo_t* ipfi = (*ipf)->info;
   if( !ipfi->valid )
@@ -413,7 +413,7 @@ static void takeoverFailtureHandler(DPAUCS_fragment_t** f){
   DPAUCS_layer3_removeFragment((DPAUCS_ip_fragment_t**)f);
 }
 
-static DPAUCS_fragmentHandler_t fragment_handler = {
+static const flash DPAUCS_fragmentHandler_t fragment_handler = {
   .packetInfo_size = sizeof(DPAUCS_IPv4_packetInfo_t),
   .fragmentInfo_size = sizeof(DPAUCS_IPv4_fragment_t),
   .isSamePacket = &isSamePacket,
@@ -422,7 +422,7 @@ static DPAUCS_fragmentHandler_t fragment_handler = {
   .takeoverFailtureHandler = &takeoverFailtureHandler
 };
 
-static const DPAUCS_l3_handler_t l3_handler = {
+static const flash DPAUCS_l3_handler_t l3_handler = {
   .type = DPAUCS_ETH_T_IPv4,
   .rawAddressSize = 4,
   // We don't know the biggest reassembled IP Packet supportet by other systems,
@@ -441,5 +441,5 @@ static const DPAUCS_l3_handler_t l3_handler = {
 };
 
 
-DPAUCS_EXPORT_FRAGMENT_HANDLER( IPv4, &fragment_handler );
-DPAUCS_EXPORT_L3_HANDLER( IPv4, &l3_handler );
+DPA_LOOSE_LIST_ADD( DPAUCS_fragmentHandler_list, &fragment_handler )
+DPA_LOOSE_LIST_ADD( DPAUCS_l3_handler_list, &l3_handler )

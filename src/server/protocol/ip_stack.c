@@ -24,8 +24,8 @@ bool DPAUCS_layer3_areFragmentsFromSamePacket( DPAUCS_ip_packetInfo_t* a, DPAUCS
 static inline size_t getRealPacketInfoSize( void ){
   static size_t size = 0;
   if( !size ){
-    DPAUCS_EACH_FRAGMENT_HANDLER( it ){
-      size_t s = (*it)->packetInfo_size;
+    for( struct DPAUCS_fragmentHandler_list* it = DPAUCS_fragmentHandler_list; it; it = it->next ){
+      size_t s = it->entry->packetInfo_size;
       if( size < s )
         size = s;
     }
@@ -46,7 +46,7 @@ static inline DPAUCS_ip_packetInfo_t* getNextIncompletePacket( void ){
   return it;
 }
 
-DPAUCS_INIT( ip_stack ){
+DPAUCS_INIT {
   incompletePackageInfos_end = (DPAUCS_ip_packetInfo_t*)( incompletePackageInfos + ( DPA_MAX_PACKET_INFO_BUFFER_SIZE % getRealPacketInfoSize() ) );
 }
 

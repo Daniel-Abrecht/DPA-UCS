@@ -33,7 +33,7 @@ static const char* getHash( const DPAUCS_ressource_entry_t* e ){
   return ((DPAUCS_ressource_file_t*)e)->hash;
 }
 
-DPAUCS_ressource_file_handler_t file_ressource_handler = {
+const flash DPAUCS_ressource_file_handler_t file_ressource_handler = {
   .super = {
     .open = open,
     .close = close,
@@ -43,4 +43,4 @@ DPAUCS_ressource_file_handler_t file_ressource_handler = {
   }
 };
 
-DPAUCS_EXPORT_RESSOURCE_HANDLER( file, &file_ressource_handler.super );
+DPA_LOOSE_LIST_ADD( DPAUCS_ressource_handler_list, &file_ressource_handler.super )

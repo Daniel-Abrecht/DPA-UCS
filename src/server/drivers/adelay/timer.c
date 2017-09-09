@@ -15,12 +15,14 @@ ISR(TIMER0_OVF_vect){
   time++;
   adelay_update_time(
     time, 0xFFFFu,
-    PRESCALER * (1ul<<COUNTER_BITS) / ( F_CPU / 100ul )
+    F_CPU / PRESCALER / (1ul<<COUNTER_BITS)
   );
 }
 
 DPAUCS_INIT {
+  cli();
+  TCCR0A = 0;
   TCCR0B = PRESCALER_BITS; 
-  // Overflow Interrupt erlauben
-  TIMSK0 |= (1<<TOIE0);
+  TIMSK0 = (1<<TOIE0);
+  sei();
 }

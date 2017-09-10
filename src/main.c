@@ -1,4 +1,4 @@
-#include <DPA/UCS/driver/eth/driver.h>
+#include <DPA/UCS/driver/ethernet.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/services/http.h>
 #include <DPA/utils/helper_macros.h>

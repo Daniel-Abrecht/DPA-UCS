@@ -5,7 +5,7 @@
 #include <DPA/utils/logger.h>
 #include <DPA/utils/mempool.h>
 #include <DPA/utils/helper_macros.h>
-#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/driver/adelay.h>
 #include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 

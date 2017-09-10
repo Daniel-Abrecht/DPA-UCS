@@ -46,7 +46,7 @@ OPTIONS        += -ffunction-sections -fdata-sections
 endif
 
 ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
-OPTIONS        += -g -fprofile-arcs -ftest-coverage -fsanitize=undefined -fsanitize=address -fstack-protector-all
+OPTIONS        += -g -fprofile-arcs -ftest-coverage -static-libasan -fsanitize=undefined -fsanitize=address -fstack-protector-all
 endif
 
 PROJECT_DIR=$(PWD)
@@ -96,8 +96,8 @@ LINUX_GENERATED  = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 LINUX_OPTIONS  += -I${TEMP_LINUX}
 
 LINUX_FILES_TMP  = $(FILES)
-LINUX_FILES_TMP += server/drivers/eth/linux.o
-LINUX_FILES_TMP += server/drivers/adelay/clock.o
+LINUX_FILES_TMP += server/driver/linux/ethernet.o
+LINUX_FILES_TMP += server/driver/linux/adelay.o
 
 LINUX_FILES = $(shell \
   for file in ${LINUX_FILES_TMP}; \
@@ -128,11 +128,12 @@ AVR_GENERATED    = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 AVR_OPTIONS  += -I${TEMP_AVR}
 
 AVR_FILES_TMP  = $(FILES)
-AVR_FILES_TMP += server/drivers/eth/dummy.o
-AVR_FILES_TMP += server/drivers/avrStdioToUART.o
+AVR_FILES_TMP += server/driver/generic/enc28j60.o
+AVR_FILES_TMP += server/driver/atmega1284/spi.o
+AVR_FILES_TMP += server/driver/atmega1284/stdio_to_uart.o
 
 ifndef NO_ADELAY_DRIVER
-AVR_FILES_TMP   += server/drivers/adelay/timer.o
+AVR_FILES_TMP   += server/driver/atmega1284/adelay.o
 endif
 
 AVR_FILES = $(shell \

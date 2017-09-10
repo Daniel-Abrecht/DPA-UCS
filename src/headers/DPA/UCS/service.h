@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <DPA/utils/helper_macros.h>
 
 typedef struct DPAUCS_service {

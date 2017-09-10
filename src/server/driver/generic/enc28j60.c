@@ -1,4 +1,4 @@
-#include <DPA/UCS/driver/eth/driver.h>
+#include <DPA/UCS/driver/ethernet.h>
 
 static DPAUCS_interface_t interfaces;
 
@@ -20,7 +20,7 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
 static void eth_shutdown( void ){}
 
 static DPAUCS_ethernet_driver_t driver = {
-  .name       = "dummy",
+  .name       = "enc28j60",
   .init       = &eth_init,
   .send       = &eth_send,
   .receive    = &eth_receive,

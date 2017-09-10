@@ -1,18 +1,18 @@
 #include <setjmp.h>
 #include <string.h>
 #include <stdbool.h>
-#include <DPA/UCS/adelay.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/service.h>
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
-#include <DPA/UCS/protocol/arp.h>
-#include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/utils/helper_macros.h>
+#include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/driver/eth/driver.h>
+#include <DPA/UCS/protocol/tcp/tcp.h>
+#include <DPA/UCS/driver/adelay.h>
+#include <DPA/UCS/driver/ethernet.h>
 
 static void DPAUCS_init( void );
 static void DPAUCS_shutdown( void );

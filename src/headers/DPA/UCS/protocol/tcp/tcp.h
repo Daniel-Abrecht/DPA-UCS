@@ -4,10 +4,10 @@
 #define PROTOCOL_TCP 6
 
 #include <stdbool.h>
-#include <DPA/UCS/adelay.h>
 #include <DPA/UCS/service.h>
-#include <DPA/utils/helper_macros.h>
+#include <DPA/UCS/driver/adelay.h>
 #include <DPA/UCS/protocol/layer3.h>
+#include <DPA/utils/helper_macros.h>
 
 DPA_MODULE( tcp );
 

@@ -4,11 +4,11 @@
 #define DPAUCS_TCP_C
 
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/adelay.h>
 #include <DPA/UCS/service.h>
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/checksum.h>
+#include <DPA/UCS/driver/adelay.h>
 #include <DPA/UCS/protocol/tcp/tcp.h>
 #include <DPA/UCS/protocol/arp.h>
 #include <DPA/UCS/protocol/IPv4.h>

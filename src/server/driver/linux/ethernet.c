@@ -14,7 +14,7 @@
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/packet.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/driver/eth/driver.h>
+#include <DPA/UCS/driver/ethernet.h>
 
 static_assert( sizeof(DPAUCS_mac_t) == 6, "Expect DPAUCS_mac_t to be 6 bytes long" );
 

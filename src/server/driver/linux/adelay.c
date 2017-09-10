@@ -1,5 +1,5 @@
 #include <sys/time.h>
-#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/driver/adelay.h>
 
 DPA_MODULE( adelay_driver ){}
 

@@ -1,4 +1,4 @@
-#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/driver/adelay.h>
 
 static unsigned long last;
 static adelay_t time;

@@ -1,7 +1,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/adelay.h>
+#include <DPA/UCS/driver/adelay.h>
 
 #define COUNTER_BITS        8
 #define PRESCALER        1024
@@ -24,5 +24,13 @@ DPAUCS_INIT {
   TCCR0A = 0;
   TCCR0B = PRESCALER_BITS; 
   TIMSK0 = (1<<TOIE0);
+  sei();
+}
+
+DPAUCS_SHUTDOWN {
+  cli();
+  TCCR0A = 0;
+  TCCR0B = 0; 
+  TIMSK0 = 0;
   sei();
 }

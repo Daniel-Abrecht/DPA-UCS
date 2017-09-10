@@ -22,7 +22,7 @@ static int ethernet_frame_min_size = 0;
 static int sock = -1;
 static char ifname[IFNAMSIZ];
 
-static DPAUCS_interface_t interfaces;
+static DPAUCS_interface_t interface;
 
 
 static int setIfaceNameMac( const char* ifName ){
@@ -64,7 +64,7 @@ static int setIfaceNameMac( const char* ifName ){
       continue;
 
     strcpy(ifname,item->ifr_name);
-    memcpy(interfaces.mac,item->ifr_hwaddr.sa_data,6);
+    memcpy(interface.mac,item->ifr_hwaddr.sa_data,6);
 
     if( ioctl( sck, SIOCGIFINDEX, item ) < 0 )
       DPA_LOG( "error: ioctl %d %s\n", errno, strerror(errno) );
@@ -125,7 +125,7 @@ void eth_init( void ){
     /* display result */
 
   {
-    uint8_t* mac = interfaces.mac;
+    uint8_t* mac = interface.mac;
     DPA_LOG("Using device: %s mac: %02x:%02x:%02x:%02x:%02x:%02x\n", 
       ifname,
       mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
@@ -193,8 +193,10 @@ static DPAUCS_ethernet_driver_t driver = {
   .send       = &eth_send,
   .receive    = &eth_receive,
   .shutdown   = &eth_shutdown,
-  .interfaces = &interfaces,
-  .interface_count = 1
+  .interface_list = (struct DPAUCS_interface_list[]){{
+    .entry = &interface,
+    .next = 0
+  }}
 };
 
 DPA_LOOSE_LIST_ADD( DPAUCS_ethernet_driver_list, &driver )

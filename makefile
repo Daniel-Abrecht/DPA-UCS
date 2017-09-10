@@ -128,8 +128,10 @@ AVR_GENERATED    = #$(shell find ${TEMP_LINUX}/${GEN_DEST} -iname "*.o")
 AVR_OPTIONS  += -I${TEMP_AVR}
 
 AVR_FILES_TMP  = $(FILES)
+AVR_FILES_TMP += config/board/avr-net-io.o
 AVR_FILES_TMP += server/driver/generic/enc28j60.o
 AVR_FILES_TMP += server/driver/atmega1284/spi.o
+AVR_FILES_TMP += server/driver/atmega1284/io_pin.o
 AVR_FILES_TMP += server/driver/atmega1284/stdio_to_uart.o
 
 ifndef NO_ADELAY_DRIVER

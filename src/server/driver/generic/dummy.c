@@ -1,6 +1,6 @@
 #include <DPA/UCS/driver/ethernet.h>
 
-static DPAUCS_interface_t interfaces;
+static DPAUCS_interface_t interface;
 
 static void eth_init( void ){}
 
@@ -25,8 +25,10 @@ static DPAUCS_ethernet_driver_t driver = {
   .send       = &eth_send,
   .receive    = &eth_receive,
   .shutdown   = &eth_shutdown,
-  .interfaces = &interfaces,
-  .interface_count = 1
+  .interface_list = (struct DPAUCS_interface_list[]){{
+    .entry = &interface,
+    .next = 0
+  }}
 };
 
 DPA_LOOSE_LIST_ADD( DPAUCS_ethernet_driver_list, &driver )

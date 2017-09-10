@@ -38,7 +38,7 @@ static jmp_buf fatal_error_exitpoint;
 
 void weak DPAUCS_onfatalerror( const flash char* message ){
   (void)message;
-  DPA_LOG( "%s", message );
+  DPA_LOG( "%"PRIsFLASH, message );
 }
 
 noreturn void DPAUCS_fatal( const flash char* message ){
@@ -217,7 +217,7 @@ void getPacketInfo( const DPAUCS_interface_t* interface, DPAUCS_packet_info_t* i
 
 typedef struct receive_driver_state {
   struct DPAUCS_ethernet_driver_list* driver;
-  const DPAUCS_interface_t* interface;
+  struct DPAUCS_interface_list* interface;
 } receive_driver_state_t;
 static receive_driver_state_t current_receive_driver_state;
 
@@ -230,9 +230,10 @@ const DPAUCS_interface_t* DPAUCS_getInterface( const DPAUCS_logicAddress_t* logi
 }
 
 const DPAUCS_ethernet_driver_t* getDriverOfInterface( const DPAUCS_interface_t* interface ){
-  for( struct DPAUCS_ethernet_driver_list* it = DPAUCS_ethernet_driver_list; it; it = it->next )
-    if( (size_t)( interface - it->entry->interfaces ) < it->entry->interface_count )
-      return it->entry;
+  for( struct DPAUCS_ethernet_driver_list* i = DPAUCS_ethernet_driver_list; i; i = i->next )
+    for( struct DPAUCS_interface_list* j = i->entry->interface_list; j; j = j->next )
+      if( interface == j->entry )
+        return i->entry;
   return 0;
 }
 
@@ -241,19 +242,14 @@ static bool DPAUCS_receive_next_interface( void ){
     return false;
   if( !current_receive_driver_state.driver || !current_receive_driver_state.driver->next ){
     current_receive_driver_state.driver = DPAUCS_ethernet_driver_list;
-    current_receive_driver_state.interface = current_receive_driver_state.driver->entry->interfaces;
-  }else if(
-    (size_t)( ++current_receive_driver_state.interface - current_receive_driver_state.driver->entry->interfaces )
-    >= current_receive_driver_state.driver->entry->interface_count
-  ){
+    current_receive_driver_state.interface = current_receive_driver_state.driver->entry->interface_list;
+  }else if( !current_receive_driver_state.interface->next ){
     current_receive_driver_state.driver = current_receive_driver_state.driver->next;
-    current_receive_driver_state.interface = current_receive_driver_state.driver->entry->interfaces;
+    current_receive_driver_state.interface = current_receive_driver_state.driver->entry->interface_list;
+  }else{
+    current_receive_driver_state.interface = current_receive_driver_state.interface->next;
   }
-  if( !current_receive_driver_state.driver->entry->interface_count ){
-    current_receive_driver_state.interface = 0;
-    return false;
-  }
-  return true;
+  return !!current_receive_driver_state.interface;
 }
 
 static void DPAUCS_receive_next(){
@@ -264,7 +260,7 @@ static void DPAUCS_receive_next(){
     return;
 
   packet->size = (*current_receive_driver_state.driver->entry->receive)(
-    current_receive_driver_state.interface,
+    current_receive_driver_state.interface->entry,
     packet->data.raw,
     PACKET_SIZE
   );
@@ -273,13 +269,13 @@ static void DPAUCS_receive_next(){
     return;
 
   if( memcmp(packet->data.dest,"\xFF\xFF\xFF\xFF\xFF\xFF",sizeof(DPAUCS_mac_t)) // not broadcast
-   && memcmp(packet->data.dest,current_receive_driver_state.interface->mac,sizeof(DPAUCS_mac_t)) // not my mac
+   && memcmp(packet->data.dest,current_receive_driver_state.interface->entry->mac,sizeof(DPAUCS_mac_t)) // not my mac
   ) return; // ignore packet
 
   DPAUCS_packet_info_t info;
 
   getPacketInfo(
-    current_receive_driver_state.interface,
+    current_receive_driver_state.interface->entry,
     &info, packet
   );
 

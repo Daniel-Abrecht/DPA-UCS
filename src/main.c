@@ -8,7 +8,7 @@
 void server_main(void* arg){
   (void)arg;
 
-  const DPAUCS_interface_t* interface = DPAUCS_ethernet_driver_list->entry->interfaces;
+  const DPAUCS_interface_t* interface = DPAUCS_ethernet_driver_list->entry->interface_list->entry;
 
   DPAUCS_add_logicAddress( interface, DPAUCS_LA_IPv4(10,60,10,29) );
   DPAUCS_add_logicAddress( interface, DPAUCS_LA_IPv4(192,168,8,29) );

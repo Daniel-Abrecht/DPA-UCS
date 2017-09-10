@@ -1,5 +1,5 @@
-#ifndef DPAUCS_SPI_DRIVER
-#define DPAUCS_SPI_DRIVER
+#ifndef DPAUCS_SPI_DRIVER_H
+#define DPAUCS_SPI_DRIVER_H
 
 uint8_t DPAUCS_spi_tranceive( uint8_t );
 

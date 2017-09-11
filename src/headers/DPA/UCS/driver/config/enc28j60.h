@@ -27,6 +27,7 @@ struct DPAUCS_enc28j60_config {
 struct DPAUCS_enc28j60_interface {
   struct DPAUCS_interface super;
   const flash struct DPAUCS_enc28j60_config* config;
+  uint8_t econ1, bank;
 };
 
 DPA_LOOSE_LIST_DECLARE( struct DPAUCS_enc28j60_interface*, DPAUCS_enc28j60_interface_list )

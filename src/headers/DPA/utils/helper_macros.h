@@ -43,6 +43,11 @@
 #endif
 #endif
 
+#define RESERVED DPA_CONCAT( R_RESERVED_, __LINE__ )
+#define RESERVED2 DPA_CONCAT( R_RESERVED2_, __LINE__ )
+#define RESERVED3 DPA_CONCAT( R_RESERVED3_, __LINE__ )
+#define RESERVED4 DPA_CONCAT( R_RESERVED4_, __LINE__ )
+
 #define DPA_UNPACK( ... ) __VA_ARGS__
 
 #define DPA_CALC_PREV_ALIGN_OFFSET( x, T ) \

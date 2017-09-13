@@ -4,11 +4,7 @@
 #include <DPA/UCS/driver/ethernet.h>
 #include <DPA/UCS/driver/config/enc28j60.h>
 
-#define RESERVED DPA_CONCAT( R_RESERVED_, __LINE__ )
-#define RESERVED2 DPA_CONCAT( R_RESERVED2_, __LINE__ )
-#define RESERVED3 DPA_CONCAT( R_RESERVED3_, __LINE__ )
-#define RESERVED4 DPA_CONCAT( R_RESERVED4_, __LINE__ )
-
+#define ENC_MEMORY_SIZE 0x2000
 
 static void eth_init( void );
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len );
@@ -71,8 +67,38 @@ enum econ1_bits {
   ECON1_CSUMEN, ECON1_DMAST, ECON1_RXRST, ECON1_TXRST
 };
 
+enum econ2_bits {
+  RESERVED, RESERVED2, RESERVED3, ECON2_VRPS,
+  ECON2_PWRSV, ECON2_PKTDEC, ECON2_AUTOINC
+};
+
+enum estat_bits {
+  ESTAT_CLKRDY, ESTAT_TXABRT, ESTAT_RXBUSY, RESERVED4,
+  ESTAT_LATECOL, RESERVED2, ESTAT_BUFFER, ESTAT_INT
+};
+
+enum macon1_bits {
+  MACON1_MARXEN, MACON1_PASSALL, MACON1_RXPAUS, MACON1_TXPAUS,
+  RESERVED, RESERVED2, RESERVED3, RESERVED4
+};
+
+enum macon3_bits {
+  MACON3_FULLDPX, MACON3_FRMLNEN, MACON3_HFRMEN, MACON3_PHDREN,
+  MACON3_TXCRCEN, MACON3_PADCFG0, MACON3_PADCFG1, MACON3_PADCFG2
+};
+
+enum macon4_bits {
+  RESERVED, RESERVED2, RESERVED3, RESERVED4,
+  MACON4_NOBKOFF, MACON4_BPEN, MACON4_DEFER
+};
+
 enum miistat_bits {
   MIISTAT_BUSY, MIISTAT_SCAN, MIISTAT_INVALID
+};
+
+enum erxfcon_bits {
+  ERXFCON_BCEN, ERXFCON_MCEN, ERXFCON_HTEN, ERXFCON_MPEN,
+  ERXFCON_PMEN, ERXFCON_CRCEN, ERXFCON_ANDOR, ERXFCON_UCEN
 };
 
 enum phy_register {
@@ -80,39 +106,30 @@ enum phy_register {
   PHY_CON2=0x10, PHY_STAT2, PHY_IE, PHY_IR, PHY_LCON
 };
 
-enum PHY_LCON_led_mode {
+enum PHY_CON1_bits {
+  PHY_CON1_PDPXMD = 8,
+  RESERVED, RESERVED2,
+  PHY_CON2_PPWRSV,
+  RESERVED, RESERVED2,
+  PHY_CON2_PLOOPBACK,
+  PHY_CON2_PRST
+};
+
+enum PHY_CON2_bits {
+  PHY_CON2_HDLDIS = 8,
   RESERVED,
-  PHY_LED_DISPLAY_TRANSMIT_ACTIVITY,
-  PHY_LED_DISPLAY_RECEIVE_ACTIVITY,
-  PHY_LED_DISPLAY_COLLISION_ACTIVITY,
-  PHY_LED_DISPLAY_LINK_STATUS,
-  PHY_LED_DISPLAY_DUBLEX_STATUS,
-  RESERVED,
-  PHY_LED_DISPLAY_TRANSMIT_AND_RECEIVE_ACTIVITY,
-  PHY_LED_ON,
-  PHY_LED_OFF,
-  PHY_LED_BLINK_FAST,
-  PHY_LED_BLINK_SLOW,
-  PHY_LED_DISPLAY_LINK_STATUS_AND_RECEIVE_ACTIVITY,
-  PHY_LED_DISPLAY_LINK_STATUS_AND_TRANSMIT_AND_RECEIVE_ACTIVITY,
-  PHY_LED_DISPLAY_DUBLEX_STATUS_AND_COLLISION_ACTIVITY,
-  RESERVED
+  PHY_CON2_JABBER,
+  RESERVED, RESERVED2,
+  PHY_CON2_TXDIS,
+  PHY_CON2_FRCLNK
 };
 
 enum PHY_LCON_leds {
-  PHY_LCON_LED_ORANGE = 8,
-  PHY_LCON_LED_GREEN = 4
+  PHY_LCON_LED_A = 8,
+  PHY_LCON_LED_B = 4
 };
 
 #define PHY_LCON_RESERVED 0x3000
-
-static inline void enc_reset(
-  struct DPAUCS_enc28j60_interface* iface
-){
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
-  DPAUCS_spi_tranceive( 0xFF );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
-}
 
 static inline void enc_bit_field_set(
   struct DPAUCS_enc28j60_interface* iface,
@@ -141,7 +158,7 @@ static void enc_write_control_register(
   uint8_t address,
   uint8_t data
 ){
-  if( !( address & 0x80 ) && iface->bank != address/0x20 )
+  if( !( address & 0x80 ) && iface->bank != address/0x20 ) // Switch bank if necessary
     enc_write_control_register( iface, CR_ECON1, ( ~iface->econ1 & 0x03 ) | (address/0x20) );
   if( ( address & 0x1F ) == ( CR_ECON1 & 0x1F ) ){
     iface->econ1 = data;
@@ -157,7 +174,7 @@ static inline uint8_t enc_read_control_register(
   struct DPAUCS_enc28j60_interface* iface,
   uint8_t address
 ){
-  if( !( address & 0x80 ) && iface->bank != address/0x20 )
+  if( !( address & 0x80 ) && iface->bank != address/0x20 ) // Switch bank if necessary
     enc_write_control_register( iface, CR_ECON1, ( ~iface->econ1 & 0x03 ) | (address/0x20) );
   DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
   uint8_t ret = DPAUCS_spi_tranceive( address & 0x1F );
@@ -201,18 +218,75 @@ static void enc_write_phy_register(
   enc_write_control_register( iface, CR_MIWRH, data >> 8 );
 }
 
+static inline void enc_reset(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  iface->bank = -1;
+  iface->econ1 = (1<<ECON1_TXRST) | (1<<ECON1_RXRST);
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
+  while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
+  DPAUCS_spi_tranceive( 0xFF );
+  while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
+}
+
+#define R16(R,V) {R##L,(V)&0xFF},{R##H,(V)>>8}
 static void eth_init( void ){
   driver.interface_list = (struct DPAUCS_interface_list*)DPAUCS_enc28j60_interface_list;
   for( struct DPAUCS_enc28j60_interface_list* it = DPAUCS_enc28j60_interface_list; it; it = it->next ){
     DPAUCS_io_set_pin_mode( it->entry->config->interrupt_pin, DPAUCS_IO_PIN_MODE_INPUT );
     DPAUCS_io_set_pin_mode( it->entry->config->slave_select_pin, DPAUCS_IO_PIN_MODE_OUTPUT );
     DPAUCS_io_set_pin( it->entry->config->slave_select_pin, true );
-    it->entry->bank = -1;
-    it->entry->econ1 = (1<<ECON1_TXRST) | (1<<ECON1_RXRST);
     enc_reset( it->entry );
-    enc_write_phy_register( it->entry, PHY_LCON, (PHY_LED_ON<<PHY_LCON_LED_ORANGE)  | (PHY_LED_ON<<PHY_LCON_LED_GREEN)  | PHY_LCON_RESERVED );
+    enc_write_phy_register( it->entry, PHY_LCON,
+      ((it->entry->config->led_A_init&0xF)<<PHY_LCON_LED_A) |
+      ((it->entry->config->led_B_init&0xF)<<PHY_LCON_LED_B) |
+      PHY_LCON_RESERVED
+    );
+    // Enable full dublex or half dublex
+    enc_write_phy_register( it->entry, PHY_CON1, (it->entry->config->full_dublex<<PHY_CON1_PDPXMD) );
+    enc_write_phy_register( it->entry, PHY_CON2, 1<<PHY_CON2_HDLDIS );
+    const uint8_t settings[][2] = {
+      // Setup receive buffer, start at 0x0, give it half the memory
+      R16(CR_ERXST,0), R16(CR_ERXRDPT,0), R16(CR_ERXND,ENC_MEMORY_SIZE/2-1),
+      // Setup transmit buffer, start where receive buffer ended, give it the other half of memory
+      R16(CR_ETXST,ENC_MEMORY_SIZE/2), R16(CR_ETXND,ENC_MEMORY_SIZE-1),
+      // 
+      // TODO: enable filtering here
+      // Enable packet receive, transmit, and writing into RX buffer
+      { CR_MACON1, (1<<MACON1_MARXEN) | (1<<MACON1_RXPAUS) | (1<<MACON1_TXPAUS) | (1<<MACON1_PASSALL) },
+      // Append CRC to ethernet frames and enable full or half dublex
+      { CR_MACON3, (1<<MACON3_TXCRCEN) | (it->entry->config->full_dublex<<MACON3_FULLDPX) },
+      // Wait while medium is occupied
+      { CR_MACON4, (1<<MACON4_DEFER) },
+      // Set Back-to-Back inter packet gap
+      { CR_MABBIPG, 0x15 },
+      // Set non-Back-to-Back inter packet gap
+      R16( CR_MAIPG, 0x12 ),
+      // Biggest possible ethernet frame
+      R16( CR_MAMXFL, 1518 ),
+      // Only accept packages with valid crc, for my mac, multicast or broadcast
+      { CR_ERXFCON, (1<<ERXFCON_CRCEN) | (1<<ERXFCON_UCEN) | (1<<ERXFCON_MCEN) | (1<<ERXFCON_BCEN) },
+      // Set mac address
+      { CR_MAADR1, it->entry->super.mac[0] },
+      { CR_MAADR2, it->entry->super.mac[1] },
+      { CR_MAADR3, it->entry->super.mac[2] },
+      { CR_MAADR4, it->entry->super.mac[3] },
+      { CR_MAADR5, it->entry->super.mac[4] },
+      { CR_MAADR6, it->entry->super.mac[5] },
+      // Enable RX
+      { CR_ECON1, it->entry->econ1 & ~(1<<ECON1_RXRST) }
+    };
+    for( size_t i=0; i<sizeof(settings)/sizeof(*settings); i++ )
+      enc_write_control_register( it->entry, settings[i][0], settings[i][1] );
+    enc_write_phy_register( it->entry, PHY_LCON,
+      ((it->entry->config->led_A&0xF)<<PHY_LCON_LED_A) |
+      ((it->entry->config->led_B&0xF)<<PHY_LCON_LED_B) |
+      PHY_LCON_RESERVED
+    );
   }
 }
+#undef R16
 
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len ){
   (void)interface;

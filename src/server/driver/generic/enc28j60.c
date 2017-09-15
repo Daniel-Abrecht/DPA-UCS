@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/driver/spi.h>
 #include <DPA/UCS/driver/io_pin.h>
@@ -5,6 +6,7 @@
 #include <DPA/UCS/driver/config/enc28j60.h>
 
 #define ENC_MEMORY_SIZE 0x2000
+#define ENC_MEMORY_RX_END_TX_START (ENC_MEMORY_SIZE/2)
 
 static void eth_init( void );
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len );
@@ -62,6 +64,11 @@ enum control_register {
   CR_ECON2      ,  CR_ECON1
 };
 
+enum eie_eir_bits {
+  EI_RXER, EI_TXER, RESERVED3, EI_TX,
+  EI_LINK, EI_DMA, EI_PKT, EI_INT
+};
+
 enum econ1_bits {
   ECON1_BSEL0 , ECON1_BSEL1, ECON1_RXEN , ECON1_TXRTS,
   ECON1_CSUMEN, ECON1_DMAST, ECON1_RXRST, ECON1_TXRST
@@ -69,7 +76,7 @@ enum econ1_bits {
 
 enum econ2_bits {
   RESERVED, RESERVED2, RESERVED3, ECON2_VRPS,
-  ECON2_PWRSV, ECON2_PKTDEC, ECON2_AUTOINC
+  RESERVED, ECON2_PWRSV, ECON2_PKTDEC, ECON2_AUTOINC
 };
 
 enum estat_bits {
@@ -131,11 +138,20 @@ enum PHY_LCON_leds {
 
 #define PHY_LCON_RESERVED 0x3000
 
+static inline void enc_set_bank(
+  struct DPAUCS_enc28j60_interface* iface,
+  uint8_t address
+);
+
 static inline void enc_bit_field_set(
   struct DPAUCS_enc28j60_interface* iface,
   uint8_t address,
   uint8_t data
 ){
+  static const flash char error_message[] = {"Attemp to set a bit from a non-ETH enc28j60 register\n"};
+  if( ( address >= 0x40 && address <= 0x65 ) || address == CR_MISTAT )
+    DPAUCS_fatal(error_message);
+  enc_set_bank(iface,address);
   DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
   DPAUCS_spi_tranceive( ( address & 0x1F ) | 0x80 );
   DPAUCS_spi_tranceive( data );
@@ -147,6 +163,10 @@ static inline void enc_bit_field_clear(
   uint8_t address,
   uint8_t data
 ){
+  static const flash char error_message[] = {"Attemp to clear a bit from a non-ETH enc28j60 register\n"};
+  if( ( address >= 0x40 && address <= 0x65 ) || address == CR_MISTAT )
+    DPAUCS_fatal(error_message);
+  enc_set_bank(iface,address);
   DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
   DPAUCS_spi_tranceive( ( address & 0x1F ) | 0xA0 );
   DPAUCS_spi_tranceive( data );
@@ -158,8 +178,7 @@ static void enc_write_control_register(
   uint8_t address,
   uint8_t data
 ){
-  if( !( address & 0x80 ) && iface->bank != address/0x20 ) // Switch bank if necessary
-    enc_write_control_register( iface, CR_ECON1, ( ~iface->econ1 & 0x03 ) | (address/0x20) );
+  enc_set_bank(iface,address);
   if( ( address & 0x1F ) == ( CR_ECON1 & 0x1F ) ){
     iface->econ1 = data;
     iface->bank = data & 0x03;
@@ -174,10 +193,12 @@ static inline uint8_t enc_read_control_register(
   struct DPAUCS_enc28j60_interface* iface,
   uint8_t address
 ){
-  if( !( address & 0x80 ) && iface->bank != address/0x20 ) // Switch bank if necessary
-    enc_write_control_register( iface, CR_ECON1, ( ~iface->econ1 & 0x03 ) | (address/0x20) );
+  enc_set_bank(iface,address);
   DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
-  uint8_t ret = DPAUCS_spi_tranceive( address & 0x1F );
+  DPAUCS_spi_tranceive( address & 0x1F );
+  if( ( address >= 0x40 && address <= 0x65 ) || address == CR_MISTAT )
+    DPAUCS_spi_tranceive( 0 ); // MAC and MII registers shift out a dummy byte first
+  uint8_t ret = DPAUCS_spi_tranceive( 0 );
   DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
   return ret;
 }
@@ -202,9 +223,36 @@ static inline void enc_read_buffer_memory(
 ){
   if(!size) return;
   DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
+  DPAUCS_spi_tranceive( 0x3A );
   while( size-- )
-    *(data++) = DPAUCS_spi_tranceive( 0x3A );
+    *(data++) = DPAUCS_spi_tranceive( 0 );
   DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
+}
+
+static inline uint16_t enc_read_buffer_uint16(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  uint16_t ret;
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
+  DPAUCS_spi_tranceive( 0x3A );
+  ret  = (uint16_t)DPAUCS_spi_tranceive( 0 );
+  ret |= (uint16_t)DPAUCS_spi_tranceive( 0 ) << 8;
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
+  return ret;
+}
+
+static inline uint32_t enc_read_buffer_uint32(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  uint32_t ret;
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
+  DPAUCS_spi_tranceive( 0x3A );
+  ret  = (uint32_t)DPAUCS_spi_tranceive( 0 );
+  ret |= (uint32_t)DPAUCS_spi_tranceive( 0 ) <<  8;
+  ret |= (uint32_t)DPAUCS_spi_tranceive( 0 ) << 16;
+  ret |= (uint32_t)DPAUCS_spi_tranceive( 0 ) << 24;
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
+  return ret;
 }
 
 static void enc_write_phy_register(
@@ -223,12 +271,21 @@ static inline void enc_reset(
 ){
   iface->bank = -1;
   iface->econ1 = (1<<ECON1_TXRST) | (1<<ECON1_RXRST);
+  while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
   DPAUCS_io_set_pin( iface->config->slave_select_pin, false );
-  while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
   DPAUCS_spi_tranceive( 0xFF );
-  while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
   DPAUCS_io_set_pin( iface->config->slave_select_pin, true );
+  while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
 }
+
+static inline void enc_set_bank(
+  struct DPAUCS_enc28j60_interface* iface,
+  uint8_t address
+){
+  if( !( address & 0x80 ) && iface->bank != (address/0x20) ) // Switch bank if necessary
+    enc_write_control_register( iface, CR_ECON1, ( iface->econ1 & ~0x03 ) | (address/0x20) );
+}
+
 
 #define R16(R,V) {R##L,(V)&0xFF},{R##H,(V)>>8}
 static void eth_init( void ){
@@ -247,16 +304,14 @@ static void eth_init( void ){
     enc_write_phy_register( it->entry, PHY_CON1, (it->entry->config->full_dublex<<PHY_CON1_PDPXMD) );
     enc_write_phy_register( it->entry, PHY_CON2, 1<<PHY_CON2_HDLDIS );
     const uint8_t settings[][2] = {
-      // Setup receive buffer, start at 0x0, give it half the memory
-      R16(CR_ERXST,0), R16(CR_ERXRDPT,0), R16(CR_ERXND,ENC_MEMORY_SIZE/2-1),
-      // Setup transmit buffer, start where receive buffer ended, give it the other half of memory
-      R16(CR_ETXST,ENC_MEMORY_SIZE/2), R16(CR_ETXND,ENC_MEMORY_SIZE-1),
-      // 
-      // TODO: enable filtering here
+      // Setup receive buffer, start at 0x0, end at ENC_MEMORY_RX_END_TX_START-1
+      R16(CR_ERXST,0), R16(CR_ERXRDPT,0), R16(CR_ERDPT,0), R16(CR_ERXND,ENC_MEMORY_RX_END_TX_START-1),
+      // Setup transmit buffer, start where receive buffer ended, give it the rest of all memory
+      R16(CR_ETXST,ENC_MEMORY_RX_END_TX_START), R16(CR_ETXND,ENC_MEMORY_SIZE-1),
       // Enable packet receive, transmit, and writing into RX buffer
-      { CR_MACON1, (1<<MACON1_MARXEN) | (1<<MACON1_RXPAUS) | (1<<MACON1_TXPAUS) | (1<<MACON1_PASSALL) },
-      // Append CRC to ethernet frames and enable full or half dublex
-      { CR_MACON3, (1<<MACON3_TXCRCEN) | (it->entry->config->full_dublex<<MACON3_FULLDPX) },
+      { CR_MACON1, (1<<MACON1_MARXEN) | (1<<MACON1_RXPAUS) | (1<<MACON1_TXPAUS) },
+      // Append CRC to ethernet frames before transmission, check frame size, enable full or half dublex
+      { CR_MACON3, (1<<MACON3_TXCRCEN) | (1<<MACON3_FRMLNEN) | (it->entry->config->full_dublex<<MACON3_FULLDPX) },
       // Wait while medium is occupied
       { CR_MACON4, (1<<MACON4_DEFER) },
       // Set Back-to-Back inter packet gap
@@ -265,8 +320,6 @@ static void eth_init( void ){
       R16( CR_MAIPG, 0x12 ),
       // Biggest possible ethernet frame
       R16( CR_MAMXFL, 1518 ),
-      // Only accept packages with valid crc, for my mac, multicast or broadcast
-      { CR_ERXFCON, (1<<ERXFCON_CRCEN) | (1<<ERXFCON_UCEN) | (1<<ERXFCON_MCEN) | (1<<ERXFCON_BCEN) },
       // Set mac address
       { CR_MAADR1, it->entry->super.mac[0] },
       { CR_MAADR2, it->entry->super.mac[1] },
@@ -274,11 +327,21 @@ static void eth_init( void ){
       { CR_MAADR4, it->entry->super.mac[3] },
       { CR_MAADR5, it->entry->super.mac[4] },
       { CR_MAADR6, it->entry->super.mac[5] },
-      // Enable RX
-      { CR_ECON1, it->entry->econ1 & ~(1<<ECON1_RXRST) }
+      // Only accept packages with valid crc, for my mac, multicast or broadcast
+      { CR_ERXFCON, (1<<ERXFCON_CRCEN) | (1<<ERXFCON_UCEN) | (1<<ERXFCON_MCEN) | (1<<ERXFCON_BCEN) },
+      // Automatically increment buffer read/write pointers
+      { CR_ECON2, 1<<ECON2_AUTOINC },
+      // Change RX and TX from reset state to normal state, enable receiving packages
+      { CR_ECON1, ( it->entry->econ1 & ~( (1<<ECON1_RXRST) | (1<<ECON1_TXRST) ) ) | (1<<ECON1_RXEN) }
     };
-    for( size_t i=0; i<sizeof(settings)/sizeof(*settings); i++ )
+    for( unsigned i=0; i<sizeof(settings)/sizeof(*settings); i++ ){
       enc_write_control_register( it->entry, settings[i][0], settings[i][1] );
+      if( settings[i][0] == CR_ERXRDPTL )
+        continue; // Skip check for buffered register, it would return the old value
+      uint8_t res = enc_read_control_register( it->entry, settings[i][0] );
+      if( res != settings[i][1] )
+        DPA_LOG( "Register not set correctly: i: %u reg: %hhx, expected: %hhx, value: %hhx\n", i, settings[i][0], settings[i][1], res );
+    }
     enc_write_phy_register( it->entry, PHY_LCON,
       ((it->entry->config->led_A&0xF)<<PHY_LCON_LED_A) |
       ((it->entry->config->led_B&0xF)<<PHY_LCON_LED_B) |
@@ -292,13 +355,44 @@ static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint
   (void)interface;
   (void)packet;
   (void)len;
+  DPA_LOG("eth_send %"PRIu16" bytes\n");
 }
 
 static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t maxlen ){
-  (void)interface;
-  (void)packet;
-  (void)maxlen;
-  return 0;
+  struct DPAUCS_enc28j60_interface* iface = (struct DPAUCS_enc28j60_interface*)interface;
+  // Check if a packet was received
+  uint8_t count = enc_read_control_register( iface, CR_EPKTCNT );
+  if( !count ) return 0; // No new packages
+  DPA_LOG( "%hhu packets available\n", count );
+  // Receive buffer contains some additional informations before the package datas
+  uint16_t next_packet_pointer = enc_read_buffer_uint16( iface );
+  uint16_t svlen = enc_read_buffer_uint16( iface );
+  uint16_t status = enc_read_buffer_uint16( iface );
+  uint16_t receive_buffer_pointer =   enc_read_control_register( iface, CR_ERDPTL )
+                                  | ( enc_read_control_register( iface, CR_ERDPTH ) << 8 );
+  (void)status;
+  uint16_t length;
+  // Ringbuffer, detect pointer overflow
+  if( receive_buffer_pointer < next_packet_pointer ){
+    length = next_packet_pointer - receive_buffer_pointer;
+  }else{
+    length = ( ENC_MEMORY_RX_END_TX_START - receive_buffer_pointer ) + next_packet_pointer;
+  }
+  DPA_LOG( "New packet received, lenght: %"PRIu16" start: %"PRIx16" next: %"PRIx16" svlen: %"PRIu16"\n", length, receive_buffer_pointer, next_packet_pointer, svlen );
+  if( length > maxlen ){
+    DPA_LOG("Packet in receive buffer too big: %"PRIu16" > %"PRIu16"\n", length, maxlen );
+    // skip packet
+    enc_write_control_register( iface, CR_ERDPTL, next_packet_pointer & 0xFF );
+    enc_write_control_register( iface, CR_ERDPTH, next_packet_pointer >> 8 );
+  }else{
+    enc_read_buffer_memory( iface, length, packet );
+  }
+  // Free packet memory in read buffer
+  enc_write_control_register( iface, CR_ERXRDPTL, next_packet_pointer & 0xFF );
+  enc_write_control_register( iface, CR_ERXRDPTH, next_packet_pointer >> 8 );
+  // Decrement packet count
+  enc_bit_field_set( iface, CR_ECON2, 1<<ECON2_PKTDEC );
+  return length;
 }
 
 static void eth_shutdown( void ){

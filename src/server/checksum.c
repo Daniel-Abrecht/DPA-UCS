@@ -3,23 +3,17 @@
 #include <DPA/UCS/checksum.h>
 
 uint16_t checksum( void* p, size_t l ){
+  if( !l )
+    return ~0;
   uint32_t checksum = 0;
-  unsigned unaligned = (uintptr_t)p & 1;
-  uint16_t* ptr = (uint16_t*)((uintptr_t)p + unaligned);
-  for(unsigned i=0;i<l/2-unaligned;i++){
-    checksum += *(ptr++);
-    checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
+  uint8_t* ptr = p;
+  for( size_t i=0; i<l; i++ ){
+    // The cast is necessary on systems where int = 16bit because of integer promotion and signedness
+    checksum += (i%2) ? (uint16_t)ptr[i] : ((uint16_t)ptr[i])<<8;
   }
-  if( l & 1 ){
-    checksum += DPA_htob16((uint16_t)*(char*)ptr<<8);
-    checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
-  }
-  if( unaligned ){
-    uint8_t* x = p;
-    checksum += DPA_htob16(((uint16_t)x[0]<<8)|x[l-1]);
-    checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
-  }
-  return ~checksum;
+  checksum  = ( checksum & 0xFFFF ) + ( checksum >> 16 );
+  checksum = (uint16_t)~DPA_htob16(checksum);
+  return checksum;
 }
 
 uint16_t checksumOfStream( DPA_stream_t* stream, size_t max_len ){

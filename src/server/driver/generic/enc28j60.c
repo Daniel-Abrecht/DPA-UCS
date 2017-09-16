@@ -6,7 +6,7 @@
 #include <DPA/UCS/driver/config/enc28j60.h>
 
 #define ENC_MEMORY_SIZE 0x2000
-#define ENC_MEMORY_RX_END_TX_START (ENC_MEMORY_SIZE/2)
+#define ENC_MEMORY_RX_END_TX_START (ENC_MEMORY_SIZE-1518-8)
 
 static void eth_init( void );
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len );
@@ -310,8 +310,8 @@ static void eth_init( void ){
       R16(CR_ETXST,ENC_MEMORY_RX_END_TX_START), R16(CR_ETXND,ENC_MEMORY_SIZE-1),
       // Enable packet receive, transmit, and writing into RX buffer
       { CR_MACON1, (1<<MACON1_MARXEN) | (1<<MACON1_RXPAUS) | (1<<MACON1_TXPAUS) },
-      // Append CRC to ethernet frames before transmission, check frame size, enable full or half dublex
-      { CR_MACON3, (1<<MACON3_TXCRCEN) | (1<<MACON3_FRMLNEN) | (it->entry->config->full_dublex<<MACON3_FULLDPX) },
+      // Append CRC and padding to ethernet frames before transmission, check frame size, enable full or half dublex
+      { CR_MACON3, (1<<MACON3_TXCRCEN) | (1<<MACON3_PADCFG0) | (1<<MACON3_PADCFG2) | (1<<MACON3_FRMLNEN) | (it->entry->config->full_dublex<<MACON3_FULLDPX) },
       // Wait while medium is occupied
       { CR_MACON4, (1<<MACON4_DEFER) },
       // Set Back-to-Back inter packet gap
@@ -351,11 +351,33 @@ static void eth_init( void ){
 }
 #undef R16
 
-static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len ){
-  (void)interface;
-  (void)packet;
-  (void)len;
-  DPA_LOG("eth_send %"PRIu16" bytes\n");
+static bool eth_tx_ready(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  return !(enc_read_control_register( iface, CR_ECON1 ) & ECON1_TXRTS);
+}
+
+static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t length ){
+  struct DPAUCS_enc28j60_interface* iface = (struct DPAUCS_enc28j60_interface*)interface;
+  if( length > 1518 ){
+    DPA_LOG( "Ethernet packet too big. %"PRIu16" > 1518\n", length );
+    return;
+  }
+  DPA_LOG("eth_send %"PRIu16" bytes\n",length);
+  while( !eth_tx_ready(iface) );
+  // Set write pointer to buffer start
+  enc_write_control_register( iface, CR_EWRPTL, ENC_MEMORY_RX_END_TX_START & 0xFF );
+  enc_write_control_register( iface, CR_EWRPTH, ENC_MEMORY_RX_END_TX_START >> 8 );
+  // Set write buffer data end pointer
+  uint16_t end = ENC_MEMORY_RX_END_TX_START + length;
+  enc_write_control_register( iface, CR_ETXNDL, end & 0xFF );
+  enc_write_control_register( iface, CR_ETXNDH, end >> 8 );
+  // ENC28J60 packet control byte, 0=use defaults from CR_MACON3
+  enc_write_buffer_memory( iface, 1, (uint8_t[]){0} );
+  // Write ethernet frame into buffer
+  enc_write_buffer_memory( iface, length, packet );
+  // Send packet
+  enc_bit_field_set( iface, CR_ECON1, 1<<ECON1_TXRTS );
 }
 
 static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t maxlen ){
@@ -363,14 +385,12 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
   // Check if a packet was received
   uint8_t count = enc_read_control_register( iface, CR_EPKTCNT );
   if( !count ) return 0; // No new packages
-  DPA_LOG( "%hhu packets available\n", count );
   // Receive buffer contains some additional informations before the package datas
   uint16_t next_packet_pointer = enc_read_buffer_uint16( iface );
-  uint16_t svlen = enc_read_buffer_uint16( iface );
-  uint16_t status = enc_read_buffer_uint16( iface );
+  (void)enc_read_buffer_uint16( iface );
+  (void)enc_read_buffer_uint16( iface );
   uint16_t receive_buffer_pointer =   enc_read_control_register( iface, CR_ERDPTL )
                                   | ( enc_read_control_register( iface, CR_ERDPTH ) << 8 );
-  (void)status;
   uint16_t length;
   // Ringbuffer, detect pointer overflow
   if( receive_buffer_pointer < next_packet_pointer ){
@@ -378,10 +398,8 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
   }else{
     length = ( ENC_MEMORY_RX_END_TX_START - receive_buffer_pointer ) + next_packet_pointer;
   }
-  DPA_LOG( "New packet received, lenght: %"PRIu16" start: %"PRIx16" next: %"PRIx16" svlen: %"PRIu16"\n", length, receive_buffer_pointer, next_packet_pointer, svlen );
   if( length > maxlen ){
     DPA_LOG("Packet in receive buffer too big: %"PRIu16" > %"PRIu16"\n", length, maxlen );
-    // skip packet
     enc_write_control_register( iface, CR_ERDPTL, next_packet_pointer & 0xFF );
     enc_write_control_register( iface, CR_ERDPTH, next_packet_pointer >> 8 );
   }else{
@@ -392,6 +410,7 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
   enc_write_control_register( iface, CR_ERXRDPTH, next_packet_pointer >> 8 );
   // Decrement packet count
   enc_bit_field_set( iface, CR_ECON2, 1<<ECON2_PKTDEC );
+  DPA_LOG("eth_receive %"PRIu16"\n",length);
   return length;
 }
 

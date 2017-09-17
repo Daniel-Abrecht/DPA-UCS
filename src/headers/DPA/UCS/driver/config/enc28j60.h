@@ -40,7 +40,6 @@ enum PHY_LCON_led_mode {
 
 struct DPAUCS_enc28j60_config {
   unsigned slave_select_pin;
-  unsigned interrupt_pin;
   bool full_dublex;
   enum PHY_LCON_led_mode led_A_init;
   enum PHY_LCON_led_mode led_B_init;
@@ -52,6 +51,7 @@ struct DPAUCS_enc28j60_interface {
   struct DPAUCS_interface super;
   const flash struct DPAUCS_enc28j60_config* config;
   uint8_t econ1, bank;
+  bool packet_sent_since_last_check;
 };
 
 DPA_LOOSE_LIST_DECLARE( struct DPAUCS_enc28j60_interface*, DPAUCS_enc28j60_interface_list )

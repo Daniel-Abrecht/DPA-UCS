@@ -37,6 +37,7 @@ static struct {
 static jmp_buf fatal_error_exitpoint;
 
 void weak DPAUCS_onfatalerror( const flash char* message ){
+  (void)message;
   DPA_LOG( "%"PRIsFLASH, message );
 }
 
@@ -59,13 +60,13 @@ static void DPAUCS_init( void ){
 
   DPA_LOG("Initialising DPAUCS...\n");
 
+  for( struct DPAUCS_init_function_list* it = DPAUCS_init_function_list; it; it = it->next ){
+    (*it->entry)();
+  }
+
   for( struct DPAUCS_ethernet_driver_list* it = DPAUCS_ethernet_driver_list; it; it = it->next ){
     DPA_LOG("Initialize ethernet driver \"%s\"\n",it->entry->name);
     (*it->entry->init)();
-  }
-
-  for( struct DPAUCS_init_function_list* it = DPAUCS_init_function_list; it; it = it->next ){
-    (*it->entry)();
   }
 
   DPA_LOG("Initialisation done\n");
@@ -76,13 +77,13 @@ static void DPAUCS_shutdown( void ){
 
   DPA_LOG("Shutdown of DPAUCS...\n");
 
+  for( struct DPAUCS_shutdown_function_list* it = DPAUCS_shutdown_function_list; it; it = it->next ){
+    (*it->entry)();
+  }
+
   for( struct DPAUCS_ethernet_driver_list* it = DPAUCS_ethernet_driver_list; it; it = it->next ){
     DPA_LOG("Shutdown of ethernet driver \"%s\"\n",it->entry->name);
     (*it->entry->shutdown)();
-  }
-
-  for( struct DPAUCS_shutdown_function_list* it = DPAUCS_shutdown_function_list; it; it = it->next ){
-    (*it->entry)();
   }
 
   DPA_LOG("Shutdown completed...\n");

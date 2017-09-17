@@ -18,5 +18,6 @@ bool adelay_done( adelay_t*, adelay_duration_t );
 void adelay_update_time( unsigned long current, unsigned long max_mask, unsigned long ticks_per_sec );
 
 void weak adelay_update( void );
+void weak adelay_wait( adelay_duration_t );
 
 #endif

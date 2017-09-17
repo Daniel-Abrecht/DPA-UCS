@@ -1,8 +1,6 @@
-#include <stdio.h>
-#include <string.h>
-
 #define DPAUCS_TCP_C
-
+#include <string.h>
+#include <inttypes.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/service.h>
 #include <DPA/utils/utils.h>
@@ -106,19 +104,19 @@ void printFrame( DPAUCS_tcp_t* tcp ){
   };
   (void)fstr_flag;
   DPA_LOG( "TCP Packet:\n"
-    "  source: " "%u" "\n"
-    "  destination: " "%u" "\n"
-    "  sequence: " "%u" "\n"
-    "  acknowledgment: " "%u" "\n"
-    "  dataOffset: " "%u" "\n"
+    "  source: %" PRIu16 "\n"
+    "  destination: %" PRIu16 "\n"
+    "  sequence: %" PRIu32 "\n"
+    "  acknowledgment: %" PRIu32 "\n"
+    "  dataOffset: %u\n"
     "  flags:%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH"%"PRIsFLASH "\n"
-    "  windowSize: " "%u" "\n"
-    "  checksum: " "%u" "\n"
-    "  urgentPointer: " "%u" "\n",
-    (unsigned)DPA_btoh16(tcp->source),
-    (unsigned)DPA_btoh16(tcp->destination),
-    (unsigned)DPA_btoh32(tcp->sequence),
-    (unsigned)DPA_btoh32(tcp->acknowledgment),
+    "  windowSize: %" PRIu16 "\n"
+    "  checksum: %" PRIu16 "\n"
+    "  urgentPointer: %" PRIu16 "\n",
+    DPA_btoh16(tcp->source),
+    DPA_btoh16(tcp->destination),
+    DPA_btoh32(tcp->sequence),
+    DPA_btoh32(tcp->acknowledgment),
     (unsigned)((tcp->dataOffset>>2)&~3u),
     ( flags & TCP_FLAG_FIN ) ? fstr_flag[1] : fstr_flag[0],
     ( flags & TCP_FLAG_SYN ) ? fstr_flag[2] : fstr_flag[0],
@@ -129,9 +127,9 @@ void printFrame( DPAUCS_tcp_t* tcp ){
     ( flags & TCP_FLAG_ECE ) ? fstr_flag[7] : fstr_flag[0],
     ( flags & TCP_FLAG_CWR ) ? fstr_flag[8] : fstr_flag[0],
     ( flags & TCP_FLAG_NS  ) ? fstr_flag[9] : fstr_flag[0],
-    (unsigned)DPA_btoh16(tcp->windowSize),
-    (unsigned)DPA_btoh16(tcp->checksum),
-    (unsigned)DPA_btoh16(tcp->urgentPointer)
+    DPA_btoh16(tcp->windowSize),
+    DPA_btoh16(tcp->checksum),
+    DPA_btoh16(tcp->urgentPointer)
   );
 }
 

@@ -6,9 +6,7 @@
 #include <DPA/UCS/driver/io_pin.h>
 #include <DPA/UCS/driver/config/spi.h>
 
-static bool initialized = false;
-
-void spi_init(){
+DPAUCS_INIT {
   SPCR = 0;
   uint8_t spcr_tmp = (1<<SPE);
   if( spi_config.master )
@@ -32,16 +30,13 @@ void spi_init(){
   }
   DPAUCS_io_set_pin_mode( spi_config.mosi, DPAUCS_IO_PIN_MODE_OUTPUT );
   DPAUCS_io_set_pin_mode( spi_config.sck , DPAUCS_IO_PIN_MODE_OUTPUT );
-  DPAUCS_io_set_pin( spi_config.mosi, false );
-  DPAUCS_io_set_pin( spi_config.sck , false );
+  DPAUCS_io_set_pin( spi_config.mosi, false, 0 );
+  DPAUCS_io_set_pin( spi_config.sck , false, 0 );
   DPAUCS_io_set_pin_mode( spi_config.miso, DPAUCS_IO_PIN_MODE_INPUT );
   SPCR = spcr_tmp;
 }
 
 uint8_t DPAUCS_spi_tranceive( uint8_t data ){
-  if(!initialized)
-    spi_init();
-  initialized = true;
   SPDR = data;
   while(!( SPSR & (1<<SPIF) ));
   return SPDR;
@@ -50,5 +45,4 @@ uint8_t DPAUCS_spi_tranceive( uint8_t data ){
 DPAUCS_SHUTDOWN {
   SPCR  = 0;
   SPSR &= ~(1<<SPI2X);
-  initialized = false;
 }

@@ -67,7 +67,7 @@ void DPAUCS_raw_stream_truncate( DPA_stream_raw_t* raw, size_t size ){
 
 void DPAUCS_raw_as_stream( DPA_stream_raw_t* raw, void(*func)(DPA_stream_t*,void*), void* ptr ){
 
-  DPA_LOG("DPAUCS_raw_as_stream: cbs: %zu, bbs: %zu, cb: %p, bb: %p\n",raw->charBufferSize,raw->bufferBufferSize,(void*)raw->charBuffer,(void*)raw->bufferBuffer);
+  DPA_LOG("DPAUCS_raw_as_stream: cbs: %"PRIuSIZE", bbs: %"PRIuSIZE", cb: %p, bb: %p\n",raw->charBufferSize,raw->bufferBufferSize,(void*)raw->charBuffer,(void*)raw->bufferBuffer);
 
   DPA_uchar_ringbuffer_t buffer = {
     .super = {

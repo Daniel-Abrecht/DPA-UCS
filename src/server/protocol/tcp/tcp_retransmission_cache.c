@@ -80,8 +80,8 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
     const size_t charBuffer_offset   = fullSize += sizeof( tcp_cache_entry_tcb_entry_t[count] );
                                        fullSize += e.charBufferSize;
     DPA_LOG(
-      "tcp_addToCache: count %u, Cache entry size: %llu, Stream length: %llu\n", count,
-      (unsigned long long)fullSize, (unsigned long long)e.streamRealLength
+      "tcp_addToCache: count %u, Cache entry size: %"PRIuSIZE", Stream length: %"PRIuSIZE"\n",
+      count, fullSize, e.streamRealLength
     );
 
     entry = cacheEntries + TCP_RETRANSMISSION_CACHE_MAX_ENTRIES;
@@ -91,7 +91,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 
     DPA_mempool_alloc( &mempool, entry, fullSize );
     if( !*entry ) return false;
-    DPA_LOG("%zu bytes requested, %zu allocated in entry %zu\n",fullSize,DPAUCS_MEMPOOL_SIZE(*entry),entry-cacheEntries);
+    DPA_LOG("%"PRIuSIZE" bytes requested, %"PRIuSIZE" allocated in entry %"PRIuSIZE"\n",fullSize,DPAUCS_MEMPOOL_SIZE(*entry),entry-cacheEntries);
 
     char* emem = (char*)*entry;
     *(size_t*)emem = entry_offset;
@@ -154,7 +154,7 @@ bool tcp_addToCache( DPAUCS_tcp_transmission_t* t, unsigned count, DPAUCS_transm
 }
 
 static void removeFromCache( void** entry ){
-  DPA_LOG("Entry %zu freed\n",entry-cacheEntries);
+  DPA_LOG("Entry %"PRIuSIZE" freed\n",entry-cacheEntries);
   DPA_mempool_free( &mempool, entry );
 }
 

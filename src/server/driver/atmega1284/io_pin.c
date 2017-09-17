@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <avr/io.h>
+#include <avr/cpufunc.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/driver/io_pin.h>
 
@@ -33,13 +34,15 @@ void DPAUCS_io_set_pin_mode( unsigned pin, DPAUCS_io_pin_mode_t mode ){
   }
 }
 
-void DPAUCS_io_set_pin( unsigned pin, bool state ){
+void DPAUCS_io_set_pin( unsigned pin, bool state, uint16_t delay ){
   ASSERT_PIN(pin);
   if( state ){
     PBIT_ON (ports,pin);
   }else{
     PBIT_OFF(ports,pin);
   }
+  while( delay-- )
+    _NOP();
 }
 
 bool DPAUCS_io_get_pin( unsigned pin ){

@@ -1,16 +1,21 @@
 #ifndef DPA_HELPER_MACROS_H
 #define DPA_HELPER_MACROS_H
 
-#if __STDC_VERSION__ < 201112L
+#include <stddef.h>
+
+#if __STDC_VERSION__ < 201112L // before C11
 #ifndef __GNUC__
 #pragma anon_unions
 #endif
 #ifndef noreturn
 #define noreturn __attribute__((noreturn))
 #endif
-#define static_assert(...)
+#define static_assert(...) const flash uint8_t DPA_CONCAT(assert_placeholder,__LINE__) // TODO: actual c99 fallback
 #else
 #include <assert.h>
+#ifndef static_assert // workaround
+#define static_assert _Static_assert
+#endif
 #include <stdnoreturn.h>
 #endif
 
@@ -18,7 +23,6 @@
 #include <stdalign.h>
 #define DPA_ALIGNOF(T) alignof(T)
 #else
-#include <stddef.h>
 #define DPA_ALIGNOF(T) offsetof(struct{char x;T y;},y)
 #endif
 
@@ -41,6 +45,13 @@
 #define flash
 #define PRIsFLASH "s"
 #endif
+#endif
+
+#ifdef __AVR__
+#define PRIuSIZE "u"
+static_assert( sizeof(size_t) == sizeof(unsigned), "size_t and unsigned int differ in size" );
+#else
+#define PRIuSIZE "zu"
 #endif
 
 #define RESERVED DPA_CONCAT( R_RESERVED_, __LINE__ )

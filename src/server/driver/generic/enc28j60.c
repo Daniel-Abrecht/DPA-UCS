@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <inttypes.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/driver/spi.h>
@@ -142,6 +143,30 @@ enum PHY_LCON_leds {
   PHY_LCON_LED_B = 4
 };
 
+#ifndef NO_LOGGING
+#define S(X) (const flash char[]){X}
+// Datasheet page 41
+static flash const char* const flash transmit_state_vector_flags[] = {
+  S("CRC Error"),
+  S("Length Check Error"),
+  S("Length Out of Range"),
+  S("Done"),
+  S("Multicast"),
+  S("Broadcast"),
+  S("Packet Defer"),
+  S("Excessive Defer"),
+  S("Excessive Collision"),
+  S("Late Collision"),
+  S("Giant"),
+  S("Underrun"),
+  S("Control Frame"),
+  S("Pause Control Frame"),
+  S("Backpressure Applie"),
+  S("Transmit VLAN Tagged Frame")
+};
+#undef S
+#endif
+
 #define PHY_LCON_RESERVED 0x3000
 
 static inline void enc_set_bank(
@@ -273,13 +298,13 @@ static void enc_write_phy_register(
   while( enc_read_control_register( iface, CR_MISTAT ) & (1<<MIISTAT_BUSY) );
 }
 
-static uint16_t enc_read_phy_register(
+static inline uint16_t enc_read_phy_register(
   struct DPAUCS_enc28j60_interface* iface,
   uint8_t reg
 ){
   while( enc_read_control_register( iface, CR_MISTAT ) & (1<<MIISTAT_BUSY) );
   enc_write_control_register( iface, CR_MIREGADR, reg );
-  enc_write_control_register( iface, CR_MICMD, MICMD_MIIRD );
+  enc_write_control_register( iface, CR_MICMD, 1<<MICMD_MIIRD );
   while( enc_read_control_register( iface, CR_MISTAT ) & (1<<MIISTAT_BUSY) );
   return (uint16_t)enc_read_control_register( iface, CR_MIRDL )
        | (uint16_t)enc_read_control_register( iface, CR_MIRDH )<<8;
@@ -295,10 +320,7 @@ static inline void enc_reset(
   DPAUCS_spi_tranceive( 0xFF );
   DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
   while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
-  uint16_t phy_lcon_init = (PHY_LED_OFF<<PHY_LCON_LED_A) | (PHY_LED_OFF<<PHY_LCON_LED_B) | PHY_LCON_RESERVED;
-  do {
-    enc_write_phy_register( iface, PHY_LCON, phy_lcon_init );
-  } while( enc_read_phy_register( iface, PHY_LCON ) == phy_lcon_init );
+  enc_write_phy_register( iface, PHY_LCON, (PHY_LED_OFF<<PHY_LCON_LED_A) | (PHY_LED_OFF<<PHY_LCON_LED_B) | PHY_LCON_RESERVED );
 }
 
 static inline void enc_set_bank(
@@ -378,16 +400,85 @@ static void eth_init( void ){
     enc_init( it->entry );
   }
 }
+/*
+static inline void dump_last_packet_in_send_buffer(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  static const flash char hex[] = {"0123456789ABCDEF"};
+  uint16_t rptr_tmp = (uint16_t)enc_read_control_register( iface, CR_ERDPTL ) | (uint16_t)enc_read_control_register( iface, CR_ERDPTH )<<8;
+  uint16_t wpkg_end = (uint16_t)enc_read_control_register( iface, CR_ETXNDL ) | (uint16_t)enc_read_control_register( iface, CR_ETXNDH )<<8;
+  enc_write_control_register( iface, CR_ERDPTL, (ENC_MEMORY_RX_END_TX_START+1) & 0xFF );
+  enc_write_control_register( iface, CR_ERDPTH, (ENC_MEMORY_RX_END_TX_START+1) >> 8 );
+  uint16_t length = wpkg_end - ENC_MEMORY_RX_END_TX_START;
+  DPA_LOG("Dumping last packet in send buffer, size: %"PRIu16" bytes:\n",length);
+  for( uint16_t i=0; i<length; i++ ){
+    uint8_t val;
+    enc_read_buffer_memory( iface, 1, &val );
+    putchar(hex[val>>4]);
+    putchar(hex[val&0xF]);
+    if( (i+1) % 16 ){
+      putchar(' ');
+    }else{
+      putchar('\n');
+    }
+  }
+  putchar('\n');
+  enc_write_control_register( iface, CR_ERDPTL, rptr_tmp & 0xFF );
+  enc_write_control_register( iface, CR_ERDPTH, rptr_tmp >> 8 );
+}*/
 
 static bool eth_tx_ready(
   struct DPAUCS_enc28j60_interface* iface
 ){
   if( !iface->packet_sent_since_last_check )
     return true;
-  bool res = !( enc_read_control_register( iface, CR_ECON1 ) & ECON1_TXRTS );
+  bool res = !( enc_read_control_register( iface, CR_ECON1 ) & (1<<ECON1_TXRTS) );
   if( res )
     iface->packet_sent_since_last_check = false;
   return res;
+}
+
+static inline void get_transmit_state_vector(
+  struct DPAUCS_enc28j60_interface* iface,
+  uint8_t sv[7]
+){
+  uint16_t readptr_tmp = enc_read_control_register( iface, CR_ERDPTL )
+                        | enc_read_control_register( iface, CR_ERDPTH );
+  uint16_t svptr = enc_read_control_register( iface, CR_ERXNDL )
+                  | enc_read_control_register( iface, CR_ERXNDH );
+  enc_write_control_register( iface, CR_ERDPTL, svptr & 0xFF );
+  enc_write_control_register( iface, CR_ERDPTH, svptr >> 8 );
+  enc_read_buffer_memory( iface, 7, sv );
+  enc_write_control_register( iface, CR_ERDPTL, readptr_tmp & 0xFF );
+  enc_write_control_register( iface, CR_ERDPTH, readptr_tmp >> 8 );
+}
+
+static inline void print_transmit_status_vector(
+  const uint8_t sv[7]
+){
+  DPA_LOG( "Transmit status vector:" );
+  for( unsigned i=20,j=0; i<52; i++,j++ ){
+    if( i == 32 )
+      i = 48;
+    DPA_LOG( " - %"PRIsFLASH"\n", transmit_state_vector_flags[j] );
+  }
+  DPA_LOG( " - Byte Count %u\n", sv[0] | sv[1]<<8 );
+  DPA_LOG( " - Total Bytes Transmitted on Wire %u\n", sv[4] | sv[5]<<8 );
+  DPA_LOG( " - Collision Count %u\n", sv[2] & 0xF );
+}
+
+static void check_print_error_info(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  uint8_t estat = enc_read_control_register( iface, CR_ESTAT );
+  if( estat & (1<<ESTAT_TXABRT) ){
+    DPA_LOG( "Sending last package failed\n" );
+    if( estat & (1<<ESTAT_LATECOL) )
+      DPA_LOG( " - Late collision error\n" );
+    uint8_t sv[7];
+    get_transmit_state_vector( iface, sv );
+    print_transmit_status_vector( sv );
+  }
 }
 
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t length ){
@@ -403,14 +494,21 @@ static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint
   while( !eth_tx_ready(iface) ){
     if( adelay_done(&adelay,AD_SEC) ){
       if( i++ < 3 ){
-        DPA_LOG("ENC28J60 stalled, last thernet packet wasn't sent within a second, trying to reinitialise ENC28J60, attemp %d...\n",i);
+        DPA_LOG("ENC28J60 stalled, last ethernet packet wasn't sent within 3 seconds\n");
+        check_print_error_info( iface );
+        DPA_LOG("Trying to reinitialise ENC28J60, attemp %d...\n",i);
         enc_init( iface );
+        adelay_start(&adelay);
       }else{
         static const flash char message[] = {"ENC28J60 didn't react, even after 3 reset attemps!\n"};
         DPAUCS_fatal(message);
       }
     }
   }
+  if( enc_read_control_register( iface, CR_EIR ) & (1<<EI_TXER) )
+    check_print_error_info( iface );
+  enc_bit_field_clear( iface, CR_EIR, (1<<EI_TXER) );
+  enc_bit_field_clear( iface, CR_ESTAT, (1<<ESTAT_TXABRT) | (1<<ESTAT_LATECOL) );
   // Set write pointer to buffer start
   enc_write_control_register( iface, CR_EWRPTL, ENC_MEMORY_RX_END_TX_START & 0xFF );
   enc_write_control_register( iface, CR_EWRPTH, ENC_MEMORY_RX_END_TX_START >> 8 );

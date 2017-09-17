@@ -456,6 +456,7 @@ static inline void get_transmit_state_vector(
 static inline void print_transmit_status_vector(
   const uint8_t sv[7]
 ){
+  (void)sv;
   DPA_LOG( "Transmit status vector:" );
   for( unsigned i=20,j=0; i<52; i++,j++ ){
     if( i == 32 )

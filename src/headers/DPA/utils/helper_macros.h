@@ -10,7 +10,7 @@
 #ifndef noreturn
 #define noreturn __attribute__((noreturn))
 #endif
-#define static_assert(...) const flash uint8_t DPA_CONCAT(assert_placeholder,__LINE__) // TODO: actual c99 fallback
+#define static_assert(...)  // TODO: actual c99 fallback
 #else
 #include <assert.h>
 #ifndef static_assert // workaround

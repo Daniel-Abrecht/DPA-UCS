@@ -93,7 +93,7 @@ typedef struct DPAUCS_transmissionControlBlock {
   // internal stuff //
 
   void* currentId;
-  struct DPAUCS_service* service;
+  const flash struct DPAUCS_service* service;
 
   struct {
     struct DPAUCS_tcp_fragment **first, **last;

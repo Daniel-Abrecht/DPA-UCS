@@ -72,9 +72,10 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
   {
     DPAUCS_logicAddress_t* addr = DPAUCS_LA_IPv4(0,0,0,0);
     memcpy(DPAUCS_GET_ADDR(addr),destination,4);
-    if( !DPAUCS_isValidHostAddress(addr)
-     || !DPAUCS_has_logicAddress(addr)
-    ) return;
+    if( !DPAUCS_isBroadcast(addr)
+     && ( !DPAUCS_isValidHostAddress(addr)
+       || !DPAUCS_has_logicAddress(addr)
+    )) return;
   }
 
   const flash DPAUCS_l4_handler_t* handler = 0;

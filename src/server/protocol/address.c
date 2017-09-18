@@ -16,6 +16,32 @@ bool DPAUCS_isBroadcast( const DPAUCS_logicAddress_t* address){
   return false;
 }
 
+void DPAUCS_swapMixedAddress( DPAUCS_mixedAddress_pair_t* mixed ){
+  switch( mixed->type ){
+    case DPAUCS_AP_ADDRESS: {
+      DPAUCS_address_t* tmp = mixed->address.source;
+      mixed->address.source = mixed->address.destination;
+      mixed->address.destination = tmp;
+    } break;
+    case DPAUCS_AP_LOGIC_ADDRESS: {
+      DPAUCS_address_t* tmp = mixed->address.source;
+      mixed->address.source = mixed->address.destination;
+      mixed->address.destination = tmp;
+    } break;
+  }
+  bool tmp = mixed->flags & DPAUCS_F_AP_SRC_SVR_OR_APC;
+  if( mixed->flags & DPAUCS_F_AP_DST_SVR_OR_APC ){
+    mixed->flags |= DPAUCS_F_AP_SRC_SVR_OR_APC;
+  }else{
+    mixed->flags &= DPAUCS_F_AP_SRC_SVR_OR_APC;
+  }
+  if( tmp ){
+    mixed->flags |= DPAUCS_F_AP_DST_SVR_OR_APC;
+  }else{
+    mixed->flags &= DPAUCS_F_AP_DST_SVR_OR_APC;
+  }
+}
+
 bool DPAUCS_compare_logicAddress(const DPAUCS_logicAddress_t* a,const DPAUCS_logicAddress_t* b){
   if( a->type != b->type )
     return false;

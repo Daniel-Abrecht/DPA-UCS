@@ -31,7 +31,7 @@ static struct {
   bool active;
   const DPAUCS_logicAddress_t* logicAddress;
   uint16_t port;
-  DPAUCS_service_t* service;
+  const flash DPAUCS_service_t* service;
 } services[MAX_SERVICES];
 
 static jmp_buf fatal_error_exitpoint;
@@ -135,9 +135,9 @@ const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_
 }
 
 
-void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, DPAUCS_service_t* service ){
+bool DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, const flash DPAUCS_service_t* service ){
   if(!service)
-    return;
+    return false;
   for(int i=0;i<MAX_SERVICES;i++){
     if(!services[i].active){
       services[i].active = true;
@@ -146,12 +146,17 @@ void DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_
       services[i].service = service;
       if(services[i].service->start)
         (*services[i].service->start)();
-      break;
-    }
+      return true;
+    }else if(
+         services[i].active == true
+      && services[i].port == port
+      && DPAUCS_compare_logicAddress( services[i].logicAddress, logicAddress )
+    ) return false;
   }
+  return false;
 }
 
-void DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port ){
+bool DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port ){
   for(int i=0;i<MAX_SERVICES;i++){
     if( services[i].active
        && (
@@ -162,12 +167,13 @@ void DPAUCS_remove_service( const DPAUCS_logicAddress_t*const logicAddress, uint
       services[i].active = false;
       if(services[i].service->stop)
         (*services[i].service->stop)();
-      break;
+      return true;
     }
   }
+  return false;
 }
 
-DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, uint8_t tos ){
+const flash DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, uint8_t tos ){
   for(int i=0;i<MAX_SERVICES;i++)
     if( services[i].active
         && ( 

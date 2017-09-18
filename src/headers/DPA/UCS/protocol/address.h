@@ -110,6 +110,7 @@ bool DPAUCS_persistMixedAddress( DPAUCS_mixedAddress_pair_t* );
 bool DPAUCS_freeMixedAddress( DPAUCS_mixedAddress_pair_t* );
 
 bool DPAUCS_addressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_address_pair_t* address );
+void DPAUCS_swapMixedAddress( DPAUCS_mixedAddress_pair_t* mixed );
 bool DPAUCS_logicAddressPairToMixed( DPAUCS_mixedAddress_pair_t* mixed, const DPAUCS_logicAddress_pair_t* address );
 bool DPAUCS_mixedPairToAddress( DPAUCS_address_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );
 bool DPAUCS_mixedPairToLogicAddress( DPAUCS_logicAddress_pair_t* address, const DPAUCS_mixedAddress_pair_t* mixed );

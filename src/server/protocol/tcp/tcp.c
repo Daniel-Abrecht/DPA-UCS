@@ -150,7 +150,7 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
   const flash DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( &tcb->fromTo ) );
   if( handler && handler->calculatePseudoHeaderChecksum )
     return (*handler->calculatePseudoHeaderChecksum)( fromTo.source, fromTo.destination, PROTOCOL_TCP, length );
-  return 0;
+  return ~0;
 }
 
 void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t header_length, uint16_t length ){
@@ -607,6 +607,9 @@ static bool tcp_processHeader(
   void* payload,
   bool last
 ){
+
+  if( DPAUCS_isBroadcast(&to->logic) )
+    return false;
 
   ISS += length;
   if( length < sizeof(DPAUCS_tcp_t) )

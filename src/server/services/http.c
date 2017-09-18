@@ -549,7 +549,7 @@ static void onclose( void* cid ){
   DPA_LOG("Connection closed\n");
 }
 
-DPAUCS_service_t http_service = {
+const flash DPAUCS_service_t http_service = {
   .tos = PROTOCOL_TCP,
   .onopen = &onopen,
   .onreceive = &onreceive,

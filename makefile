@@ -49,6 +49,10 @@ ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
 OPTIONS        += -g -fprofile-arcs -ftest-coverage -static-libasan -fsanitize=undefined -fsanitize=address -fstack-protector-all
 endif
 
+ifdef NO_LOGGING
+OPTIONS += -DNO_LOGGING
+endif
+
 PROJECT_DIR=$(PWD)
 
 GEN_DEST = FilesAsCArrays

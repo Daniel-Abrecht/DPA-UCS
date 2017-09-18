@@ -126,6 +126,7 @@ void eth_init( void ){
 
   {
     uint8_t* mac = interface.mac;
+    (void)mac;
     DPA_LOG("Using device: %s mac: %02x:%02x:%02x:%02x:%02x:%02x\n", 
       ifname,
       mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]
@@ -140,6 +141,8 @@ void eth_init( void ){
     if( setsockopt (sock, SOL_PACKET,PACKET_ADD_MEMBERSHIP, &mr, sizeof (mr)) == -1 )
       DPA_LOG( "error: setsockopt: %d %s\n", errno, strerror(errno) ); // not fatal
   }
+
+  DPAUCS_interface_event( &interface, DPAUCS_IFACE_EVENT_LINK_UP, 0 );
 
   return;
 

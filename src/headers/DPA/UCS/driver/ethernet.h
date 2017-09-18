@@ -25,4 +25,14 @@ typedef struct DPAUCS_ethernet_driver {
 
 DPA_LOOSE_LIST_DECLARE( struct DPAUCS_ethernet_driver*, DPAUCS_ethernet_driver_list )
 
+enum DPAUCS_interface_event {
+  DPAUCS_IFACE_EVENT_LINK_UP,
+  DPAUCS_IFACE_EVENT_LINK_DOWN
+};
+
+typedef void(*event_handler)( DPAUCS_interface_t*, enum DPAUCS_interface_event, void* );
+void DPAUCS_interface_event( DPAUCS_interface_t*, enum DPAUCS_interface_event, void* param );
+
+DPA_LOOSE_LIST_DECLARE( event_handler, DPAUCS_event_list )
+
 #endif

@@ -90,6 +90,11 @@ static void DPAUCS_shutdown( void ){
 
 }
 
+void DPAUCS_interface_event( DPAUCS_interface_t* interface, enum DPAUCS_interface_event type, void* param ){
+  for( struct DPAUCS_event_list* it = DPAUCS_event_list; it; it = it->next )
+    (*it->entry)( interface, type, param );
+}
+
 void DPAUCS_add_logicAddress( const DPAUCS_interface_t*const interface, const DPAUCS_logicAddress_t*const logicAddress ){
   for(int i=0;i<MAX_LOGIC_ADDRESSES;i++){
     if(!address_list[i].logicAddress){

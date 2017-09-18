@@ -138,6 +138,22 @@ enum PHY_CON2_bits {
   PHY_CON2_FRCLNK
 };
 
+enum PHY_STAT1_bits {
+  PHY_STAT1_JBSTAT=1,
+  PHY_STAT1_LLSTAT,
+  PHY_STAT1_PHDPX=11,
+  PHY_STAT1_PFDPX
+};
+
+enum PHY_STAT2_bits {
+  PHY_STAT2_PLRITY=5,
+  PHY_STAT2_DPXSTAT=9,
+  PHY_STAT2_LSTAT,
+  PHY_STAT2_COLSTAT,
+  PHY_STAT2_RXSTAT,
+  PHY_STAT2_TXSTAT
+};
+
 enum PHY_LCON_leds {
   PHY_LCON_LED_A = 8,
   PHY_LCON_LED_B = 4
@@ -295,6 +311,7 @@ static void enc_write_phy_register(
   enc_write_control_register( iface, CR_MIREGADR, reg );
   enc_write_control_register( iface, CR_MIWRL, data );
   enc_write_control_register( iface, CR_MIWRH, data >> 8 );
+  adelay_wait(AD_SEC/10);
   while( enc_read_control_register( iface, CR_MISTAT ) & (1<<MIISTAT_BUSY) );
 }
 
@@ -306,6 +323,7 @@ static inline uint16_t enc_read_phy_register(
   enc_write_control_register( iface, CR_MIREGADR, reg );
   enc_write_control_register( iface, CR_MICMD, 1<<MICMD_MIIRD );
   while( enc_read_control_register( iface, CR_MISTAT ) & (1<<MIISTAT_BUSY) );
+  enc_write_control_register( iface, CR_MICMD, 0 );
   return (uint16_t)enc_read_control_register( iface, CR_MIRDL )
        | (uint16_t)enc_read_control_register( iface, CR_MIRDH )<<8;
 }
@@ -461,7 +479,8 @@ static inline void print_transmit_status_vector(
   for( unsigned i=20,j=0; i<52; i++,j++ ){
     if( i == 32 )
       i = 48;
-    DPA_LOG( " - %"PRIsFLASH"\n", transmit_state_vector_flags[j] );
+    if( sv[i>>3] & (1<<(i&0x7)) )
+      DPA_LOG( " - %"PRIsFLASH"\n", transmit_state_vector_flags[j] );
   }
   DPA_LOG( " - Byte Count %u\n", sv[0] | sv[1]<<8 );
   DPA_LOG( " - Total Bytes Transmitted on Wire %u\n", sv[4] | sv[5]<<8 );
@@ -482,7 +501,29 @@ static void check_print_error_info(
   }
 }
 
+static bool last_link_state = false;
+
+static void check_link_state(
+  struct DPAUCS_enc28j60_interface* iface
+){
+  bool new_link_state = enc_read_phy_register( iface, PHY_STAT1 ) & (1<<PHY_STAT1_LLSTAT);
+  if( last_link_state != new_link_state ){
+    last_link_state = new_link_state;
+    if( new_link_state ){
+      DPA_LOG("ENC28J60 link up\n");
+      DPAUCS_interface_event(&iface->super,DPAUCS_IFACE_EVENT_LINK_UP,0);
+    }else{
+      DPA_LOG("ENC28J60 link down\n");
+      DPAUCS_interface_event(&iface->super,DPAUCS_IFACE_EVENT_LINK_DOWN,0);
+    }
+  }
+}
+
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t length ){
+  if( !last_link_state ){
+    DPA_LOG( "Link is down" );
+    return;
+  }
   struct DPAUCS_enc28j60_interface* iface = (struct DPAUCS_enc28j60_interface*)interface;
   if( length > 1518 ){
     DPA_LOG( "Ethernet packet too big. %"PRIu16" > 1518\n", length );
@@ -528,6 +569,11 @@ static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint
 
 static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t maxlen ){
   struct DPAUCS_enc28j60_interface* iface = (struct DPAUCS_enc28j60_interface*)interface;
+  static uint8_t check = 0;
+  if( check++ ) // Check link state every once in a while
+    check_link_state( iface );
+  if( !last_link_state )
+    return 0;
   // Check if a packet was received
   uint8_t count = enc_read_control_register( iface, CR_EPKTCNT );
   if( !count ) return 0; // No new packages

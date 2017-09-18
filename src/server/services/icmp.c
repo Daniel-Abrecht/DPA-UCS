@@ -77,19 +77,9 @@ static bool icmp_receiveHandler(
   return true;
 }
 
-static DPAUCS_l4_handler_t icmp_handler = {
+static const flash DPAUCS_l4_handler_t icmp_handler = {
   .protocol = PROTOCOL_ICMP,
   .onreceive = &icmp_receiveHandler
 };
 
-static int counter = 0;
-
-DPAUCS_INIT {
-  if(counter++) return;
-  DPAUCS_layer3_addProtocolHandler(&icmp_handler);
-}
-
-DPAUCS_SHUTDOWN {
-  if(--counter) return;
-  DPAUCS_layer3_removeProtocolHandler(&icmp_handler);
-}
+DPA_LOOSE_LIST_ADD( DPAUCS_l4_handler_list, &icmp_handler )

@@ -77,14 +77,13 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
     ) return;
   }
 
-  DPAUCS_l4_handler_t* handler = 0;
-  for(int i=0; i<MAX_LAYER4_PROTO_HANDLERS; i++)
-    if( l4_handlers[i]
-     && l4_handlers[i]->protocol == ip->protocol
-    ){
-      handler = l4_handlers[i];
+  const flash DPAUCS_l4_handler_t* handler = 0;
+  for( struct DPAUCS_l4_handler_list* it = DPAUCS_l4_handler_list; it; it = it->next ){
+    if( it->entry->protocol == ip->protocol ){
+      handler = it->entry;
       break;
     }
+  }
   if(!handler) return; 
 
   uint16_t headerlength = (ip->version_ihl & 0x0F) * 4;

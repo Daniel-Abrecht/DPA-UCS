@@ -813,23 +813,13 @@ static void tcp_receiveFailtureHandler( void* id ){
   DPA_LOG("-- tcp_receiveFailtureHandler | id: %p --\n",id);
 }
 
-static DPAUCS_l4_handler_t tcpHandler = {
+static const flash DPAUCS_l4_handler_t tcpHandler = {
   .protocol = PROTOCOL_TCP,
   .onreceive = &tcp_receiveHandler,
   .onreceivefailture = &tcp_receiveFailtureHandler
 };
 
-static int counter = 0;
-
-DPAUCS_INIT {
-  if(counter++) return;
-  DPAUCS_layer3_addProtocolHandler(&tcpHandler);
-}
-
-DPAUCS_SHUTDOWN {
-  if(--counter) return;
-  DPAUCS_layer3_removeProtocolHandler(&tcpHandler);
-}
+DPA_LOOSE_LIST_ADD( DPAUCS_l4_handler_list, &tcpHandler )
 
 void tcp_do_next_task( void ){
   tcp_retransmission_cache_do_retransmissions();

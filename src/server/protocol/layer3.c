@@ -11,24 +11,6 @@ static DPA_stream_t outputStream = {
   &outputStreamBufferBuffer
 };
 
-DPAUCS_l4_handler_t* l4_handlers[MAX_LAYER4_PROTO_HANDLERS];
-
-void DPAUCS_layer3_addProtocolHandler(DPAUCS_l4_handler_t* handler){
-  for(int i=0; i<MAX_LAYER4_PROTO_HANDLERS; i++)
-    if( !l4_handlers[i] ){
-      l4_handlers[i] = handler;
-      break;
-    }
-}
-
-void DPAUCS_layer3_removeProtocolHandler(DPAUCS_l4_handler_t* handler){
-  for(int i=0; i<MAX_LAYER4_PROTO_HANDLERS; i++)
-    if( l4_handlers[i] == handler ){
-      l4_handlers[i] = 0;
-      break;
-    }
-}
-
 DPA_stream_t* DPAUCS_layer3_createTransmissionStream( void ){
   return &outputStream;
 }

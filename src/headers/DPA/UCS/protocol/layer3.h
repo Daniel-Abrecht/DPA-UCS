@@ -4,8 +4,6 @@
 #include <DPA/utils/stream.h>
 #include <DPA/UCS/protocol/address.h>
 
-#define MAX_LAYER4_PROTO_HANDLERS 3
-
 #ifndef OUTSTREAM_BYTE_BUFFER_SIZE
 #define OUTSTREAM_BYTE_BUFFER_SIZE 256
 #endif
@@ -52,8 +50,7 @@ typedef struct DPAUCS_l3_handler {
 } DPAUCS_l3_handler_t;
 
 DPA_LOOSE_LIST_DECLARE( const flash struct DPAUCS_l3_handler*, DPAUCS_l3_handler_list )
-
-extern DPAUCS_l4_handler_t* l4_handlers[MAX_LAYER4_PROTO_HANDLERS];
+DPA_LOOSE_LIST_DECLARE( const flash struct DPAUCS_l4_handler*, DPAUCS_l4_handler_list )
 
 const flash DPAUCS_l3_handler_t* DPAUCS_getAddressHandler( uint16_t type );
 void DPAUCS_layer3_addProtocolHandler( DPAUCS_l4_handler_t* handler );

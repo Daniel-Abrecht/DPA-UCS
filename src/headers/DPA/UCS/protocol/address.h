@@ -34,6 +34,7 @@ typedef uint8_t DPAUCS_mac_t[6];
 
 typedef struct DPAUCS_interface {
   DPAUCS_mac_t mac;
+  bool link_up;
 } DPAUCS_interface_t;
 
 // Don't change this struct

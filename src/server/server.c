@@ -27,6 +27,8 @@ DPAUCS_address_entry_t address_list[MAX_LOGIC_ADDRESSES];
 static DPAUCS_packet_t packetInputBuffer;
 static DPAUCS_packet_t nextPacketToSend;
 
+weak const flash char* DPAUCS_hostname = (const flash char[]){"dpaucs"};
+
 static struct {
   bool active;
   const DPAUCS_logicAddress_t* logicAddress;
@@ -91,6 +93,10 @@ static void DPAUCS_shutdown( void ){
 }
 
 void DPAUCS_interface_event( DPAUCS_interface_t* interface, enum DPAUCS_interface_event type, void* param ){
+  switch( type ){
+    case DPAUCS_IFACE_EVENT_LINK_UP  : interface->link_up = true ; break;
+    case DPAUCS_IFACE_EVENT_LINK_DOWN: interface->link_up = false; break;
+  }
   for( struct DPAUCS_event_list* it = DPAUCS_event_list; it; it = it->next )
     (*it->entry)( interface, type, param );
 }

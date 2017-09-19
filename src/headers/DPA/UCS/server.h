@@ -33,6 +33,8 @@ struct DPAUCS_service;
 struct DPAUCS_packet_info;
 struct DPAUCS_ethernet_driver;
 
+extern const flash char* DPAUCS_hostname;
+
 void DPAUCS_run( void(*)(void*), void* );
 
 noreturn void DPAUCS_fatal( const flash char* message );

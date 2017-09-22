@@ -3,6 +3,7 @@
 
 #define PROTOCOL_UDP 17
 
+#include <DPA/utils/stream.h>
 #include <DPA/UCS/protocol/address.h>
 #include <DPA/utils/helper_macros.h>
 
@@ -14,5 +15,6 @@ typedef struct DPAUCS_udp_descriptor {
 } DPAUCS_udp_descriptor_t;
 
 void DPAUCS_udp_make_reply_descriptor( DPAUCS_udp_descriptor_t* request, DPAUCS_udp_descriptor_t* reply );
+void DPAUCS_udp_transmit( const DPAUCS_udp_descriptor_t*, const linked_data_list_t*, DPA_stream_t* );
 
 #endif

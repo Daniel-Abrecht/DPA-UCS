@@ -1,6 +1,7 @@
 #ifndef DPAUCS_LAYER3_H
 #define DPAUCS_LAYER3_H
 
+#include <DPA/utils/utils.h>
 #include <DPA/utils/stream.h>
 #include <DPA/UCS/protocol/address.h>
 
@@ -45,7 +46,7 @@ typedef struct DPAUCS_l3_handler {
   bool (*compare)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
   bool (*copy)( DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t* );
   bool (*withRawAsLogicAddress)( void*, size_t, void(*)(const DPAUCS_logicAddress_t*,void*), void*);
-  bool (*transmit)( size_t, const size_t[], const void*[], DPA_stream_t*, const DPAUCS_mixedAddress_pair_t*, uint8_t, size_t );
+  bool (*transmit)( const linked_data_list_t*, DPA_stream_t*, const DPAUCS_mixedAddress_pair_t*, uint8_t, size_t );
   uint16_t (*calculatePseudoHeaderChecksum)( const DPAUCS_logicAddress_t*, const DPAUCS_logicAddress_t*, uint8_t, uint16_t );
 } DPAUCS_l3_handler_t;
 
@@ -59,9 +60,7 @@ void DPAUCS_layer3_removeProtocolHandler( DPAUCS_l4_handler_t* handler );
 DPA_stream_t* DPAUCS_layer3_createTransmissionStream( void );
 bool DPAUCS_layer3_getPacketSizeLimit( uint16_t, size_t* limit );
 bool DPAUCS_layer3_transmit(
-  size_t header_count,
-  const size_t header_size[header_count],
-  const void* header_data[header_count],
+  const linked_data_list_t* headers,
   DPA_stream_t* payload,
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,

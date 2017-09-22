@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <DPA/UCS/server.h>
 #include <DPA/UCS/packet.h>
+#include <DPA/utils/utils.h>
 #include <DPA/UCS/protocol/layer3.h>
 
 DPA_DEFINE_RINGBUFFER(unsigned char,DPA_uchar_ringbuffer_t,outputStreamBuffer,OUTSTREAM_BYTE_BUFFER_SIZE,false);
@@ -20,9 +21,7 @@ void DPAUCS_layer3_destroyTransmissionStream( DPA_stream_t* stream ){
 }
 
 bool DPAUCS_layer3_transmit(
-  size_t header_count,
-  const size_t header_size[header_count],
-  const void* header_data[header_count],
+  const linked_data_list_t* headers,
   DPA_stream_t* payload,
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
@@ -30,7 +29,7 @@ bool DPAUCS_layer3_transmit(
 ){
   const flash DPAUCS_l3_handler_t* handler = DPAUCS_getAddressHandler( DPAUCS_mixedPairGetType( fromTo ) );
   if( handler && handler->transmit )
-    return (*handler->transmit)( header_count, header_size, header_data, payload, fromTo, type, max_size );
+    return (*handler->transmit)( headers, payload, fromTo, type, max_size );
   return false;
 }
 

@@ -19,15 +19,15 @@
     .address = { DPA_UNPACK ADDRESS } \
   }})
 
-#define DPAUCS_ADDR( TYPE, SIZE ) \
+#define DPAUCS_ADDR( TYPE, SIZE, MAC, LA ) \
   (DPAUCS_address_t*)((struct { \
     unsigned char mac[6]; \
     uint16_t type; \
     unsigned char address[SIZE]; \
   }[]){{ \
-    .mac = { 0 }, \
+    .mac = { DPA_UNPACK MAC }, \
     .type = TYPE, \
-    .address = { 0 } \
+    .address = { DPA_UNPACK LA } \
   }})
 
 typedef uint8_t DPAUCS_mac_t[6];

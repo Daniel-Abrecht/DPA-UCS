@@ -12,6 +12,12 @@
 #define DPA_htob16 DPA_btoh16
 #define DPA_htob32 DPA_btoh32
 
+struct linked_data_list;
+typedef struct linked_data_list {
+  size_t size;
+  const void* data;
+  const struct linked_data_list* next;
+} linked_data_list_t;
 
 uint16_t DPA_btoh16( uint16_t ); // big endian to host byte order
 uint32_t DPA_btoh32( uint32_t ); // big endian to host byte order

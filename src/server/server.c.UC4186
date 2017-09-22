@@ -27,7 +27,7 @@ DPAUCS_address_entry_t address_list[MAX_LOGIC_ADDRESSES];
 static DPAUCS_packet_t packetInputBuffer;
 static DPAUCS_packet_t nextPacketToSend;
 
-weak const char* DPAUCS_hostname = "dpaucs";
+weak const char* DPAUCS_hostname = (const flash char[]){"dpaucs"};
 
 static struct {
   bool active;

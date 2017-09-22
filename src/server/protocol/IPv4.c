@@ -116,7 +116,9 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
   memcpy( DPAUCS_GET_ADDR( &ipInfo.src.address ), source, 4 );
   memcpy( DPAUCS_GET_ADDR( &ipInfo.dest.address ), destination, 4 );
   memcpy( ipInfo.src.address.mac,info->source_mac, sizeof(DPAUCS_mac_t) );
-  memcpy( ipInfo.dest.address.mac,info->destination_mac, sizeof(DPAUCS_mac_t) );
+  // If the package was sent to the broadcast mac, we use the interface mac anyway
+  // so we can lookup the interface using the mac address later
+  memcpy( ipInfo.dest.address.mac,info->interface->mac, sizeof(DPAUCS_mac_t) );
 
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
@@ -204,9 +206,7 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
 }
 
 static bool transmit(
-  size_t header_count,
-  const size_t header_size[header_count],
-  const void* header_data[header_count],
+  const linked_data_list_t* headers,
   DPA_stream_t* inputStream,
   const DPAUCS_mixedAddress_pair_t* fromTo,
   uint8_t type,
@@ -215,7 +215,7 @@ static bool transmit(
 
   const DPAUCS_address_t* src = DPAUCS_mixedPairComponentToAddress( fromTo, true );
   const DPAUCS_address_t* dst = DPAUCS_mixedPairComponentToAddress( fromTo, false );
-  DPAUCS_address_t* tmp_IPv4Addr = DPAUCS_ADDR_IPv4;
+  DPAUCS_address_t* tmp_IPv4Addr = DPAUCS_ADDR_IPv4((0),(0));
 
   static const uint16_t hl = 5;
   static uint16_t id = 0;
@@ -230,7 +230,12 @@ static bool transmit(
     DPA_LOG("transmit: Can't convert source address\n");
     return false;
   }
-  const DPAUCS_interface_t* interface = DPAUCS_getInterface( laddr );
+  const DPAUCS_interface_t* interface = 0;
+  if( src ){
+    interface = DPAUCS_getInterfaceByPhysicalAddress( src->mac );
+  }else{
+    interface = DPAUCS_getInterfaceByLogicAddress( laddr );
+  }
   if( !interface ){
     DPA_LOG( "transmit: Can't find source interface\n" );
     return false;
@@ -241,19 +246,20 @@ static bool transmit(
     src = tmp_IPv4Addr;
   }
 
-  for( size_t i=0; i<header_count; i++ ){
-    if( max_size_arg + header_size[i] < max_size_arg ){
+  for( const linked_data_list_t* it=headers; it; it = it->next ){
+    if( max_size_arg + it->size < max_size_arg ){
       max_size_arg = ~0;
     }else{
-      max_size_arg += header_size[i];
+      max_size_arg += it->size;
     }
   }
 
   uint16_t max_size = max_size_arg;
 
-  size_t offset = 0, header = 0;
+  size_t offset = 0;
+  const linked_data_list_t* header = headers;
 
-  while( offset < max_size && ( header < header_count || ( inputStream && !DPA_stream_eof(inputStream) ) ) ){
+  while( offset < max_size && ( header || ( inputStream && !DPA_stream_eof(inputStream) ) ) ){
 
     // prepare next packet
     DPAUCS_packet_info_t p;
@@ -279,14 +285,14 @@ static bool transmit(
     {
       unsigned char* data = ((unsigned char*)p.payload) + hl * 4;
       while( s < msize ){
-        if( header < header_count ){
-          size_t hs = header_size[header];
+        if( header ){
+          size_t hs = header->size;
           if( hs > msize - s )
             hs = msize - s;
-          memcpy( data, header_data[header], hs );
+          memcpy( data, header->data, hs );
           data += hs;
           s += hs;
-          header++;
+          header = header->next;
         }else if(inputStream){
           s += DPA_stream_read( inputStream, data, msize - s );
           break;
@@ -297,7 +303,7 @@ static bool transmit(
     // complete ip header
     uint8_t flags = 0;
 
-    if( ( header < header_count || ( inputStream && !DPA_stream_eof(inputStream) ) ) && (uint32_t)(offset+s) < max_size )
+    if( ( header || ( inputStream && !DPA_stream_eof(inputStream) ) ) && (uint32_t)(offset+s) < max_size )
       flags |= IPv4_FLAG_MORE_FRAGMENTS;
 
     ip->length = DPA_htob16( p.size + hl * 4 + s );

@@ -133,6 +133,18 @@ bool DPA_stream_referenceWrite( DPA_stream_t* stream, const void* p, size_t size
   return true;
 }
 
+bool DPA_stream_fillWrite( DPA_stream_t* stream, char constant, size_t size ){
+  if(DPA_ringbuffer_full(&stream->buffer_buffer->super))
+    return false;
+  DPA_bufferInfo_t entry = {0};
+  entry.type = BUFFER_CONSTANT;
+  entry.range.size = size;
+  entry.range.offset = 0;
+  entry.constant = constant;
+  DPA_RINGBUFFER_PUT( stream->buffer_buffer, entry );
+  return true;
+}
+
 #ifdef __FLASH
 bool DPA_stream_progmemWrite( DPA_stream_t* stream, const flash void* p, size_t size ){
   if(DPA_ringbuffer_full(&stream->buffer_buffer->super))
@@ -182,6 +194,21 @@ static inline size_t stream_read_from_array(
   return n;
 }
 
+static inline size_t stream_read_constant(
+  const DPA_stream_t* stream,
+  DPA_bufferInfo_t* info,
+  void* p,
+  size_t max_size
+){
+  (void)stream;
+  size_t size = info->range.size - info->range.offset;
+  size_t n = size < max_size ? size : max_size;
+  memset(p,info->constant,n);
+  info->range.offset += n;
+  return n;
+}
+
+
 #ifdef __FLASH
 static inline size_t stream_read_from_flash(
   const DPA_stream_t* stream,
@@ -209,6 +236,9 @@ size_t DPA_stream_read( DPA_stream_t* stream, void* p, size_t max_size ){
       break;
       case BUFFER_ARRAY:
         size = stream_read_from_array(stream,info,p,n);
+      break;
+      case BUFFER_CONSTANT:
+        size += stream_read_constant(stream,info,p,n);
       break;
 #ifdef __FLASH
       case BUFFER_FLASH:

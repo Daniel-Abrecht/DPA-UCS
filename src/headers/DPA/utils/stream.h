@@ -13,6 +13,7 @@
 enum DPA_buffer_type {
   BUFFER_BUFFER,
   BUFFER_ARRAY,
+  BUFFER_CONSTANT,
 #ifdef __FLASH
   BUFFER_FLASH,
 #endif
@@ -25,6 +26,7 @@ typedef struct DPA_bufferInfo {
   union {
     void* ptr;
     const void* cptr;
+    char constant;
 #ifdef __FLASH
     const flash void* fptr;
 #endif
@@ -46,6 +48,7 @@ typedef struct DPA_stream_raw {
 
 bool DPA_stream_copyWrite( DPA_stream_t*, const void*, size_t );
 bool DPA_stream_referenceWrite( DPA_stream_t*, const void*, size_t );
+bool DPA_stream_fillWrite( DPA_stream_t*, char character, size_t );
 #ifdef __FLASH
 bool DPA_stream_progmemWrite( DPA_stream_t*, const flash void*, size_t );
 #else

@@ -71,7 +71,11 @@ static bool icmp_receiveHandler(
         .source = to,
         .destination = from
       }} );
-      DPAUCS_layer3_transmit( 1, (size_t[]){length}, (const void*[]){payload}, 0, &fromTo, PROTOCOL_ICMP, ~0 );
+      DPAUCS_layer3_transmit( (linked_data_list_t[]){{
+        .size = length,
+        .data = payload,
+        .next = 0
+      }}, 0, &fromTo, PROTOCOL_ICMP, ~0 );
     } break;
   }
   return true;

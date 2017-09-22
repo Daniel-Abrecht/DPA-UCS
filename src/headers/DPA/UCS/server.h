@@ -33,7 +33,7 @@ struct DPAUCS_service;
 struct DPAUCS_packet_info;
 struct DPAUCS_ethernet_driver;
 
-extern const flash char* DPAUCS_hostname;
+extern const char* DPAUCS_hostname;
 
 void DPAUCS_run( void(*)(void*), void* );
 
@@ -50,7 +50,8 @@ bool DPAUCS_add_service( const struct DPAUCS_logicAddress* logicAddress, uint16_
 const flash struct DPAUCS_service* DPAUCS_get_service( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port, uint8_t tos );
 bool DPAUCS_remove_service( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port );
 void DPAUCS_doNextTask( void );
-const struct DPAUCS_interface* DPAUCS_getInterface( const struct DPAUCS_logicAddress* logicAddress );
+const struct DPAUCS_interface* DPAUCS_getInterfaceByLogicAddress( const struct DPAUCS_logicAddress* logicAddress );
+const struct DPAUCS_interface* DPAUCS_getInterfaceByPhysicalAddress( const DPAUCS_mac_t mac );
 
 void DPAUCS_preparePacket( struct DPAUCS_packet_info* info );
 void DPAUCS_sendPacket( struct DPAUCS_packet_info* info, uint16_t size );

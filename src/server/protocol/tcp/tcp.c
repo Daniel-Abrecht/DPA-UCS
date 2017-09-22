@@ -154,8 +154,6 @@ static uint16_t tcp_pseudoHeaderChecksum( DPAUCS_transmissionControlBlock_t* tcb
 }
 
 void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t* tcp, DPA_stream_t* stream, uint16_t header_length, uint16_t length ){
-  size_t stream_size = stream ? DPA_stream_getLength(stream,~0,0) : 0;
-
   uint16_t ps_checksum   = ~tcp_pseudoHeaderChecksum( tcb, tcp, length );
   uint16_t tcph_checksum = ~checksum( tcp, header_length );
   uint16_t data_checksum = ~checksumOfStream( stream, length-header_length );
@@ -164,9 +162,6 @@ void tcp_calculateChecksum( DPAUCS_transmissionControlBlock_t* tcb, DPAUCS_tcp_t
   uint16_t checksum = ~( ( tmp_checksum & 0xFFFF ) + ( tmp_checksum >> 16 ) );
 
   tcp->checksum = checksum;
-
-  if(stream)
-    DPA_stream_restoreReadOffset( stream, stream_size );
 }
 
 static DPAUCS_tcp_transmission_t tcp_begin( void ){
@@ -321,7 +316,11 @@ bool DPAUCS_tcp_transmit(
     if( stream && off && !offset )
       DPA_stream_seek( stream, off );
     tcp_calculateChecksum( tcb, &tcp, stream, headersize, packet_length );
-    DPAUCS_layer3_transmit( 1, (const size_t[]){headersize}, (const void*[]){&tcp}, stream, &tcb->fromTo, PROTOCOL_TCP, size );
+    DPAUCS_layer3_transmit( (linked_data_list_t[]){{
+      .size = headersize,
+      .data = &tcp,
+      .next = 0,
+    }}, stream, &tcb->fromTo, PROTOCOL_TCP, size );
     DPA_LOG( "DPAUCS_tcp_transmit: sending %uB payload, %uB headers, tcp checksum %x, offset %u\n", (unsigned)size,(unsigned)headersize, (unsigned)tcp.checksum, (unsigned)offset );
 
     size_t segSize = size + tcp_flaglength(flags);

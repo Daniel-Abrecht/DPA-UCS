@@ -34,11 +34,6 @@ typedef struct packed DPAUCS_IPv4 {
   unsigned char destination[4]; // destination IP address
 } DPAUCS_IPv4_t;
 
-typedef struct DPAUCS_IPv4_address {
-  DPAUCS_address_t address;
-  char rawAddrMem[4]; // ensure enough space for IPv4 address
-} DPAUCS_IPv4_address_t;
-
 typedef struct DPAUCS_IPv4_packetInfo {
   DPAUCS_ip_packetInfo_t ipPacketInfo;
   DPAUCS_IPv4_address_t src;
@@ -100,12 +95,12 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
       .offset = 0
     },
     .src = {
-      .address = {
+      .real = {
         .type = DPAUCS_ETH_T_IPv4
       },
     },
     .dest = {
-      .address = {
+      .real = {
         .type = DPAUCS_ETH_T_IPv4
       },
     },
@@ -113,12 +108,12 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
     .tos = ip->tos,
   };
 
-  memcpy( DPAUCS_GET_ADDR( &ipInfo.src.address ), source, 4 );
-  memcpy( DPAUCS_GET_ADDR( &ipInfo.dest.address ), destination, 4 );
-  memcpy( ipInfo.src.address.mac,info->source_mac, sizeof(DPAUCS_mac_t) );
+  memcpy( &ipInfo.src.real.address, source, 4 );
+  memcpy( &ipInfo.dest.real.address, destination, 4 );
+  memcpy( ipInfo.src.real.mac,info->source_mac, sizeof(DPAUCS_mac_t) );
   // If the package was sent to the broadcast mac, we use the interface mac anyway
   // so we can lookup the interface using the mac address later
-  memcpy( ipInfo.dest.address.mac,info->interface->mac, sizeof(DPAUCS_mac_t) );
+  memcpy( ipInfo.dest.real.mac,info->interface->mac, sizeof(DPAUCS_mac_t) );
 
   uint8_t* payload = ((uint8_t*)ip) + headerlength;
 
@@ -152,8 +147,8 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
         if(
             !(*handler->onreceive)(
               ipi,
-              &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->src.address,
-              &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->dest.address,
+              &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->src.super,
+              &((DPAUCS_IPv4_packetInfo_t*)f->ipFragment.info)->dest.super,
               f->ipFragment.offset,
               f->ipFragment.length,
               (DPAUCS_fragment_t**)f_ptr,
@@ -188,8 +183,8 @@ static void packetHandler( DPAUCS_packet_info_t* info ){
     DPAUCS_IPv4_packetInfo_t* ipp = ipi ? ipi : &ipInfo;
     (*handler->onreceive)(
       ipp,
-      &ipp->src.address,
-      &ipp->dest.address,
+      &ipp->src.super,
+      &ipp->dest.super,
       fragment.ipFragment.offset,
       fragment.ipFragment.length,
       (DPAUCS_fragment_t*[]){(DPAUCS_fragment_t*)&fragment},
@@ -387,10 +382,10 @@ static bool isSamePacket( DPAUCS_ip_packetInfo_t* ta, DPAUCS_ip_packetInfo_t* tb
   return (
       a->id == b->id
    && a->tos == b->tos
-   && !memcmp( DPAUCS_GET_ADDR(&a->src.address), DPAUCS_GET_ADDR(&b->src.address), 4 )
-   && !memcmp( DPAUCS_GET_ADDR(&a->dest.address), DPAUCS_GET_ADDR(&b->dest.address), 4 )
-   && !memcmp( a->src.address.mac, b->src.address.mac, sizeof(DPAUCS_mac_t) )
-   && !memcmp( a->dest.address.mac, b->dest.address.mac, sizeof(DPAUCS_mac_t) )
+   && !memcmp( &a->src.real.address, &b->src.real.address, 4 )
+   && !memcmp( &a->dest.real.address, &b->dest.real.address, 4 )
+   && !memcmp( a->src.real.mac, b->src.real.mac, sizeof(DPAUCS_mac_t) )
+   && !memcmp( a->dest.real.mac, b->dest.real.mac, sizeof(DPAUCS_mac_t) )
   );
 }
 

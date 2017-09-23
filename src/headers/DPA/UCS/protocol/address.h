@@ -10,25 +10,37 @@
 #define DPAUCS_ANY_ADDRESS 0
 #define DPAUCS_GET_ADDR( X ) ((char*)( &(X)->type + 1 ))
 
+#define DPAUCS_LA_TYPE( TYPE, SIZE ) \
+  union packed { \
+    DPAUCS_logicAddress_t super; \
+    struct packed { \
+      uint16_t type; \
+      unsigned char address[SIZE]; \
+    } real; \
+  }
+
+#define DPAUCS_ADDR_TYPE( TYPE, SIZE ) \
+  union packed { \
+    DPAUCS_address_t super; \
+    struct packed { \
+      unsigned char mac[6]; \
+      uint16_t type; \
+      unsigned char address[SIZE]; \
+    } real; \
+  }
+
 #define DPAUCS_LA( TYPE, SIZE, ADDRESS ) \
-  (DPAUCS_logicAddress_t*)((struct { \
-    uint16_t type; \
-    unsigned char address[SIZE]; \
-  }[]){{ \
+  &((DPAUCS_LA_TYPE(TYPE,SIZE)){.real={\
     .type = TYPE, \
     .address = { DPA_UNPACK ADDRESS } \
-  }})
+  }}).super
 
 #define DPAUCS_ADDR( TYPE, SIZE, MAC, LA ) \
-  (DPAUCS_address_t*)((struct { \
-    unsigned char mac[6]; \
-    uint16_t type; \
-    unsigned char address[SIZE]; \
-  }[]){{ \
+  &((DPAUCS_ADDR_TYPE(TYPE,SIZE)){.real={ \
     .mac = { DPA_UNPACK MAC }, \
     .type = TYPE, \
     .address = { DPA_UNPACK LA } \
-  }})
+  }}).super
 
 typedef uint8_t DPAUCS_mac_t[6];
 
@@ -38,11 +50,11 @@ typedef struct DPAUCS_interface {
 } DPAUCS_interface_t;
 
 // Don't change this struct
-typedef struct DPAUCS_logicAddress {
+typedef struct packed DPAUCS_logicAddress {
   uint16_t type;
 } DPAUCS_logicAddress_t;
 
-typedef struct DPAUCS_address {
+typedef struct packed DPAUCS_address {
   DPAUCS_mac_t mac;
   union {
     uint16_t type;

@@ -2,8 +2,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <string.h>
+#include <stdbool.h>
+#include <inttypes.h>
 #include <DPA/UCS/files.h>
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
@@ -172,6 +173,8 @@ static bool writeErrorPage( DPA_stream_t* stream, void* ptr ){
     break;
   }
 
+  DPA_LOG("HTTP %"PRIu16": %"PRIsFLASH"\n",params->code,(error?error->message:(const flash char*)0));
+
   DPA_stream_progmemWrite( stream, S(http_1_0_) );
   char code_buf[7];
   char* code_string = code_buf + sizeof(code_buf);
@@ -216,6 +219,8 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
     code = HTTP_errors + i;
     break;
   }
+
+  DPA_LOG("HTTP Error %"PRIu16": %"PRIsFLASH"\n",c->status,(code?code->message:(const flash char*)0));
 
   DPA_stream_progmemWrite( stream, S(http_1_0_) );
   char code_buf[7];
@@ -283,7 +288,7 @@ static HTTP_Connections_t* getConnection( void* cid ){
 }
 
 static bool onopen( void* cid ){
-  DPA_LOG("http_service->onopen\n");
+  DPA_LOG("http_service->onopen %p\n",cid);
   HTTP_Connections_t *it, *end;
   for( it = connections, end = it + DPA_MAX_HTTP_CONNECTIONS; it < end; it++ )
     if(!it->cid) goto add_connection;
@@ -291,34 +296,32 @@ static bool onopen( void* cid ){
  add_connection:
   it->cid = cid;
   it->parseState = HTTP_PARSE_START;
-  DPA_LOG("New connection added\n");
+  it->status = 200;
+  it->method = HTTP_METHOD_UNKNOWN;
+  it->connectionAction = HTTP_CONNECTION_CLOSE;
+  it->upgradeService = 0;
+  it->version.major = 1;
+  it->version.minor = 0;
+  DPA_LOG("New connection added %p -> %"PRIuSIZE"\n",cid,it-connections);
   return true;
 }
 
 
 #define S(STR) STR, sizeof(STR)-1
 static void onreceive( void* cid, void* data, size_t size ){
-  DPA_LOG("http_service->onreceive: \n");
-
   HTTP_Connections_t* c = getConnection(cid);
+  DPA_LOG("http_service->onreceive: %p -> %"PRIuSIZE"\n",cid,c-connections);
   if(!c){
     DPAUCS_tcp_abord( cid );
     return;
   }
 
-  if( c->status == HTTP_PARSE_START ){
-    c->status = 200;
-    c->method = HTTP_METHOD_UNKNOWN;
-    c->connectionAction = HTTP_CONNECTION_CLOSE;
-    c->upgradeService = 0;
-    c->version.major = 1;
-    c->version.minor = 0;
+  if( c->parseState == HTTP_PARSE_START ){
+    DPA_LOG("Test\n");
   }
 
   char* it = data;
   size_t n = size;
-
-
 
   while( n ){
     switch( c->parseState ){
@@ -369,8 +372,18 @@ static void onreceive( void* cid, void* data, size_t size ){
           break;
         }
 
+        DPA_LOG("%p ",cid);
+        for(size_t i=0;i<urlEnd;i++)
+          putchar(it[i]);
+        putchar('\n');
+
         c->ressource = ressourceOpen( it, urlEnd );
         c->parseState = HTTP_PARSE_PROTOCOL;
+
+        DPA_LOG("%p %p ",cid,(void*)c->ressource);
+        for(size_t i=0;i<urlEnd;i++)
+          putchar(it[i]);
+        putchar('\n');
 
         if( c->status < 400 && !c->ressource )
           c->status = 404;
@@ -535,12 +548,12 @@ static void onreceive( void* cid, void* data, size_t size ){
 #undef S
 
 static void oneof( void* cid ){
-  DPA_LOG("http_service->oneof\n");
+  DPA_LOG("http_service->oneof %p\n",cid);
   DPAUCS_tcp_close( cid );
 }
 
 static void onclose( void* cid ){
-  DPA_LOG("http_service->onclose\n");
+  DPA_LOG("http_service->onclose %p\n",cid);
   HTTP_Connections_t* c = getConnection(cid);
   if(!c) return;
   if(c->ressource)

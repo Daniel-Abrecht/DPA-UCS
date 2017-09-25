@@ -347,6 +347,17 @@ DPAUCS_INIT {
   }
 }
 
+DPAUCS_TASK {
+  for( size_t i=0; i<DPAUCS_DHCP_CLIENT_MAX_LEASES; i++ ){
+    if( ( leases[i].state == DHCP_STATE_DISCOVER_SENT && adelay_done(&leases[i].lease_start,AD_SEC*2) )
+     || ( leases[i].state == DHCP_STATE_REQUEST_SENT  && adelay_done(&leases[i].lease_start,AD_SEC*2) )
+    ){
+      DPA_LOG("No DHCP ACK received within 2 seconds, resending a DHCPDISCOVER\n");
+      dhcp_discover(leases[i].interface);
+    }
+  }
+}
+
 DPAUCS_SHUTDOWN {
   DPAUCS_remove_service( DPAUCS_ANY_ADDRESS, 68 );
 }

@@ -8,7 +8,7 @@
 
 #define ENC_MEMORY_SIZE 0x2000
 #define ENC_MEMORY_RX_END_TX_START (ENC_MEMORY_SIZE-1518-8)
-#define MIN_PIN_HIGH_US 20
+#define MIN_PIN_HIGH_US_T_10 7
 
 static void eth_init( void );
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t len );
@@ -198,10 +198,10 @@ static inline void enc_bit_field_set(
   if( ( address >= 0x40 && address <= 0x65 ) || address == CR_MISTAT )
     DPAUCS_fatal(error_message);
   enc_set_bank(iface,address);
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( ( address & 0x1F ) | 0x80 );
   DPAUCS_spi_tranceive( data );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
 }
 
 static inline void enc_bit_field_clear(
@@ -213,10 +213,10 @@ static inline void enc_bit_field_clear(
   if( ( address >= 0x40 && address <= 0x65 ) || address == CR_MISTAT )
     DPAUCS_fatal(error_message);
   enc_set_bank(iface,address);
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( ( address & 0x1F ) | 0xA0 );
   DPAUCS_spi_tranceive( data );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
 }
 
 static void enc_write_control_register(
@@ -229,10 +229,10 @@ static void enc_write_control_register(
     iface->econ1 = data;
     iface->bank = data & 0x03;
   }
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( ( address & 0x1F ) | 0x40 );
   DPAUCS_spi_tranceive( data );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
 }
 
 static inline uint8_t enc_read_control_register(
@@ -240,12 +240,12 @@ static inline uint8_t enc_read_control_register(
   uint8_t address
 ){
   enc_set_bank(iface,address);
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( address & 0x1F );
   if( ( address >= 0x40 && address <= 0x65 ) || address == CR_MISTAT )
     DPAUCS_spi_tranceive( 0 ); // MAC and MII registers shift out a dummy byte first
   uint8_t ret = DPAUCS_spi_tranceive( 0 );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
   return ret;
 }
 
@@ -255,11 +255,11 @@ static inline void enc_write_buffer_memory(
   uint8_t data[size]
 ){
   if(!size) return;
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( 0x7A );
   while( size-- )
     DPAUCS_spi_tranceive( *(data++) );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
 }
 
 static inline void enc_read_buffer_memory(
@@ -268,22 +268,22 @@ static inline void enc_read_buffer_memory(
   uint8_t data[size]
 ){
   if(!size) return;
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( 0x3A );
   while( size-- )
     *(data++) = DPAUCS_spi_tranceive( 0 );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
 }
 
 static inline uint16_t enc_read_buffer_uint16(
   struct DPAUCS_enc28j60_interface* iface
 ){
   uint16_t ret;
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( 0x3A );
   ret  = (uint16_t)DPAUCS_spi_tranceive( 0 );
   ret |= (uint16_t)DPAUCS_spi_tranceive( 0 ) << 8;
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
   return ret;
 }
 
@@ -291,13 +291,13 @@ static inline uint32_t enc_read_buffer_uint32(
   struct DPAUCS_enc28j60_interface* iface
 ){
   uint32_t ret;
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( 0x3A );
   ret  = (uint32_t)DPAUCS_spi_tranceive( 0 );
   ret |= (uint32_t)DPAUCS_spi_tranceive( 0 ) <<  8;
   ret |= (uint32_t)DPAUCS_spi_tranceive( 0 ) << 16;
   ret |= (uint32_t)DPAUCS_spi_tranceive( 0 ) << 24;
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
   return ret;
 }
 
@@ -333,9 +333,9 @@ static inline void enc_reset(
   iface->bank = -1;
   iface->econ1 = (1<<ECON1_TXRST) | (1<<ECON1_RXRST);
   while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, false , MIN_PIN_HIGH_US_T_10 );
   DPAUCS_spi_tranceive( 0xFF );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
   while( enc_read_control_register( iface, CR_ESTAT ) & ESTAT_CLKRDY );
   enc_write_phy_register( iface, PHY_LCON, (PHY_LED_OFF<<PHY_LCON_LED_A) | (PHY_LED_OFF<<PHY_LCON_LED_B) | PHY_LCON_RESERVED );
 }
@@ -353,7 +353,7 @@ static void enc_init(
   struct DPAUCS_enc28j60_interface* iface
 ){
   DPAUCS_io_set_pin_mode( iface->config->slave_select_pin, DPAUCS_IO_PIN_MODE_OUTPUT );
-  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US );
+  DPAUCS_io_set_pin( iface->config->slave_select_pin, true , MIN_PIN_HIGH_US_T_10 );
   iface->packet_sent_since_last_check = false;
   enc_reset( iface );
   enc_write_phy_register( iface, PHY_LCON,

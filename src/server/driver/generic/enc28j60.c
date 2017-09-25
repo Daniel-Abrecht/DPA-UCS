@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <inttypes.h>
 #include <DPA/utils/logger.h>
 #include <DPA/UCS/driver/spi.h>
@@ -475,7 +474,7 @@ static inline void print_transmit_status_vector(
   const uint8_t sv[7]
 ){
   (void)sv;
-  DPA_LOG( "Transmit status vector:" );
+  DPA_LOG( "Transmit status vector:\n" );
   for( unsigned i=20,j=0; i<52; i++,j++ ){
     if( i == 32 )
       i = 48;

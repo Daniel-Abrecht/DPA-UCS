@@ -60,7 +60,7 @@ URL_FILE_BASE   =
 
 OPTIONAL_FILES += server/adelay.o
 OPTIONAL_FILES += server/ressource.o
-OPTIONAL_FILES += server/services/dhcp_client.o
+#OPTIONAL_FILES += server/services/dhcp_client.o
 OPTIONAL_FILES += server/services/http.o
 OPTIONAL_FILES += server/services/icmp.o
 OPTIONAL_FILES += server/protocol/udp.o

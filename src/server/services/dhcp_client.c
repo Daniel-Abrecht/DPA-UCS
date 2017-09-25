@@ -1,6 +1,5 @@
 #define DPAUCS_DHCP_C
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <DPA/UCS/server.h>
@@ -55,10 +54,11 @@ static dhcp_lease_t* dhcp_get_lease( const DPAUCS_interface_t* interface ){
 
 static void dhcp_remove_lease( const DPAUCS_interface_t* interface ){
   dhcp_lease_t* lease = dhcp_get_lease( interface );
+  if( !lease )
+    return;
   if( lease->state == DHCP_STATE_ACCEPTED )
     DPAUCS_remove_logicAddress( &lease->ip.super );
-  if(lease)
-    lease->state = DHCP_STATE_NONE;
+  lease->state = DHCP_STATE_NONE;
 }
 
 static void dhcp_request( const DPAUCS_interface_t*, const uint8_t[4], const uint8_t[4] );

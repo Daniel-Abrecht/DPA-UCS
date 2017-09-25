@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -171,7 +170,11 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
       break;
   if( !~tcb_index )
     return false;
+  uint32_t sent_octets = tcb->SND.NXT - tcb->cache.first_SEQ;
   uint32_t acknowledged_octets = tcb->SND.UNA - tcb->cache.first_SEQ;
+  DPA_LOG("Q acked: %lu, len: %lu, tcb: %u\n", (unsigned long)acknowledged_octets, (unsigned long)e->streamRealLength, tcb_index);
+  if( acknowledged_octets > sent_octets + tcb->cache.flags.FIN )
+    acknowledged_octets = 0;
   bool ret = false;
   // check if all octets may have been acknowledged or conection doesn't exist anymore
   if( ( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ) || tcb->state == TCP_CLOSED_STATE ){
@@ -189,6 +192,7 @@ static bool tcp_cleanupCacheEntryCheckTCB( DPAUCS_transmissionControlBlock_t* tc
     if( ( acknowledged_octets && acknowledged_octets-e->streamIsLonger >= e->streamRealLength ) || tcb->state == TCP_CLOSED_STATE ){
       // remove tcb from entry and entry from tcb
       ret = true;
+      DPA_LOG("acked: %lu, len: %lu, tcb: %u\n", (unsigned long)acknowledged_octets, (unsigned long)e->streamRealLength, tcb_index);
       info.tcb_list[tcb_index].tcb = 0;
       tcb->cache.first = info.tcb_list[tcb_index].next;
       tcb->cache.first_SEQ += e->streamRealLength;
@@ -301,37 +305,29 @@ void tcp_retransmission_cache_do_retransmissions( void ){
     if( it->cache.first && !it->cache.flags.SYN ){
       tcp_cache_entryInfo_t info;
       DPAUCS_tcp_cacheEntry_t*const last = DCE(*it->cache.last);
-      DPAUCS_tcp_cacheEntry_t* next;
       DPAUCS_tcp_cacheEntry_t* e = DCE(*it->cache.first);
-      do {
-        uint16_t frag_flags = flags;
-        next = 0;
-        if( last == e && it->cache.flags.FIN && !it->cache.flags.SYN )
-          flags |= TCP_FLAG_FIN;
-        getEntryInfo( &info, e );
-        DPA_stream_raw_t raw_stream = {
-          .bufferBufferSize = e->bufferBufferSize,
-          .charBufferSize   = e->charBufferSize,
-          .bufferBuffer     = info.bufferBuffer,
-          .charBuffer       = info.charBuffer
-        };
 
-        for( unsigned i = e->count; i--; ){
-          if( e->ctcb[i].tcb == it ){
-            frag_flags |= e->ctcb[i].flags;
-            if( e->ctcb[i].next && *e->ctcb[i].next )
-              next = DCE(*e->ctcb[i].next);
-          }
-        }
+      uint16_t frag_flags = flags;
+      if( last == e && it->cache.flags.FIN && !it->cache.flags.SYN )
+        flags |= TCP_FLAG_FIN;
+      getEntryInfo( &info, e );
+      DPA_stream_raw_t raw_stream = {
+        .bufferBufferSize = e->bufferBufferSize,
+        .charBufferSize   = e->charBufferSize,
+        .bufferBuffer     = info.bufferBuffer,
+        .charBuffer       = info.charBuffer
+      };
 
-        DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
-          .tcb = it,
-          .flags = flags,
-          .size = e->streamRealLength,
-          .SEQ = it->cache.first_SEQ
-        }});
+      for( unsigned i = e->count; i--; )
+        if( e->ctcb[i].tcb == it )
+          frag_flags |= e->ctcb[i].flags;
 
-      } while(( e = next ));
+      DPAUCS_raw_as_stream(&raw_stream,&tcp_retransmission_cache_do_retransmissions_sub,(struct tcp_retransmission_cache_do_retransmissions_sub_args[]){{
+        .tcb = it,
+        .flags = flags,
+        .size = e->streamRealLength,
+        .SEQ = it->cache.first_SEQ
+      }});
 
     }else{
       if( it->cache.flags.FIN && !it->cache.flags.SYN )

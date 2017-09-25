@@ -225,8 +225,15 @@ bool DPAUCS_tcp_transmit(
   const bool RST = flags & TCP_FLAG_RST;
   const bool ACK = flags & TCP_FLAG_ACK;
   if( RST ) flags = 0;
-  const bool SYN = flags & TCP_FLAG_SYN;
-  const bool FIN = flags & TCP_FLAG_FIN;
+  bool SYN = flags & TCP_FLAG_SYN;
+  bool FIN = flags & TCP_FLAG_FIN;
+  bool FIN_sent = FIN;
+
+  if( tcb->cache.flags.FIN_acked ){
+    SYN = false;
+    FIN = false;
+    FIN_sent = true;
+  }
 
   if(RST)
     stream = 0;
@@ -265,6 +272,8 @@ bool DPAUCS_tcp_transmit(
     if( alreadyAcknowledged > alreadySent )
       alreadyAcknowledged = 0;
 
+    DPA_LOG("alreadySent: %lu, alreadyAcknowledged: %lu\n",(unsigned long)alreadySent,(unsigned long)alreadyAcknowledged);
+
     off = alreadyAcknowledged + offset;
     if( SYN ){
       if( off ){
@@ -278,7 +287,7 @@ bool DPAUCS_tcp_transmit(
       flags |= TCP_FLAG_RST;
 
     // Check if there is anything to send, even if it's only an ACK
-    if( size + SYN + FIN < off + !ACK  && !( off==0 && size==0 && RST ) )
+    if( size + SYN + FIN_sent < off + !ACK  && !( off==0 && size==0 && RST ) )
       break;
 
     if( size < off ){ // if FIN was acknowledged, it takes up sequence space, which increases off by 1
@@ -523,7 +532,11 @@ static bool tcp_processPacket(
   }
 
   if( SEG.flags & TCP_FLAG_ACK ){
-    tcp_una_change_handler( tcb, DPA_btoh32( tcp->acknowledgment ) );
+    tcp_una_change_handler( tcb, ACK );
+    if( tcb->SND.UNA == tcb->SND.NXT && tcb->cache.flags.FIN ){
+      DPA_LOG("FIN was acknowledged\n");
+      tcb->cache.flags.FIN_acked = true;
+    }
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
       DPA_LOG("TCP Keep-Alive\n");
       tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_ACK });

@@ -108,6 +108,7 @@ typedef struct DPAUCS_transmissionControlBlock {
       bool FIN : 1; // No more datas will be added to cache
       bool ACK : 1; // Set ACK for next transmission
       bool need_ACK : 1; // Need to send an ACK
+      bool FIN_acked : 1;
     } flags;
   } cache;
 

@@ -417,8 +417,8 @@ static void eth_init( void ){
     enc_init( it->entry );
   }
 }
-/*
-static inline void dump_last_packet_in_send_buffer(
+
+/*static inline void dump_last_packet_in_send_buffer(
   struct DPAUCS_enc28j60_interface* iface
 ){
   static const flash char hex[] = {"0123456789ABCDEF"};
@@ -500,14 +500,11 @@ static void check_print_error_info(
   }
 }
 
-static bool last_link_state = false;
-
 static void check_link_state(
   struct DPAUCS_enc28j60_interface* iface
 ){
   bool new_link_state = enc_read_phy_register( iface, PHY_STAT1 ) & (1<<PHY_STAT1_LLSTAT);
-  if( last_link_state != new_link_state ){
-    last_link_state = new_link_state;
+  if( iface->super.link_up != new_link_state ){
     if( new_link_state ){
       DPA_LOG("ENC28J60 link up\n");
       DPAUCS_interface_event(&iface->super,DPAUCS_IFACE_EVENT_LINK_UP,0);
@@ -519,10 +516,6 @@ static void check_link_state(
 }
 
 static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t length ){
-  if( !last_link_state ){
-    DPA_LOG( "Link is down" );
-    return;
-  }
   struct DPAUCS_enc28j60_interface* iface = (struct DPAUCS_enc28j60_interface*)interface;
   if( length > 1518 ){
     DPA_LOG( "Ethernet packet too big. %"PRIu16" > 1518\n", length );
@@ -562,17 +555,13 @@ static void eth_send( const DPAUCS_interface_t* interface, uint8_t* packet, uint
   // Write ethernet frame into buffer
   enc_write_buffer_memory( iface, length, packet );
   // Send packet
+//  dump_last_packet_in_send_buffer(iface);
   enc_bit_field_set( iface, CR_ECON1, 1<<ECON1_TXRTS );
   iface->packet_sent_since_last_check = true;
 }
 
 static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packet, uint16_t maxlen ){
   struct DPAUCS_enc28j60_interface* iface = (struct DPAUCS_enc28j60_interface*)interface;
-  static uint8_t check = 0;
-  if( check++ ) // Check link state every once in a while
-    check_link_state( iface );
-  if( !last_link_state )
-    return 0;
   // Check if a packet was received
   uint8_t count = enc_read_control_register( iface, CR_EPKTCNT );
   if( !count ) return 0; // No new packages
@@ -608,5 +597,22 @@ static uint16_t eth_receive( const DPAUCS_interface_t* interface, uint8_t* packe
 static void eth_shutdown( void ){
   for( struct DPAUCS_enc28j60_interface_list* it = DPAUCS_enc28j60_interface_list; it; it = it->next ){
     enc_reset( it->entry );
+  }
+}
+
+DPAUCS_TASK {
+  static uint8_t check = 0;
+  if( check++ )
+    return;
+  for( struct DPAUCS_enc28j60_interface_list* it = DPAUCS_enc28j60_interface_list; it; it = it->next ){
+    check_link_state( it->entry );
+    if( !it->entry->super.link_up )
+      continue;
+    if( eth_tx_ready( it->entry ) ){
+      if( enc_read_control_register( it->entry, CR_EIR ) & (1<<EI_TXER) ){
+        check_print_error_info( it->entry );
+        enc_bit_field_clear( it->entry, CR_EIR, (1<<EI_TXER) );
+      }
+    }
   }
 }

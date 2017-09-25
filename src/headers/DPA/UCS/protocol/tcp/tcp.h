@@ -133,18 +133,6 @@ typedef struct DPAUCS_tcp_transmission {
 
 extern DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANSMISSION_CONTROL_BLOCK_COUNT ];
 
-#ifdef DPAUCS_TCP_C
-#define W
-#else
-#define W weak
-#endif
-
-void W DPAUCS_tcpInit();
-void W DPAUCS_tcpShutdown();
-void W tcp_do_next_task( void );
-
-#undef W
-
 bool DPAUCS_tcp_send( bool(*func)( DPA_stream_t* stream, void* ptr ), void** cids, size_t count, void* ptr );
 void DPAUCS_tcp_close( void* cid );
 void DPAUCS_tcp_abord( void* cid );

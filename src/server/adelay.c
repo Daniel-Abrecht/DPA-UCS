@@ -1,4 +1,5 @@
 #include <DPA/UCS/driver/adelay.h>
+#include <DPA/UCS/server.h>
 
 static volatile adelay_t time;
 
@@ -29,4 +30,9 @@ void adelay_wait( adelay_duration_t duration ){
   adelay_t x;
   adelay_start( &x );
   while( !adelay_done( &x, duration ) );
+}
+
+DPAUCS_TASK {
+  if( adelay_update )
+    adelay_update();
 }

@@ -7,10 +7,8 @@
 #include <DPA/utils/utils.h>
 #include <DPA/utils/logger.h>
 #include <DPA/utils/helper_macros.h>
-#include <DPA/UCS/protocol/arp.h>
-#include <DPA/UCS/protocol/icmp.h>
 #include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/protocol/tcp/tcp.h>
+#include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/driver/adelay.h>
 #include <DPA/UCS/driver/ethernet.h>
 
@@ -284,6 +282,9 @@ static void DPAUCS_receive_next(){
   if( !DPAUCS_receive_next_interface() )
     return;
 
+  if( !current_receive_driver_state.interface->entry->link_up )
+    return;
+
   packet->size = (*current_receive_driver_state.driver->entry->receive)(
     current_receive_driver_state.interface->entry,
     packet->data.raw,
@@ -317,11 +318,9 @@ void DPAUCS_doNextTask( void ){
 
   DPAUCS_receive_next();
 
-  if(adelay_update)
-    adelay_update();
-
-  if(tcp_do_next_task)
-    tcp_do_next_task();
+  for( struct DPAUCS_task_list* it = DPAUCS_task_list; it; it = it->next ){
+    (*it->entry)();
+  }
 
 }
 
@@ -357,6 +356,15 @@ void DPAUCS_sendPacket( DPAUCS_packet_info_t* info, uint16_t size ){
   const DPAUCS_ethernet_driver_t* driver = getDriverOfInterface( info->interface );
   if(!driver){
     DPA_LOG("DPAUCS_sendPacket: interface or driver unavailable\n");
+    return;
+  }
+  if( !info->interface->link_up ){
+    DPA_LOG(
+      "DPAUCS_sendPacket: link down on interface %s %hhx:%hhx:%hhx:%hhx:%hhx:%hhx\n",
+      driver->name,
+      info->interface->mac[0], info->interface->mac[1], info->interface->mac[2],
+      info->interface->mac[3], info->interface->mac[4], info->interface->mac[5]
+    );
     return;
   }
   (*driver->send)( info->interface, nextPacketToSend.data.raw, size );

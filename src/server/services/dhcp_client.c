@@ -123,8 +123,9 @@ static void onreceive( void* request, void* data, size_t size ){
       }
     ));
     if( !server_ip ){
-      DPA_LOG("DHCP-client: required next server identifier missing\n");
+      DPA_LOG("Required next server identifier missing\n");
     }else{
+      DPA_LOG("DHCPOFFER from server %hhd.%hhd.%hhd.%hhd\n",server_ip[0],server_ip[1],server_ip[2],server_ip[3]);
       dhcp_request( interface, server_ip, dhcp->yiaddr );
     }
   }else if( message_type == DHCP_MESSAGE_TYPE_DHCPNAK ){

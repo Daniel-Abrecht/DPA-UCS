@@ -836,6 +836,6 @@ static const flash DPAUCS_l4_handler_t tcpHandler = {
 
 DPA_LOOSE_LIST_ADD( DPAUCS_l4_handler_list, &tcpHandler )
 
-void tcp_do_next_task( void ){
+DPAUCS_TASK {
   tcp_retransmission_cache_do_retransmissions();
 }

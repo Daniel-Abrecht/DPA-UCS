@@ -18,6 +18,11 @@
   DPA_LOOSE_LIST_ADD( DPAUCS_init_function_list, &DPA_CONCAT( DPA_CONCAT( DPAUCS_init_, __LINE__ ), _func ) ) \
   static void DPA_CONCAT( DPA_CONCAT( DPAUCS_init_, __LINE__ ), _func )( void )
 
+#define DPAUCS_TASK \
+  static void DPA_CONCAT( DPA_CONCAT( DPAUCS_task_, __LINE__ ), _func )( void ); \
+  DPA_LOOSE_LIST_ADD( DPAUCS_task_list, &DPA_CONCAT( DPA_CONCAT( DPAUCS_task_, __LINE__ ), _func ) ) \
+  static void DPA_CONCAT( DPA_CONCAT( DPAUCS_task_, __LINE__ ), _func )( void )
+
 #define DPAUCS_SHUTDOWN \
   static void DPA_CONCAT( DPA_CONCAT( DPAUCS_shutdown_, __LINE__ ), _func )( void ); \
   DPA_LOOSE_LIST_ADD( DPAUCS_shutdown_function_list, &DPA_CONCAT( DPA_CONCAT( DPAUCS_shutdown_, __LINE__ ), _func ) ) \
@@ -25,9 +30,11 @@
 
 typedef void(*DPAUCS_init_func_t)(void);
 typedef void(*DPAUCS_shutdown_func_t)(void);
+typedef void(*DPAUCS_task_t)(void);
 
 DPA_LOOSE_LIST_DECLARE( const DPAUCS_init_func_t, DPAUCS_init_function_list )
 DPA_LOOSE_LIST_DECLARE( const DPAUCS_shutdown_func_t, DPAUCS_shutdown_function_list )
+DPA_LOOSE_LIST_DECLARE( const DPAUCS_task_t, DPAUCS_task_list )
 
 struct DPAUCS_service;
 struct DPAUCS_packet_info;

@@ -12,7 +12,7 @@ enum arp_operation {
   ARP_OP_RESPONSE = 2
 };
 
-typedef struct {
+typedef struct packed {
   uint16_t referenceCount;
   DPAUCS_address_t address;
   char followingAddressMemory[];
@@ -34,7 +34,7 @@ static inline size_t getLargestAddressSize( void ){
 }
 
 static inline size_t getRealArpEntrySize( void ){
-  return sizeof(ARP_entry_t) - getLargestAddressSize();
+  return sizeof(ARP_entry_t) + getLargestAddressSize();
 }
 
 static inline void next_arp_entry( ARP_entry_t** entry ){
@@ -42,10 +42,10 @@ static inline void next_arp_entry( ARP_entry_t** entry ){
 }
 
 static inline ARP_entry_t* arpCache_getEntryByAddress( const DPAUCS_logicAddress_t* addr ){
-  void* entry = ((char*)addr) - offsetof(DPAUCS_address_t,logic) - offsetof(ARP_entry_t,address);
+  char* entry = ((char*)addr) - offsetof(DPAUCS_address_t,logic) - offsetof(ARP_entry_t,address);
 
-  if( entry >= (void*)entries && entry < (void*)entries_end )
-    return entry;
+  if( entry >= entries && entry < (char*)entries_end )
+    return (ARP_entry_t*)entry;
 
   for( ARP_entry_t* it = (ARP_entry_t*)entries; it < entries_end; next_arp_entry(&it) )
     if( DPAUCS_compare_logicAddress( &it->address.logic, addr ) )

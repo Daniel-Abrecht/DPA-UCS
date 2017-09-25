@@ -682,7 +682,8 @@ static bool tcp_processHeader(
       return false;
     }
     if(stcb->service->onopen){
-      if(!(*stcb->service->onopen)(stcb)){
+      const void* ssdata = DPAUCS_get_service_ssdata( &to->logic, stcb->srcPort, PROTOCOL_TCP );
+      if(!(*stcb->service->onopen)(stcb,ssdata)){
         tcp_sendNoData( 1, &stcb, (uint16_t[]){ TCP_FLAG_ACK | TCP_FLAG_RST });
         DPA_LOG( "tcb->service->onopen: connection rejected\n" );
         removeTCB(stcb);
@@ -811,6 +812,19 @@ void DPAUCS_tcp_abord( void* cid ){
     return;
   tcp_setState( tcb, TCP_CLOSED_STATE );
   tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_RST | TCP_FLAG_ACK });
+}
+
+void DPAUCS_tcp_change_service( void* cid, const flash DPAUCS_service_t* service, const void* ssdata ){
+  DPAUCS_transmissionControlBlock_t* tcb = cid;
+  if( tcb->service->ondisown ){
+    (*tcb->service->ondisown)(cid);
+  }else if( tcb->service->onclose ){
+    (*tcb->service->onclose)(cid);
+  }
+  tcb->service = service;
+  if(service->onopen)
+    if( !(*service->onopen)( cid, ssdata ) )
+      DPAUCS_tcp_close( cid );
 }
 
 void DPAUCS_tcp_close( void* cid ){

@@ -88,7 +88,7 @@ typedef struct HTTP_Connection {
   enum HTTP_Method method;
   enum HTTP_ParseState parseState;
   enum HTTP_ConnectionAction connectionAction;
-  const DPAUCS_service_t* upgradeService;
+  const flash DPAUCS_http_upgrade_handler_t* upgrade_handler;
 } HTTP_Connections_t;
 
 static HTTP_Connections_t connections[DPA_MAX_HTTP_CONNECTIONS];
@@ -219,7 +219,7 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
     break;
   }
 
-  DPA_LOG("HTTP Error %"PRIu16": %"PRIsFLASH"\n",c->status,(code?code->message:(const flash char*)0));
+  DPA_LOG("HTTP %"PRIu16": %"PRIsFLASH"\n",c->status,(code?code->message:(const flash char*)0));
 
   DPA_stream_progmemWrite( stream, S(http_1_0_) );
   char code_buf[7];
@@ -242,8 +242,12 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
   switch( c->method ){
     case HTTP_METHOD_GET:
     case HTTP_METHOD_HEAD: {
-      const flash char* mime = c->ressource->handler->getMime(c->ressource);
-      const char* hash = c->ressource->handler->getHash(c->ressource);
+      const flash char* mime = 0;
+      if( c->ressource && c->ressource->handler->getMime )
+        mime = c->ressource->handler->getMime(c->ressource);
+      const char* hash = 0;
+      if( c->ressource && c->ressource->handler->getHash )
+        hash = c->ressource->handler->getHash(c->ressource);
       if( mime ){
         static const flash char content_type_header[] = {"\r\nContent-Type: "};
         DPA_stream_progmemWrite( stream, S(content_type_header) );
@@ -256,12 +260,50 @@ static bool writeRessource( DPA_stream_t* stream, void* ptr ){
       }
       DPA_stream_progmemWrite( stream, S(CR_LF_CR_LF) );
     } if( c->method == HTTP_METHOD_GET ) {
-      c->ressource->handler->read( c->ressource, stream );
+      if( c->ressource && c->ressource->handler->read )
+        c->ressource->handler->read( c->ressource, stream );
     } break;
     default: {
       DPA_stream_progmemWrite( stream, S(CR_LF_CR_LF) );
     } break;
   }
+
+  return true;
+}
+#undef S
+
+#define S(STR) STR, sizeof(STR)-1
+static bool writeUpgrade( DPA_stream_t* stream, void* ptr ){
+
+  HTTP_Connections_t* c = ptr;
+
+  DPA_LOG("HTTP 101 Switching Protocols\n");
+
+  static const flash char upgrade_headers[] = {
+    "HTTP/1.1 101 Switching Protocols\r\n"
+    "Connection: Upgrade\r\n"
+    "Upgrade: "
+  };
+  DPA_stream_progmemWrite( stream, S(upgrade_headers) );
+  DPA_stream_progmemWrite( stream, c->upgrade_handler->protocol, DPA_progmem_strlen(c->upgrade_handler->protocol) );
+
+  static const flash char CR_LF[] = {"\r\n"};
+  DPA_stream_progmemWrite( stream, S(CR_LF) );
+
+  if( c->upgrade_handler->add_response_headers )
+    if( !c->upgrade_handler->add_response_headers( c->cid, stream ) )
+      return false;
+
+  if( !DPA_stream_progmemWrite( stream, S(CR_LF) ) ){
+    if( c->upgrade_handler->abort )
+      c->upgrade_handler->abort(c->cid);
+    return false;
+  }
+
+  const void* ssdata = 0;
+  if( c->upgrade_handler->getssdata )
+    ssdata = (*c->upgrade_handler->getssdata)(c->cid);
+  DPAUCS_tcp_change_service(c->cid,c->upgrade_handler->service,ssdata);
 
   return true;
 }
@@ -286,7 +328,8 @@ static HTTP_Connections_t* getConnection( void* cid ){
   return 0;
 }
 
-static bool onopen( void* cid ){
+static bool onopen( void* cid, const void* ssdata ){
+  (void)ssdata;
   DPA_LOG("http_service->onopen %p\n",cid);
   HTTP_Connections_t *it, *end;
   for( it = connections, end = it + DPA_MAX_HTTP_CONNECTIONS; it < end; it++ )
@@ -298,7 +341,7 @@ static bool onopen( void* cid ){
   it->status = 200;
   it->method = HTTP_METHOD_UNKNOWN;
   it->connectionAction = HTTP_CONNECTION_CLOSE;
-  it->upgradeService = 0;
+  it->upgrade_handler = 0;
   it->version.major = 1;
   it->version.minor = 0;
   DPA_LOG("New connection added %p -> %"PRIuSIZE"\n",cid,it-connections);
@@ -313,10 +356,6 @@ static void onreceive( void* cid, void* data, size_t size ){
   if(!c){
     DPAUCS_tcp_abord( cid );
     return;
-  }
-
-  if( c->parseState == HTTP_PARSE_START ){
-    DPA_LOG("Test\n");
   }
 
   char* it = data;
@@ -479,16 +518,45 @@ static void onreceive( void* cid, void* data, size_t size ){
         static const flash char fstr_Connection[] = {"Connection"};
         static const flash char fstr_Upgrade[] = {"Upgrade"};
 
-        if( DPA_streq_nocase_fn( fstr_Connection, key, key_length ) ){
-          enum HTTP_ConnectionAction ca;
-          for( ca=0; ca<HTTP_CONNECTION_ACTION_COUNT; ca++ )
-            if( DPA_streq_nocase_fn( HTTP_ConnectionActions[ca], value, value_length ) )
+        if( c->upgrade_handler ){
+          if( c->upgrade_handler->process_header ){
+            if( !c->upgrade_handler->process_header( cid, key_length, key, value_length, value ) ){
+              c->status = 500;
+              c->upgrade_handler = 0;
+              c->parseState = HTTP_PARSER_ERROR;
+              c->connectionAction = HTTP_CONNECTION_CLOSE;
+            }
+          }
+        }else{
+          if( DPA_streq_nocase_fn( fstr_Connection, key, key_length ) ){
+            enum HTTP_ConnectionAction ca;
+            for( ca=0; ca<HTTP_CONNECTION_ACTION_COUNT; ca++ )
+              if( DPA_streq_nocase_fn( HTTP_ConnectionActions[ca], value, value_length ) )
+                break;
+            c->connectionAction = ca;
+          }else if( DPA_streq_nocase_fn( fstr_Upgrade, key, key_length ) ){
+            c->status = 400;
+            for( struct http_upgrade_handler_list* it = http_upgrade_handler_list; it; it = it->next ){
+              if(!DPA_streq_nocase_fn( it->entry->protocol, value, value_length ))
+                continue;
+              c->status = 101;
+              c->connectionAction = HTTP_CONNECTION_UPGRADE;
+              c->upgrade_handler = it->entry;
+              if( c->ressource && c->ressource->handler->close )
+                c->ressource->handler->close( c->ressource );
+              c->ressource = 0;
+              if( it->entry->start ){
+                if( !(*it->entry->start)( cid ) ){
+                  c->status = 503;
+                  c->upgrade_handler = 0;
+                  c->parseState = HTTP_PARSER_ERROR;
+                  c->connectionAction = HTTP_CONNECTION_CLOSE;
+                }
+              }
               break;
-          c->connectionAction = ca;
-        }else if( DPA_streq_nocase_fn( fstr_Upgrade, key, key_length ) ){
-          
+            }
+          }
         }
-
 
 /*        DPA_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
           (int)key_length,key,
@@ -511,8 +579,10 @@ static void onreceive( void* cid, void* data, size_t size ){
 
 
   if( c->parseState == HTTP_PARSER_ERROR ){
-    if(c->ressource)
+    if( c->ressource && c->ressource->handler->close )
       c->ressource->handler->close( c->ressource );
+    if( c->upgrade_handler && c->upgrade_handler->abort )
+      c->upgrade_handler->abort( cid );
     HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
     return;
   }
@@ -521,17 +591,23 @@ static void onreceive( void* cid, void* data, size_t size ){
     return;
 
   if( c->status >= 400 ){
-    if(c->ressource)
+    if( c->ressource && c->ressource->handler->close )
       c->ressource->handler->close( c->ressource );
+    if( c->upgrade_handler && c->upgrade_handler->abort )
+      c->upgrade_handler->abort( cid );
     HTTP_sendErrorPage( cid, c->status, c->method == HTTP_METHOD_HEAD );
     return;
   }
 
-  DPAUCS_tcp_send( &writeRessource, &cid, 1, c );
-  DPAUCS_tcp_close( cid );
-
-  if(c->ressource)
-    c->ressource->handler->close( c->ressource );
+  if( c->upgrade_handler ){
+    if( !DPAUCS_tcp_send( &writeUpgrade, &cid, 1, c ) )
+      HTTP_sendErrorPage( cid, 400, c->method == HTTP_METHOD_HEAD );
+  }else{
+    DPAUCS_tcp_send( &writeRessource, &cid, 1, c );
+    DPAUCS_tcp_close( cid );
+    if( c->ressource && c->ressource->handler->close )
+      c->ressource->handler->close( c->ressource );
+  }
 
 }
 #undef S
@@ -545,10 +621,19 @@ static void onclose( void* cid ){
   DPA_LOG("http_service->onclose %p\n",cid);
   HTTP_Connections_t* c = getConnection(cid);
   if(!c) return;
-  if(c->ressource)
+  if( c->ressource && c->ressource->handler->close )
     c->ressource->handler->close( c->ressource );
   c->cid = 0;
   DPA_LOG("Connection closed\n");
+}
+
+static void ondisown( void* cid ){
+  DPA_LOG("http_service->ondisown %p\n",cid);
+  HTTP_Connections_t* c = getConnection(cid);
+  if(!c) return;
+  if( c->ressource && c->ressource->handler->close )
+    c->ressource->handler->close( c->ressource );
+  c->cid = 0;
 }
 
 const flash DPAUCS_service_t http_service = {
@@ -556,5 +641,6 @@ const flash DPAUCS_service_t http_service = {
   .onopen = &onopen,
   .onreceive = &onreceive,
   .oneof = &oneof,
+  .ondisown = &ondisown,
   .onclose = &onclose
 };

@@ -53,8 +53,9 @@ void DPAUCS_each_logicAddress(uint16_t, bool(*)(const struct DPAUCS_logicAddress
 bool DPAUCS_has_logicAddress(const struct DPAUCS_logicAddress* addr);
 const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_t* addr );
 
-bool DPAUCS_add_service( const struct DPAUCS_logicAddress* logicAddress, uint16_t port, const flash struct DPAUCS_service* service );
+bool DPAUCS_add_service( const struct DPAUCS_logicAddress* logicAddress, uint16_t port, const flash struct DPAUCS_service* service, const void* ssdata );
 const flash struct DPAUCS_service* DPAUCS_get_service( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port, uint8_t tos );
+const void* DPAUCS_get_service_ssdata( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port, uint8_t tos );
 bool DPAUCS_remove_service( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port );
 void DPAUCS_doNextTask( void );
 const struct DPAUCS_interface* DPAUCS_getInterfaceByLogicAddress( const struct DPAUCS_logicAddress* logicAddress );

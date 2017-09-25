@@ -218,9 +218,7 @@ static void dhcp_request( const DPAUCS_interface_t* interface, const uint8_t sip
     DHCP_OPTION_HOST_NAME
   };
   DPA_stream_referenceWrite( stream, dhcp_options, sizeof(dhcp_options) );
-  const char* hostname_end = DPAUCS_hostname;
-  for( ; *hostname_end; hostname_end++ );
-  size_t hostname_length = hostname_end - DPAUCS_hostname;
+  size_t hostname_length = strlen( DPAUCS_hostname );
   if( hostname_length > 0xFF )
     hostname_length = 0xFF;
   DPA_stream_referenceWrite( stream, (uint8_t[]){hostname_length}, 1 );
@@ -341,7 +339,7 @@ static void interface_event_handler( DPAUCS_interface_t* interface, enum DPAUCS_
 }
 
 DPAUCS_INIT {
-  if( !DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 68, &dhcp_client_service ) ){
+  if( !DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 68, &dhcp_client_service, 0) ){
     static const flash char message[] = {"Failed to add DHCP service!\n"};
     DPAUCS_fatal(message);
   }

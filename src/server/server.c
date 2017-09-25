@@ -28,10 +28,11 @@ static DPAUCS_packet_t nextPacketToSend;
 weak const char* DPAUCS_hostname = "dpaucs";
 
 static struct {
-  bool active;
   const DPAUCS_logicAddress_t* logicAddress;
-  uint16_t port;
+  const void* ssdata;
   const flash DPAUCS_service_t* service;
+  uint16_t port;
+  bool active;
 } services[MAX_SERVICES];
 
 static jmp_buf fatal_error_exitpoint;
@@ -138,8 +139,7 @@ const DPAUCS_logicAddress_t* DPAUCS_get_logicAddress( const DPAUCS_logicAddress_
   return 0;
 }
 
-
-bool DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, const flash DPAUCS_service_t* service ){
+bool DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_t port, const flash DPAUCS_service_t* service, const void* ssdata ){
   if(!service)
     return false;
   for(int i=0;i<MAX_SERVICES;i++){
@@ -148,6 +148,7 @@ bool DPAUCS_add_service( const DPAUCS_logicAddress_t*const logicAddress, uint16_
       services[i].port = port;
       services[i].logicAddress = logicAddress;
       services[i].service = service;
+      services[i].ssdata = ssdata;
       if(services[i].service->start)
         (*services[i].service->start)();
       return true;
@@ -186,6 +187,18 @@ const flash DPAUCS_service_t* DPAUCS_get_service( const DPAUCS_logicAddress_t*co
       ) && services[i].port == port
         && services[i].service->tos == tos
     ) return services[i].service;
+  return 0;
+}
+
+const void* DPAUCS_get_service_ssdata( const struct DPAUCS_logicAddress*const logicAddress, uint16_t port, uint8_t tos ){
+  for(int i=0;i<MAX_SERVICES;i++)
+    if( services[i].active
+        && (
+           !services[i].logicAddress
+        || DPAUCS_compare_logicAddress( services[i].logicAddress, logicAddress )
+      ) && services[i].port == port
+        && services[i].service->tos == tos
+    ) return services[i].ssdata;
   return 0;
 }
 

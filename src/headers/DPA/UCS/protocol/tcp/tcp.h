@@ -135,6 +135,7 @@ extern DPAUCS_transmissionControlBlock_t DPAUCS_transmissionControlBlocks[ TRANS
 
 bool DPAUCS_tcp_send( bool(*func)( DPA_stream_t* stream, void* ptr ), void** cids, size_t count, void* ptr );
 void DPAUCS_tcp_close( void* cid );
+void DPAUCS_tcp_change_service( void* cid, const flash DPAUCS_service_t* service, const void* ssdata );
 void DPAUCS_tcp_abord( void* cid );
 
 bool DPAUCS_tcp_transmit(

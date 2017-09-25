@@ -8,7 +8,7 @@
 weak void server_main(void* arg){
   (void)arg;
 
-  DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 80, &http_service );
+  DPAUCS_add_service( DPAUCS_ANY_ADDRESS, 80, &http_service, 0 );
 
   while(true)
     DPAUCS_doNextTask();

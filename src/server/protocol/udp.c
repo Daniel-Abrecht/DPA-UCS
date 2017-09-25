@@ -60,8 +60,9 @@ static bool udp_receiveHandler(
   const flash DPAUCS_service_t* service = DPAUCS_get_service( &to->logic, udp_descriptor.destination, PROTOCOL_UDP );
   if(!service)
     return false;
+  const void* ssdata = DPAUCS_get_service_ssdata( &to->logic, udp_descriptor.destination, PROTOCOL_UDP );
   if( service->onopen )
-    (*service->onopen)( &udp_descriptor );
+    (*service->onopen)( &udp_descriptor, ssdata );
   if(service->onreceive)
     (*service->onreceive)( &udp_descriptor, udp + 1, realLength - sizeof(DPAUCS_udp_t) );
   if( service->onclose )

@@ -1,6 +1,5 @@
 #define DPAUCS_HTTP_C
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -372,18 +371,8 @@ static void onreceive( void* cid, void* data, size_t size ){
           break;
         }
 
-        DPA_LOG("%p ",cid);
-        for(size_t i=0;i<urlEnd;i++)
-          putchar(it[i]);
-        putchar('\n');
-
         c->ressource = ressourceOpen( it, urlEnd );
         c->parseState = HTTP_PARSE_PROTOCOL;
-
-        DPA_LOG("%p %p ",cid,(void*)c->ressource);
-        for(size_t i=0;i<urlEnd;i++)
-          putchar(it[i]);
-        putchar('\n');
 
         if( c->status < 400 && !c->ressource )
           c->status = 404;
@@ -501,10 +490,10 @@ static void onreceive( void* cid, void* data, size_t size ){
         }
 
 
-        DPA_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
+/*        DPA_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
           (int)key_length,key,
           (int)value_length,value
-        );
+        );*/
 
         n  -= lineEndPos + 2;
         it += lineEndPos + 2;

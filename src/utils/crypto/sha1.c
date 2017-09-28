@@ -52,29 +52,35 @@ static void mix_it( DPA_crypto_sha1_state_t*restrict sha1 ){
 }
 #undef W
 
-void DPA_crypto_sha1_add( DPA_crypto_sha1_state_t*restrict sha1, void* data, uint64_t n ){
-
-  uint8_t* in = data;
-  uint8_t shift = sha1->length % 64;
-
-  for( ; n; n = n>64 ? n-64 : 0 ){
-
-    size_t i;
-    for( i=shift; i<(n+shift) && i<64; i++ ){
-      if(!( i % 4 )){
-        sha1->window[i/4] = (uint32_t)*(in++) << 24;
-      }else{
-        sha1->window[i/4] |= (uint32_t)*(in++) << (24-(i%4)*8);
-      }
-    }
-
-    sha1->length += i - shift;
-
-    if( i == 64 )
-      mix_it(sha1);
-
-  }
+#define X(Y,Z) \
+void Y( DPA_crypto_sha1_state_t*restrict sha1, Z void* data, uint64_t n ){ \
+  \
+  Z uint8_t* in = data; \
+  uint8_t shift = sha1->length % 64; \
+  \
+  for( ; n; n = n>64 ? n-64 : 0 ){ \
+  \
+    size_t i; \
+    for( i=shift; i<(n+shift) && i<64; i++ ){ \
+      if(!( i % 4 )){ \
+        sha1->window[i/4] = (uint32_t)*(in++) << 24; \
+      }else{ \
+        sha1->window[i/4] |= (uint32_t)*(in++) << (24-(i%4)*8); \
+      } \
+    } \
+  \
+    sha1->length += i - shift; \
+  \
+    if( i == 64 ) \
+      mix_it(sha1); \
+  \
+  } \
 }
+X(DPA_crypto_sha1_add,const)
+#ifdef __FLASH
+X(DPA_crypto_sha1_add_flash,const flash)
+#endif
+#undef X
 
 void DPA_crypto_sha1_done( DPA_crypto_sha1_state_t*restrict sha1, uint8_t result[20] ){
 

@@ -5,7 +5,7 @@
 
 #define S(X) X, sizeof(X)-1
 
-Test(utils,sha1_empty){
+Test(crypto_sha1,empty){
   DPA_crypto_sha1_state_t sha1;
   DPA_crypto_sha1_init( &sha1 );
   uint8_t res[20];
@@ -17,7 +17,7 @@ Test(utils,sha1_empty){
   cr_assert_arr_eq( res, expected, 20 );
 }
 
-Test(utils,sha1_small_one_piece){
+Test(crypto_sha1,small_one_piece){
   DPA_crypto_sha1_state_t sha1;
   DPA_crypto_sha1_init( &sha1 );
   DPA_crypto_sha1_add( &sha1, S("The quick brown fox jumps over the lazy dog") );
@@ -30,7 +30,7 @@ Test(utils,sha1_small_one_piece){
   cr_assert_arr_eq( res, expected, 20 );
 }
 
-Test(utils,sha1_multiple_pieces){
+Test(crypto_sha1,multiple_pieces){
   DPA_crypto_sha1_state_t sha1;
   DPA_crypto_sha1_init( &sha1 );
   DPA_crypto_sha1_add( &sha1, S("The quick brown fox ") );
@@ -44,7 +44,7 @@ Test(utils,sha1_multiple_pieces){
   cr_assert_arr_eq( res, expected, 20 );
 }
 
-Test(utils,sha1_large_text){
+Test(crypto_sha1,large_text){
   DPA_crypto_sha1_state_t sha1;
   DPA_crypto_sha1_init( &sha1 );
   DPA_crypto_sha1_add( &sha1, S(

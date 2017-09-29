@@ -383,3 +383,13 @@ void DPAUCS_sendPacket( DPAUCS_packet_info_t* info, uint16_t size ){
   (*driver->send)( info->interface, nextPacketToSend.data.raw, size );
 }
 
+weak void server_main(void* arg){
+  (void)arg;
+  while(true)
+    DPAUCS_doNextTask();
+}
+
+weak int main(void){
+  DPAUCS_run(server_main,0);
+  return 0;
+}

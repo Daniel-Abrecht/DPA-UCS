@@ -43,6 +43,7 @@ struct DPAUCS_ethernet_driver;
 extern const char* DPAUCS_hostname;
 
 void DPAUCS_run( void(*)(void*), void* );
+weak void server_main(void* arg);
 
 noreturn void DPAUCS_fatal( const flash char* message );
 void DPAUCS_onfatalerror( const flash char* message );

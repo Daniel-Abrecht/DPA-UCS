@@ -9,6 +9,7 @@
 #include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 
 #define RETRANSMISSION_INTERVAL AD_SEC * 2
+#define KEEP_ALIVE_INTERVAL AD_SEC * 30
 
 #define DCE( X ) ((DPAUCS_tcp_cacheEntry_t*)((char*)(X)+*(size_t*)(X)))
 
@@ -288,9 +289,9 @@ void tcp_retransmission_cache_do_retransmissions( void ){
       it->cache.flags.ACK = true;
     }else{
       if( it->state == TCP_CLOSED_STATE
-      || it->state == TCP_TIME_WAIT_STATE
+       || it->state == TCP_TIME_WAIT_STATE
       ) continue;
-      if( it->cache.last_transmission && !adelay_done( &it->cache.last_transmission, RETRANSMISSION_INTERVAL ) )
+      if( it->cache.last_transmission && !adelay_done( &it->cache.last_transmission, it->SND.NXT == it->SND.UNA ? KEEP_ALIVE_INTERVAL : RETRANSMISSION_INTERVAL ) )
         continue;
     }
     adelay_start( &it->cache.last_transmission );

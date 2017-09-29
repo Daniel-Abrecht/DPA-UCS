@@ -287,7 +287,7 @@ bool DPAUCS_tcp_transmit(
       flags |= TCP_FLAG_RST;
 
     // Check if there is anything to send, even if it's only an ACK
-    if( size + SYN + FIN_sent < off + !ACK  && !( off==0 && size==0 && RST ) )
+    if( size + SYN + FIN_sent < off && !( off==0 && size==0 && ( RST || ACK ) ) )
       break;
 
     if( size < off ){ // if FIN was acknowledged, it takes up sequence space, which increases off by 1
@@ -539,6 +539,7 @@ static bool tcp_processPacket(
     }
     if( n==0 && SEG.SEQ == tcb->RCV.NXT-1 ){
       DPA_LOG("TCP Keep-Alive\n");
+      tcb->cache.flags.need_ACK = true;
       tcp_sendNoData( 1, &tcb, (uint16_t[]){ TCP_FLAG_ACK });
     }else switch( tcb->state ){
       case TCP_SYN_RCVD_STATE  : tcp_setState( tcb, TCP_ESTAB_STATE      ); break;

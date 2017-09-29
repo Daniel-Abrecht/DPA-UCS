@@ -58,10 +58,12 @@ PROJECT_DIR=$(PWD)
 GEN_DEST = FilesAsCArrays
 URL_FILE_BASE   = 
 
+OPTIONAL_FILES += example/websocket/echo.o
 OPTIONAL_FILES += server/adelay.o
 OPTIONAL_FILES += server/ressource.o
 OPTIONAL_FILES += server/services/dhcp_client.o
 OPTIONAL_FILES += server/services/http.o
+OPTIONAL_FILES += server/services/websocket.o
 OPTIONAL_FILES += server/services/icmp.o
 OPTIONAL_FILES += server/protocol/udp.o
 OPTIONAL_FILES += server/protocol/tcp/tcp.o
@@ -77,6 +79,8 @@ MAIN_FILE = main.o
 
 FILES += server/server.o
 FILES += utils/utils.o
+FILES += utils/crypto/sha1.o
+FILES += utils/encoding/base64.o
 FILES += utils/ringbuffer.o
 FILES += utils/stream.o
 FILES += utils/mempool.o

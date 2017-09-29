@@ -359,7 +359,9 @@ static void onreceive( void* cid, void* data, size_t size ){
   }
 
   char* it = data;
+  char* headers_start=data;
   size_t n = size;
+  size_t headers_size=n;
 
   while( n ){
     switch( c->parseState ){
@@ -430,7 +432,7 @@ static void onreceive( void* cid, void* data, size_t size ){
         DPA_mempos( &lineEndPos, it, n, S("\r\n") );
         DPA_memrcharpos( &protocolEndPos, lineEndPos, it, '/' );
         static const flash char fstr_http[] = {"HTTP"};
-        if( !DPA_streq_nocase_fn( fstr_http, it, protocolEndPos ) )
+        if( ( sizeof(fstr_http)-1 == protocolEndPos ) && !DPA_streq_nocase_fn( fstr_http, it, protocolEndPos ) )
           c->status = 480;
 
         c->parseState = HTTP_PARSE_VERSION;
@@ -471,6 +473,8 @@ static void onreceive( void* cid, void* data, size_t size ){
         c->parseState = HTTP_PARSE_HEADER_FIELD;
         n  -= lineEndPos + 2;
         it += lineEndPos + 2;
+        headers_start = it;
+        headers_size = n;
 
       } continue;
 
@@ -485,6 +489,8 @@ static void onreceive( void* cid, void* data, size_t size ){
           break;
         n  -= lineEndPos + 2;
         it += lineEndPos + 2;
+        headers_start = it;
+        headers_size = n;
         c->parseState = HTTP_PARSE_HEADER_FIELD;
       } continue;
 
@@ -521,42 +527,47 @@ static void onreceive( void* cid, void* data, size_t size ){
         if( c->upgrade_handler ){
           if( c->upgrade_handler->process_header ){
             if( !c->upgrade_handler->process_header( cid, key_length, key, value_length, value ) ){
-              c->status = 500;
+              c->status = 400;
               c->upgrade_handler = 0;
               c->parseState = HTTP_PARSER_ERROR;
               c->connectionAction = HTTP_CONNECTION_CLOSE;
             }
           }
         }else{
-          if( DPA_streq_nocase_fn( fstr_Connection, key, key_length ) ){
+          if( sizeof(fstr_Connection)-1 == key_length && DPA_streq_nocase_fn( fstr_Connection, key, key_length ) ){
             enum HTTP_ConnectionAction ca;
             for( ca=0; ca<HTTP_CONNECTION_ACTION_COUNT; ca++ )
-              if( DPA_streq_nocase_fn( HTTP_ConnectionActions[ca], value, value_length ) )
+              if( DPA_progmem_strlen(HTTP_ConnectionActions[ca]) == value_length && DPA_streq_nocase_fn( HTTP_ConnectionActions[ca], value, value_length ) )
                 break;
             c->connectionAction = ca;
-          }else if( DPA_streq_nocase_fn( fstr_Upgrade, key, key_length ) ){
-            c->status = 400;
-            for( struct http_upgrade_handler_list* it = http_upgrade_handler_list; it; it = it->next ){
-              if(!DPA_streq_nocase_fn( it->entry->protocol, value, value_length ))
+          }else if( sizeof(fstr_Upgrade)-1 == key_length && DPA_streq_nocase_fn( fstr_Upgrade, key, key_length ) ){
+            c->status = 501;
+            for( struct http_upgrade_handler_list* uhe = http_upgrade_handler_list; uhe; uhe = uhe->next ){
+              if( DPA_progmem_strlen(uhe->entry->protocol) != value_length || !DPA_streq_nocase_fn( uhe->entry->protocol, value, value_length ))
                 continue;
               c->status = 101;
               c->connectionAction = HTTP_CONNECTION_UPGRADE;
-              c->upgrade_handler = it->entry;
+              c->upgrade_handler = uhe->entry;
               if( c->ressource && c->ressource->handler->close )
                 c->ressource->handler->close( c->ressource );
               c->ressource = 0;
-              if( it->entry->start ){
-                if( !(*it->entry->start)( cid ) ){
+              if( uhe->entry->start ){
+                if( !(*uhe->entry->start)( cid ) ){
                   c->status = 503;
                   c->upgrade_handler = 0;
                   c->parseState = HTTP_PARSER_ERROR;
                   c->connectionAction = HTTP_CONNECTION_CLOSE;
                 }
               }
-              break;
+              n = headers_size;
+              it = headers_start;
+              continue;
             }
           }
         }
+
+        if( c->parseState == HTTP_PARSER_ERROR )
+          break;
 
 /*        DPA_LOG("Header field: key=\"%.*s\" value=\"%.*s\"\n",
           (int)key_length,key,

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <DPA/UCS/protocol/address.h>
-#include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
+#include <DPA/UCS/protocol/fragment_memory.h>
 #include <DPA/utils/helper_macros.h>
 
 #define DEFAULT_TTL 64

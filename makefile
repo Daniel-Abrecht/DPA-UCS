@@ -86,7 +86,7 @@ FILES += server/protocol/arp.o
 FILES += server/protocol/layer3.o
 FILES += server/protocol/ip_stack.o
 FILES += server/protocol/address.o
-FILES += server/protocol/tcp_ip_stack_memory.o
+FILES += server/protocol/fragment_memory.o
 FILES += $(OPTIONAL_FILES)
 
 ###################

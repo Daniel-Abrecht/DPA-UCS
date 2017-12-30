@@ -1,6 +1,5 @@
 #include <string.h>
 #include <DPA/UCS/server.h>
-#include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/ip_stack.h>
 
 // Should be initialized with zeros

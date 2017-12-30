@@ -1,7 +1,7 @@
 #ifndef DPAUCS_TCP_STACK_H
 #define DPAUCS_TCP_STACK_H
 
-#include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
+#include <DPA/UCS/protocol/fragment_memory.h>
 
 typedef struct DPAUCS_tcp_fragment {
   DPAUCS_fragment_t fragment; // must be the first member

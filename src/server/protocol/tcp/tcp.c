@@ -12,7 +12,7 @@
 #include <DPA/UCS/protocol/IPv4.h>
 #include <DPA/UCS/protocol/layer3.h>
 #include <DPA/UCS/protocol/tcp/tcp_stack.h>
-#include <DPA/UCS/protocol/tcp_ip_stack_memory.h>
+#include <DPA/UCS/protocol/fragment_memory.h>
 #include <DPA/UCS/protocol/tcp/tcp_retransmission_cache.h>
 
 DPA_MODULE( tcp ){

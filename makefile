@@ -233,7 +233,13 @@ test-%: $(TEMP_LINUX)/test/%
 	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^ --no-early-exit
 	gcov -rn $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep 'TEST FOR:' "$(SRC)/test/$*.c" | sed 's|^.*TEST FOR:\s*||')))
 
-test: $(TESTS)
+test:
+	i=0; \
+	for test in $(TESTS); \
+	do if ! make "$$test"; \
+          then i=$$(expr $$i + 1); \
+	fi; done; \
+	exit $$i
 
 ###################
 #       AVR       #

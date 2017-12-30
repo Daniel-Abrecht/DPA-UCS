@@ -4,6 +4,8 @@
 /*
 TEST FOR: utils/stream
 DEPENDS: utils/stream
+DEPENDS: utils/ringbuffer
+DEPENDS: utils/utils
 */
 
 #define MTest(...) Test(__VA_ARGS__, .init = setup)

@@ -4,6 +4,7 @@
 /*
 TEST FOR: utils/ringbuffer
 DEPENDS: utils/ringbuffer
+DEPENDS: utils/utils
 */
 
 #define FTest(...) Test(__VA_ARGS__, .init = setup_normal)

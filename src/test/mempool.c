@@ -3,9 +3,12 @@
 #include <string.h>
 #include <DPA/utils/mempool.h>
 
-#define MTest(...) Test(__VA_ARGS__, .init = setup)
+/*
+TEST FOR: utils/mempool
+DEPENDS: utils/mempool
+*/
 
-// TEST FOR: utils/mempool
+#define MTest(...) Test(__VA_ARGS__, .init = setup)
 
 static char buffer[1024+DPAUCS_MEMPOOL_ENTRY_SIZE];
 static DPA_mempool_t mempool = {

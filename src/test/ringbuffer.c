@@ -1,7 +1,10 @@
 #include <criterion/criterion.h>
 #include <DPA/utils/ringbuffer.h>
 
-// TEST FOR: utils/ringbuffer
+/*
+TEST FOR: utils/ringbuffer
+DEPENDS: utils/ringbuffer
+*/
 
 #define FTest(...) Test(__VA_ARGS__, .init = setup_normal)
 #define RTest(...) Test(__VA_ARGS__, .init = setup_reverse)

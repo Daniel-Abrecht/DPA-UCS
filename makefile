@@ -20,37 +20,34 @@ AVR_AR=avr-ar
 AVR_MCU=atmega1284
 AVR_F_CPU = 16000000UL
 
-LINUX_OPTIONS  += -std=c11
+LINUX_OPTIONS    += -std=c11
 # gnu11 Needed for __flash support
-AVR_OPTIONS    += -std=gnu11
-OPTIONS        += -I$(SRC)/headers/ -L$(BIN)
-OPTIONS        += -Wall -Wextra -pedantic -Werror
-#OPTIONS        += --short-enums
+AVR_OPTIONS      += -std=gnu11
+OPTIONS          += -I$(SRC)/headers/ -L$(BIN)
+OPTIONS          += -Wall -Wextra -pedantic -Werror
+DEBUG_OPTIONS    += -Og -g -DDEBUG
+SANITIZE_OPTIONS += -fprofile-arcs -ftest-coverage -static-libasan -fsanitize=undefined -fsanitize=address -fstack-protector-all
+PROD_OPTIONS     += -Os -ffast-math -ffunction-sections -fdata-sections
+
+#OPTIONS         += --short-enums
 
 LINUX_LIBS=
-
-test-% test: OPTIONS += -fprofile-arcs -ftest-coverage
-test-% test: LINUX_LIBS += -lgcov
-
-OPTIONS        += $(O)
 
 ifndef_any_of = $(filter undefined,$(foreach v,$(1),$(origin $(v))))
 ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
 
 ifneq ($(call ifdef_any_of,DEBUG),)
-OPTIONS        += -Og -g -DDEBUG
+TMP_OPTIONS += $(DEBUG_OPTIONS)
 else
-OPTIONS        += -Os
-OPTIONS        += -ffast-math
-OPTIONS        += -ffunction-sections -fdata-sections
+TMP_OPTIONS += $(PROD_OPTIONS)
 endif
 
 ifneq ($(call ifdef_any_of,DEBUG SANITIZE),)
-OPTIONS        += -g -fprofile-arcs -ftest-coverage -static-libasan -fsanitize=undefined -fsanitize=address -fstack-protector-all
+TMP_OPTIONS += $(SANITIZE_OPTIONS)
 endif
 
 ifdef NO_LOGGING
-OPTIONS += -DNO_LOGGING
+TMP_OPTIONS += -DNO_LOGGING
 endif
 
 PROJECT_DIR=$(PWD)
@@ -96,7 +93,9 @@ FILES += $(OPTIONAL_FILES)
 #      LINUX      #
 ###################
 
-LINUX_OPTIONS	+= $(OPTIONS)
+TMP_LINUX_OPTIONS += $(OPTIONS)
+LINUX_OPTIONS   += $(TMP_LINUX_OPTIONS) $(TMP_OPTIONS)
+TEST_OPTIONS    += -lgcov $(TMP_LINUX_OPTIONS) $(DEBUG_OPTIONS) $(SANITIZE_OPTIONS)
 TEMP_LINUX	 = tmp/linux
 LINUX_NAME	 = dpaucs-linux
 LINUX_TARGET	 = $(BIN)/$(LINUX_NAME)
@@ -119,8 +118,7 @@ LINUX_FILES = $(shell \
 CRITERION_SRC=$(LIB)/Criterion
 TESTS=$(shell \
   for file in "$(SRC)"/test/*.c; do \
-    file="$(TEMP_LINUX)/test/$$(basename "$$file" .c).o"; \
-    echo "$$file"; \
+    echo "test-$$(basename "$$file" .c)"; \
   done \
 )
 
@@ -128,7 +126,7 @@ TESTS=$(shell \
 #       AVR       #
 ###################
 
-AVR_OPTIONS	+= $(OPTIONS) -Waddr-space-convert -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
+AVR_OPTIONS	+= $(OPTIONS) $(TMP_OPTIONS) -Waddr-space-convert -DF_CPU=$(AVR_F_CPU) -mmcu=$(AVR_MCU)
 TEMP_AVR	 = tmp/avr_$(AVR_MCU)
 AVR_NAME	 = dpaucs-$(AVR_MCU)
 AVR_TARGET	 = $(BIN)/$(AVR_NAME)
@@ -222,21 +220,20 @@ $(TEMP_LINUX)/test/%.o: $(SRC)/test/%.c
 	@mkdir -p "$(shell dirname "$@")"
 	$(LINUX_CC) $(LINUX_OPTIONS) -I"$(LIB)/Criterion/include/" -c $^ -o $@
 
-$(TEMP_LINUX)/test/%: $(TEMP_LINUX)/test/%.o | $(LINUX_LIBRARY) $(CRITERION_LIB)
-	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ -Wl,--whole-archive -l$(LINUX_NAME) -Wl,--no-whole-archive $(LINUX_LIBS) -lcriterion -o $@
+$(TEMP_LINUX)/test_objs/%.o: $(SRC)/%.c $(HEADERS)
+	@mkdir -p "$(shell dirname "$@")"
+	$(LINUX_CC) $(TEST_OPTIONS) -c $< -o $@
+
+.SECONDEXPANSION:
+$(TEMP_LINUX)/test/%: $(TEMP_LINUX)/test/%.o $$(addprefix $(TEMP_LINUX)/test_objs/,$$(addsuffix .o,$$(shell grep 'DEPENDS\:' "$(SRC)/test/$$*.c" | sed 's|^.*DEPENDS\:\s*||'))) | $(CRITERION_LIB)
+	$(LINUX_CC) $(TEST_OPTIONS) -L"$(CRITERION_BUILD)" $^ $(LINUX_LIBS) -lcriterion -o $@
 
 test-%: $(TEMP_LINUX)/test/%
+	@echo "Test '$*':"
 	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^ --no-early-exit
-	gcov -rn $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep '^//\s*TEST FOR:' "$(SRC)/test/$*.c" | sed 's|^//\s*TEST FOR:\s*||')))
+	gcov -rn $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep 'TEST FOR:' "$(SRC)/test/$*.c" | sed 's|^.*TEST FOR:\s*||')))
 
-$(TEMP_LINUX)/test/test-all: $(TESTS) | $(LINUX_LIBRARY) $(CRITERION_LIB)
-	$(LINUX_CC) $(LINUX_OPTIONS) -L"$(CRITERION_BUILD)" $^ -Wl,--whole-archive -l$(LINUX_NAME) -Wl,--no-whole-archive $(LINUX_LIBS) -lcriterion -o $@
-
-test: $(TEMP_LINUX)/test/test-all
-	LD_LIBRARY_PATH="$(CRITERION_BUILD)" $^ --no-early-exit
-	for file in $(addprefix $(TEMP_LINUX)/,$(addsuffix .gcda,$(shell grep -hr '^//\s*TEST FOR:' "$(SRC)/test/" | sed 's|^//\s*TEST FOR:\s*||'))); \
-	  do gcov -rn "$$file"; \
-	done
+test: $(TESTS)
 
 ###################
 #       AVR       #

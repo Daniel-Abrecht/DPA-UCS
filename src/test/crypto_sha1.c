@@ -1,7 +1,10 @@
 #include <criterion/criterion.h>
 #include <DPA/utils/crypto/sha1.h>
 
-// TEST FOR: utils/crypto/sha1
+/*
+TEST FOR: utils/crypto/sha1
+DEPENDS: utils/crypto/sha1
+*/
 
 #define S(X) X, sizeof(X)-1
 

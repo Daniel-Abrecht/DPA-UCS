@@ -1,7 +1,10 @@
 #include <criterion/criterion.h>
 #include <DPA/utils/utils.h>
 
-// TEST FOR: utils/utils
+/*
+TEST FOR: utils/utils
+DEPENDS: utils/utils
+*/
 
 Test(utils,DPA_memrcpy){
   int src[] = {1,2,3,4};

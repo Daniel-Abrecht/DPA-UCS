@@ -1,7 +1,10 @@
 #include <criterion/criterion.h>
 #include <DPA/utils/encoding/base64.h>
 
-// TEST FOR: utils/encoding/base64
+/*
+TEST FOR: utils/encoding/base64
+DEPENDS: utils/encoding/base64
+*/
 
 #define S(X) X, sizeof(X)-1
 

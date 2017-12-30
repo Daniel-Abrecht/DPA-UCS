@@ -1,9 +1,12 @@
 #include <criterion/criterion.h>
 #include <DPA/utils/stream.h>
 
-#define MTest(...) Test(__VA_ARGS__, .init = setup)
+/*
+TEST FOR: utils/stream
+DEPENDS: utils/stream
+*/
 
-// TEST FOR: utils/stream
+#define MTest(...) Test(__VA_ARGS__, .init = setup)
 
 DPA_DEFINE_RINGBUFFER(unsigned char,DPA_uchar_ringbuffer_t,ostBuffer,256,false);
 DPA_DEFINE_RINGBUFFER(DPA_bufferInfo_t,DPA_buffer_ringbuffer_t,ostBufferBuffer,10,false);
